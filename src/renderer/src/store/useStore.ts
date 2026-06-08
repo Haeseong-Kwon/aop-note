@@ -79,6 +79,8 @@ interface AppState {
 
   // workspace / category
   createWorkspace: (name: string) => Promise<void>
+  renameWorkspace: (id: string, name: string) => Promise<void>
+  deleteWorkspace: (id: string) => Promise<void>
   createCategory: (input: Omit<CreateCategoryInput, 'workspace_id'>) => Promise<void>
   reorderCategories: (updates: UpdateCategoryInput[]) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
@@ -227,6 +229,37 @@ export const useStore = create<AppState>((set, get) => ({
     const ws = await window.api.workspace.create({ name: trimmed })
     set((s) => ({ workspaces: [...s.workspaces, ws] }))
     await get().selectWorkspace(ws.id)
+  },
+
+  renameWorkspace: async (id, name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    await window.api.workspace.update({ id, name: trimmed })
+    set({ workspaces: await window.api.workspace.list() })
+  },
+
+  deleteWorkspace: async (id) => {
+    await window.api.workspace.remove(id)
+    const workspaces = await window.api.workspace.list()
+    set({ workspaces })
+    const { activeWorkspaceId, smartView } = get()
+    if (activeWorkspaceId === id) {
+      if (workspaces.length > 0) {
+        await get().selectWorkspace(workspaces[0].id)
+      } else {
+        set({
+          activeWorkspaceId: null,
+          categories: [],
+          tasks: [],
+          goals: [],
+          activeCategoryId: null,
+          expandedTaskId: null,
+          selectedTaskId: null
+        })
+      }
+    } else if (smartView) {
+      await get().refresh()
+    }
   },
 
   createCategory: async (input) => {

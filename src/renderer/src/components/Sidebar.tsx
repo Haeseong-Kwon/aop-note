@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Check, X, Search, Sun, CalendarCheck, Moon, Monitor } from 'lucide-react'
+import { Plus, Check, X, Search, Sun, CalendarCheck, Moon, Monitor, Pencil, Trash2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -19,16 +19,34 @@ export function Sidebar(): JSX.Element {
   const createWorkspace = useStore((s) => s.createWorkspace)
   const selectSmartView = useStore((s) => s.selectSmartView)
   const openPalette = useStore((s) => s.openPalette)
+  const renameWorkspace = useStore((s) => s.renameWorkspace)
+  const deleteWorkspace = useStore((s) => s.deleteWorkspace)
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
 
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
 
   const submit = async (): Promise<void> => {
     await createWorkspace(name)
     setName('')
     setAdding(false)
+  }
+
+  const startRename = (id: string, current: string): void => {
+    setEditingId(id)
+    setEditName(current)
+  }
+  const saveRename = async (): Promise<void> => {
+    if (editingId) await renameWorkspace(editingId, editName)
+    setEditingId(null)
+  }
+  const confirmDelete = (id: string, deskName: string): void => {
+    if (window.confirm(`'${deskName}' 데스크와 포함된 모든 카테고리·작업이 삭제됩니다. 계속할까요?`)) {
+      deleteWorkspace(id)
+    }
   }
 
   return (
@@ -72,21 +90,66 @@ export function Sidebar(): JSX.Element {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2">
-        {workspaces.map((ws) => (
-          <button
-            key={ws.id}
-            onClick={() => selectWorkspace(ws.id)}
-            className={cn(
-              'no-drag flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors',
-              ws.id === activeId && smartView === null
-                ? 'bg-accent font-medium text-accent-foreground'
-                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-            )}
-          >
-            <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: ws.color }} />
-            <span className="truncate">{ws.name}</span>
-          </button>
-        ))}
+        {workspaces.map((ws) =>
+          editingId === ws.id ? (
+            <div key={ws.id} className="flex items-center gap-1 px-1">
+              <input
+                autoFocus
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveRename()
+                  if (e.key === 'Escape') setEditingId(null)
+                }}
+                className="no-drag h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={saveRename}>
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div
+              key={ws.id}
+              className={cn(
+                'group flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                ws.id === activeId && smartView === null
+                  ? 'bg-accent font-medium text-accent-foreground'
+                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+              )}
+            >
+              <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: ws.color }} />
+              <button
+                onClick={() => selectWorkspace(ws.id)}
+                className="no-drag min-w-0 flex-1 truncate text-left"
+              >
+                {ws.name}
+              </button>
+              <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6"
+                  onClick={() => startRename(ws.id, ws.name)}
+                  title="이름 변경"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6"
+                  onClick={() => confirmDelete(ws.id, ws.name)}
+                  title="삭제"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )
+        )}
 
         {workspaces.length === 0 && !adding && (
           <p className="px-3 py-2 text-xs text-muted-foreground">아직 데스크가 없습니다.</p>
