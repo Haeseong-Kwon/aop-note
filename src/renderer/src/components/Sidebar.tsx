@@ -29,6 +29,9 @@ export function Sidebar(): JSX.Element {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
 
+  // On macOS the traffic-light buttons overlay the top-left; inset the brand below them.
+  const isMac = navigator.userAgent.includes('Macintosh')
+
   const submit = async (): Promise<void> => {
     await createWorkspace(name)
     setName('')
@@ -51,11 +54,21 @@ export function Sidebar(): JSX.Element {
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-card/40">
-      <div className="drag-region flex h-12 shrink-0 items-center gap-2 px-4">
-        <div className="flex h-5 w-5 items-center justify-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground">
+      <div
+        className={cn(
+          'drag-region flex shrink-0 items-center gap-2.5 px-4 pb-3',
+          isMac ? 'pt-8' : 'pt-4'
+        )}
+      >
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white shadow-sm">
           A
         </div>
-        <span className="text-sm font-semibold tracking-tight">AOP Note</span>
+        <div className="flex min-w-0 flex-col leading-none">
+          <span className="text-[15px] font-semibold tracking-tight">AOP Note</span>
+          <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            업무 메모
+          </span>
+        </div>
       </div>
 
       <div className="px-2 pt-1">
