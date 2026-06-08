@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join, basename } from 'path'
 import { pathToFileURL } from 'url'
 import { existsSync } from 'fs'
 import { app, shell, BrowserWindow, protocol, net } from 'electron'
@@ -56,7 +56,10 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   // Serve attachment files via aop-file://<storedName> (basename-guarded).
   protocol.handle('aop-file', (request) => {
-    const storedName = decodeURIComponent(new URL(request.url).pathname).replace(/^\/+/, '')
+    // A standard scheme may put the filename in the host (aop-file://name) or the
+    // path (aop-file:///name) depending on Chromium normalization — combine both.
+    const u = new URL(request.url)
+    const storedName = basename(decodeURIComponent(u.hostname + u.pathname))
     const abs = pathForStored(storedName)
     if (!storedName || !existsSync(abs)) return new Response('Not found', { status: 404 })
     return net.fetch(pathToFileURL(abs).toString())
