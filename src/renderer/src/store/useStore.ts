@@ -56,6 +56,7 @@ interface AppState {
 
   // overlays
   quickCaptureOpen: boolean
+  quickCaptureDate: string | null // preset due date (YYYY-MM-DD) when opened from the calendar
   paletteOpen: boolean
   helpOpen: boolean
 
@@ -105,7 +106,7 @@ interface AppState {
   focusTask: (task: Task) => void
 
   // overlays + calendar + theme
-  openQuickCapture: () => void
+  openQuickCapture: (date?: string) => void
   closeQuickCapture: () => void
   openPalette: () => void
   closePalette: () => void
@@ -147,6 +148,7 @@ export const useStore = create<AppState>((set, get) => ({
   expandedTaskId: null,
   editingTitleId: null,
   quickCaptureOpen: false,
+  quickCaptureDate: null,
   paletteOpen: false,
   helpOpen: false,
   calYear: now.getFullYear(),
@@ -351,8 +353,8 @@ export const useStore = create<AppState>((set, get) => ({
       selectedTaskId: task.id
     }),
 
-  openQuickCapture: () => set({ quickCaptureOpen: true }),
-  closeQuickCapture: () => set({ quickCaptureOpen: false }),
+  openQuickCapture: (date) => set({ quickCaptureOpen: true, quickCaptureDate: date ?? null }),
+  closeQuickCapture: () => set({ quickCaptureOpen: false, quickCaptureDate: null }),
   openPalette: () => set({ paletteOpen: true }),
   closePalette: () => set({ paletteOpen: false }),
   toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen })),

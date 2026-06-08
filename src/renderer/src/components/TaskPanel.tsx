@@ -54,7 +54,7 @@ export function TaskPanel(): JSX.Element {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button size="sm" onClick={openQuickCapture} disabled={!activeCategory}>
+            <Button size="sm" onClick={() => openQuickCapture()} disabled={!activeCategory}>
               <Plus className="h-4 w-4" />새 작업
             </Button>
           </div>

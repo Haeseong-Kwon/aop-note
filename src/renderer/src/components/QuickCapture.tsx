@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from '@/store/useStore'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { fromDateInput } from '@/lib/format'
 
 export function QuickCapture(): JSX.Element {
   const open = useStore((s) => s.quickCaptureOpen)
@@ -9,20 +10,24 @@ export function QuickCapture(): JSX.Element {
   const categories = useStore((s) => s.categories)
   const goals = useStore((s) => s.goals)
   const activeCategoryId = useStore((s) => s.activeCategoryId)
+  const quickCaptureDate = useStore((s) => s.quickCaptureDate)
   const createTask = useStore((s) => s.createTask)
 
   const [title, setTitle] = useState('')
   const [categoryId, setCategoryId] = useState<string>('')
   const [goalId, setGoalId] = useState<string>('')
+  const [dueDate, setDueDate] = useState<string>('')
 
-  // Reset the form when the dialog opens, defaulting to the active category.
+  // Reset the form when the dialog opens, defaulting to the active category and
+  // (when opened from the calendar) the clicked day.
   useEffect(() => {
     if (open) {
       setTitle('')
       setGoalId('')
       setCategoryId(activeCategoryId ?? categories[0]?.id ?? '')
+      setDueDate(quickCaptureDate ?? '')
     }
-  }, [open, activeCategoryId, categories])
+  }, [open, activeCategoryId, categories, quickCaptureDate])
 
   const submit = async (): Promise<void> => {
     const trimmed = title.trim()
@@ -30,7 +35,8 @@ export function QuickCapture(): JSX.Element {
     await createTask({
       category_id: categoryId,
       title: trimmed,
-      goal_id: goalId === '' ? null : goalId
+      goal_id: goalId === '' ? null : goalId,
+      due_date: fromDateInput(dueDate)
     })
     setTitle('')
     close()
@@ -81,7 +87,18 @@ export function QuickCapture(): JSX.Element {
               </option>
             ))}
           </select>
+        </div>
 
+        <div className="flex items-center justify-between gap-2">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            기한
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </label>
           <Button onClick={submit} disabled={!title.trim() || !categoryId}>
             추가
           </Button>

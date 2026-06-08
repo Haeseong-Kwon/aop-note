@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
-import { PRIORITY_META } from '@/lib/format'
+import { PRIORITY_META, formatDateInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Task } from '@shared/types'
 
@@ -21,6 +21,7 @@ export function CalendarView(): JSX.Element {
   const shiftMonth = useStore((s) => s.shiftMonth)
   const goToToday = useStore((s) => s.goToToday)
   const focusTask = useStore((s) => s.focusTask)
+  const openQuickCapture = useStore((s) => s.openQuickCapture)
 
   // Bucket tasks (with a due date) by local day.
   const byDay = useMemo(() => {
@@ -65,6 +66,7 @@ export function CalendarView(): JSX.Element {
         <Button size="sm" variant="outline" onClick={goToToday}>
           오늘
         </Button>
+        <span className="ml-auto text-xs text-muted-foreground">날짜를 클릭해 일정을 추가하세요</span>
       </div>
 
       <div className="grid grid-cols-7 border-b border-border pb-1">
@@ -91,27 +93,35 @@ export function CalendarView(): JSX.Element {
           return (
             <div
               key={i}
+              onClick={() => openQuickCapture(formatDateInput(d))}
+              title="클릭하여 이 날짜에 작업 추가"
               className={cn(
-                'flex min-h-0 flex-col gap-1 bg-background p-1.5',
+                'group flex min-h-0 cursor-pointer flex-col gap-1 bg-background p-1.5 transition-colors hover:bg-accent/30',
                 !inMonth && 'bg-muted/30 text-muted-foreground'
               )}
             >
-              <span
-                className={cn(
-                  'flex h-5 w-5 items-center justify-center rounded-full text-xs tabular-nums',
-                  isToday && 'bg-primary font-semibold text-primary-foreground',
-                  !isToday && d.getDay() === 0 && inMonth && 'text-rose-400',
-                  !isToday && d.getDay() === 6 && inMonth && 'text-sky-400'
-                )}
-              >
-                {d.getDate()}
-              </span>
+              <div className="flex items-center justify-between">
+                <span
+                  className={cn(
+                    'flex h-5 w-5 items-center justify-center rounded-full text-xs tabular-nums',
+                    isToday && 'bg-primary font-semibold text-primary-foreground',
+                    !isToday && d.getDay() === 0 && inMonth && 'text-rose-400',
+                    !isToday && d.getDay() === 6 && inMonth && 'text-sky-400'
+                  )}
+                >
+                  {d.getDate()}
+                </span>
+                <Plus className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+              </div>
 
               <div className="flex flex-col gap-0.5 overflow-y-auto">
                 {dayTasks.slice(0, 3).map((t) => (
                   <button
                     key={t.id}
-                    onClick={() => focusTask(t)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      focusTask(t)
+                    }}
                     title={t.title}
                     className={cn(
                       'flex items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] transition-colors hover:bg-accent',

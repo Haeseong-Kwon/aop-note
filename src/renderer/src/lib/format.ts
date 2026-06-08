@@ -65,10 +65,18 @@ export function endOfWeekIso(): string {
   return sat.toISOString()
 }
 
-/** ISO date (no time) for <input type="date"> binding. */
+/** Format a Date as a local YYYY-MM-DD string (timezone-safe, matches calendar bucketing). */
+export function formatDateInput(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** ISO date (no time) for <input type="date"> binding — uses local components. */
 export function toDateInput(iso: string | null): string {
   if (!iso) return ''
-  return new Date(iso).toISOString().slice(0, 10)
+  return formatDateInput(new Date(iso))
 }
 
 /** Convert a date-input value back to a stored ISO timestamp (or null). */
