@@ -74,6 +74,26 @@ const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_goals_workspace ON goals(workspace_id);
       CREATE INDEX IF NOT EXISTS idx_tasks_goal       ON tasks(goal_id);
     `)
+  },
+
+  // 0003 — document attachments on tasks
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS attachments (
+        id           TEXT PRIMARY KEY,
+        task_id      TEXT NOT NULL REFERENCES tasks(id),
+        file_name    TEXT NOT NULL,
+        ext          TEXT NOT NULL DEFAULT '',
+        mime         TEXT NOT NULL DEFAULT '',
+        size         INTEGER NOT NULL DEFAULT 0,
+        stored_name  TEXT NOT NULL,
+        created_at   TEXT NOT NULL,
+        updated_at   TEXT NOT NULL,
+        deleted_at   TEXT
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_attachments_task ON attachments(task_id);
+    `)
   }
 ]
 

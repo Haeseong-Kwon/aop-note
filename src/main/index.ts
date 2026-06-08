@@ -1,10 +1,22 @@
 import { join } from 'path'
-import { app, shell, BrowserWindow } from 'electron'
+import { pathToFileURL } from 'url'
+import { existsSync } from 'fs'
+import { app, shell, BrowserWindow, protocol, net } from 'electron'
 import { getDb, closeDb } from './db'
 import { registerIpcHandlers } from './ipc/handlers'
 import { startDueNotifier } from './notifications'
+import { pathForStored } from './attachments'
 
 let stopNotifier: (() => void) | null = null
+
+// Custom scheme to serve attachment files to the renderer (PDF iframe, images)
+// without exposing file:// or relaxing sandboxing. Must be registered before ready.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'aop-file',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
+  }
+])
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -42,6 +54,14 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  // Serve attachment files via aop-file://<storedName> (basename-guarded).
+  protocol.handle('aop-file', (request) => {
+    const storedName = decodeURIComponent(new URL(request.url).pathname).replace(/^\/+/, '')
+    const abs = pathForStored(storedName)
+    if (!storedName || !existsSync(abs)) return new Response('Not found', { status: 404 })
+    return net.fetch(pathToFileURL(abs).toString())
+  })
+
   // Open DB + run migrations before the UI asks for data.
   getDb()
   registerIpcHandlers()

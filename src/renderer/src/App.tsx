@@ -28,6 +28,17 @@ function App(): JSX.Element {
     })
   }, [navigateToTask])
 
+  // Prevent the window from navigating away when a file is dropped outside a drop zone.
+  useEffect(() => {
+    const prevent = (e: DragEvent): void => e.preventDefault()
+    window.addEventListener('dragover', prevent)
+    window.addEventListener('drop', prevent)
+    return () => {
+      window.removeEventListener('dragover', prevent)
+      window.removeEventListener('drop', prevent)
+    }
+  }, [])
+
   // Global shortcuts. Cmd/Ctrl combos work even while typing; bare keys (?, Esc)
   // yield to text inputs.
   useEffect(() => {

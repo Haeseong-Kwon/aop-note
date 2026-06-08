@@ -143,8 +143,9 @@ export function GoalsView(): JSX.Element {
           value={title}
           placeholder="목표 제목 (Enter로 추가)"
           onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => (title.trim() ? submit() : setAdding(false))}
+          onBlur={() => setAdding(false)}
           onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시
             if (e.key === 'Enter') submit()
             if (e.key === 'Escape') {
               setAdding(false)

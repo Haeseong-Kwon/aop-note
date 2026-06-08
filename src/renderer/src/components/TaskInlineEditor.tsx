@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
+import { AttachmentsSection } from './AttachmentsSection'
 import { PRIORITY_META, STATUS_META, toDateInput, fromDateInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Priority, Task, TaskStatus } from '@shared/types'
@@ -42,6 +43,7 @@ export function TaskInlineEditor({ task }: { task: Task }): JSX.Element {
         onChange={(e) => setTitle(e.target.value)}
         onBlur={commitTitle}
         onKeyDown={(e) => {
+          if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
         }}
         className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-medium outline-none focus:ring-2 focus:ring-ring"
@@ -120,6 +122,8 @@ export function TaskInlineEditor({ task }: { task: Task }): JSX.Element {
           className="w-full resize-y rounded-md border border-input bg-background p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring"
         />
       </Field>
+
+      <AttachmentsSection taskId={task.id} />
 
       <div className="flex justify-end">
         <Button

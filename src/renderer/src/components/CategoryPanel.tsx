@@ -294,6 +294,7 @@ function CategoryInput({
         onChange={(e) => onChange(e.target.value)}
         onBlur={onCancel}
         onKeyDown={(e) => {
+          if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시 (중복 생성 방지)
           if (e.key === 'Enter') onSubmit()
           if (e.key === 'Escape') onCancel()
         }}

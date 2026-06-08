@@ -99,6 +99,7 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
             onClick={stop}
             onBlur={(e) => commitTitle(e.target.value)}
             onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시
               if (e.key === 'Enter') commitTitle((e.target as HTMLInputElement).value)
               if (e.key === 'Escape') setEditingTitle(null)
             }}

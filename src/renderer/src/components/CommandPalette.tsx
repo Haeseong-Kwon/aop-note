@@ -65,6 +65,7 @@ export function CommandPalette(): JSX.Element {
   }
 
   const onKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter가 검색 결과를 즉시 열지 않도록
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       setIndex((i) => Math.min(i + 1, results.length - 1))

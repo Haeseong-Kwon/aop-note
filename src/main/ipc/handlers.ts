@@ -5,6 +5,13 @@ import { categoryRepo } from '../repositories/category.repo'
 import { taskRepo } from '../repositories/task.repo'
 import { goalRepo } from '../repositories/goal.repo'
 import { searchRepo } from '../repositories/search.repo'
+import { attachmentRepo } from '../repositories/attachment.repo'
+import {
+  addAttachment,
+  renderAttachmentAsync,
+  openAttachmentExternal,
+  removeAttachment
+} from '../attachments'
 import type {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
@@ -14,6 +21,7 @@ import type {
   UpdateTaskInput,
   CreateGoalInput,
   UpdateGoalInput,
+  AttachmentAddInput,
   TaskStatus
 } from '@shared/types'
 
@@ -66,4 +74,13 @@ export function registerIpcHandlers(): void {
 
   // ---- Search ----
   handle(IPC.search.query, (text: string) => searchRepo.query(text))
+
+  // ---- Attachments ----
+  handle(IPC.attachment.listByTask, (taskId: string) => attachmentRepo.listByTask(taskId))
+  handle(IPC.attachment.add, (input: AttachmentAddInput) =>
+    addAttachment(input.task_id, input.source_path, input.file_name)
+  )
+  handle(IPC.attachment.render, (id: string) => renderAttachmentAsync(id))
+  handle(IPC.attachment.openExternal, (id: string) => openAttachmentExternal(id))
+  handle(IPC.attachment.remove, (id: string) => removeAttachment(id))
 }

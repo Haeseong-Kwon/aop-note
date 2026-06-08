@@ -55,6 +55,7 @@ export function QuickCapture(): JSX.Element {
           placeholder="무엇을 해야 하나요? (Enter로 저장)"
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return // 한글 IME 조합 확정 Enter 무시 (중복 생성 방지)
             if (e.key === 'Enter') submit()
           }}
           className="h-11 w-full rounded-lg border border-input bg-background px-3 text-base outline-none focus:ring-2 focus:ring-ring"

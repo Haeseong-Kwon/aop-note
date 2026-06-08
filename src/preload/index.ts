@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 import { IPC } from '@shared/ipc'
 import type { Api, NavigatePayload } from '@shared/ipc'
 import type {
@@ -10,6 +10,7 @@ import type {
   UpdateTaskInput,
   CreateGoalInput,
   UpdateGoalInput,
+  AttachmentAddInput,
   TaskStatus
 } from '@shared/types'
 
@@ -52,6 +53,14 @@ const api: Api = {
   search: {
     query: (text: string) => ipcRenderer.invoke(IPC.search.query, text)
   },
+  attachment: {
+    listByTask: (taskId: string) => ipcRenderer.invoke(IPC.attachment.listByTask, taskId),
+    add: (input: AttachmentAddInput) => ipcRenderer.invoke(IPC.attachment.add, input),
+    render: (id: string) => ipcRenderer.invoke(IPC.attachment.render, id),
+    openExternal: (id: string) => ipcRenderer.invoke(IPC.attachment.openExternal, id),
+    remove: (id: string) => ipcRenderer.invoke(IPC.attachment.remove, id)
+  },
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
   onNavigateToTask: (cb: (payload: NavigatePayload) => void) => {
     const listener = (_e: IpcRendererEvent, payload: NavigatePayload): void => cb(payload)
     ipcRenderer.on(IPC.events.navigateToTask, listener)

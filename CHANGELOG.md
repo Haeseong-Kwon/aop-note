@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.3 — 작업에 문서 첨부 + 인앱 뷰어
+- 작업 상세(인라인 편집기)에 **첨부 문서** 영역 추가. **파일 선택 + 드래그앤드롭** 업로드 지원.
+- 업로드한 파일은 `userData/attachments/`에 복사되어 오프라인에서도 보존(메타데이터는 `attachments` 테이블, 마이그레이션 0003, soft-delete 규칙 준수).
+- **인앱 문서 뷰어**(모달):
+  - PDF·이미지 → 커스텀 프로토콜 `aop-file://`로 크로미움 내장 뷰어 렌더.
+  - Word(.docx) → `mammoth`로 HTML 변환.
+  - Excel(.xlsx/.xls/.csv) → SheetJS로 시트별 표 렌더(시트 탭).
+  - 텍스트(.txt/.md/.json 등) → 원문 표시.
+  - 미지원 형식 → "외부 앱으로 열기" 폴백(모든 형식에서 항상 제공).
+- 변환 HTML은 **DOMPurify로 살균**해 악성 문서의 스크립트 실행(→ `window.api` 접근)을 차단.
+- Electron 33 대응: `File.path` 대신 `webUtils.getPathForFile`로 경로 획득 후 메인이 복사(바이트를 렌더러 메모리에 적재하지 않음).
+- 첨부 삭제 시 행 soft-delete + 디스크 파일 제거(용량 회수). 파일을 드롭존 밖에 떨어뜨려도 창이 이동하지 않도록 전역 방어.
+- **확인**: 작업 펼치기 → 첨부 영역에 파일 선택/드롭 → 목록에 표시 → "보기"로 PDF/엑셀/워드/텍스트 인앱 표시, 삭제 동작.
+  - 자동 검증: 마이그레이션 v3·`attachments` 테이블, SheetJS 변환(xlsx→HTML 표), mammoth API, 빌드/타입체크. PDF iframe·파일 선택·드래그앤드롭은 `npm run dev`에서 직접 확인 필요.
+
+## v0.2.3 — 추가 시 항목 2개 생성 버그 수정
+- **원인**: 한글 IME 조합 중 Enter를 누르면 `keydown`이 두 번 발생(조합 확정 + 실제 Enter)해 저장 핸들러가 2회 실행 → 데스크·카테고리·작업이 두 개씩 생성. GoalsView는 Enter와 `onBlur`가 모두 저장해 별도로 이중 생성.
+- **수정**: 모든 Enter 저장/편집 핸들러에 `if (e.nativeEvent.isComposing) return` 가드 추가(QuickCapture·Sidebar 생성/이름변경·CategoryPanel·GoalsView·TaskRow·TaskInlineEditor·CommandPalette). GoalsView 추가 입력의 `onBlur`는 저장 대신 취소로 변경.
+- **확인**: 한글로 이름 입력 후 Enter → 항목이 **하나만** 생성. (자동 테스트로는 IME 재현 불가 — `npm run dev`에서 한글 입력으로 직접 확인 필요)
+
 ## v0.2.2 — 데스크 이름 변경 / 삭제
 - 사이드바 데스크 행에 hover 시 **이름 변경(연필)·삭제(휴지통)** 버튼 추가.
 - 이름 변경: 인라인 입력 → Enter 저장 / Esc 취소 (`workspace.update`).

@@ -98,6 +98,7 @@ export function Sidebar(): JSX.Element {
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시
                   if (e.key === 'Enter') saveRename()
                   if (e.key === 'Escape') setEditingId(null)
                 }}
@@ -164,6 +165,7 @@ export function Sidebar(): JSX.Element {
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시
                 if (e.key === 'Enter') submit()
                 if (e.key === 'Escape') {
                   setAdding(false)

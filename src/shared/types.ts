@@ -75,6 +75,34 @@ export interface TaskWithContext extends Task {
   workspace_color: string
 }
 
+export interface Attachment {
+  id: string
+  task_id: string
+  file_name: string // original name as uploaded
+  ext: string // lowercase, no dot (e.g. "pdf")
+  mime: string
+  size: number // bytes
+  stored_name: string // filename on disk under userData/attachments
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+export interface AttachmentAddInput {
+  task_id: string
+  source_path: string
+  file_name: string
+}
+
+/** Result of rendering an attachment for the in-app viewer. */
+export type AttachmentRender =
+  | { kind: 'pdf'; url: string }
+  | { kind: 'image'; url: string }
+  | { kind: 'html'; html: string }
+  | { kind: 'sheets'; sheets: { name: string; html: string }[] }
+  | { kind: 'text'; text: string }
+  | { kind: 'unsupported'; reason: string }
+
 /** A hit in the command palette / quick switcher. */
 export interface SearchHit {
   type: 'task' | 'category' | 'workspace'

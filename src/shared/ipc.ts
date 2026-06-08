@@ -8,6 +8,9 @@ import type {
   TaskWithContext,
   GoalWithProgress,
   SearchHit,
+  Attachment,
+  AttachmentAddInput,
+  AttachmentRender,
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
   CreateCategoryInput,
@@ -59,6 +62,13 @@ export const IPC = {
   search: {
     query: 'search:query'
   },
+  attachment: {
+    listByTask: 'attachment:listByTask',
+    add: 'attachment:add',
+    render: 'attachment:render',
+    openExternal: 'attachment:openExternal',
+    remove: 'attachment:remove'
+  },
   events: {
     navigateToTask: 'event:navigateToTask'
   }
@@ -99,6 +109,15 @@ export interface Api {
   search: {
     query(text: string): Promise<SearchHit[]>
   }
+  attachment: {
+    listByTask(taskId: string): Promise<Attachment[]>
+    add(input: AttachmentAddInput): Promise<Attachment>
+    render(id: string): Promise<AttachmentRender>
+    openExternal(id: string): Promise<void>
+    remove(id: string): Promise<void>
+  }
+  /** Electron 32+: resolve the absolute filesystem path of a picked/dropped File. */
+  getPathForFile(file: File): string
   /** Subscribe to "open this task" requests from notification clicks. Returns an unsubscribe fn. */
   onNavigateToTask(cb: (payload: NavigatePayload) => void): () => void
 }
