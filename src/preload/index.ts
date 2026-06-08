@@ -1,6 +1,6 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { IPC } from '@shared/ipc'
-import type { Api } from '@shared/ipc'
+import type { Api, NavigatePayload } from '@shared/ipc'
 import type {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
@@ -26,6 +26,7 @@ const api: Api = {
       ipcRenderer.invoke(IPC.category.listByWorkspace, workspaceId),
     create: (input: CreateCategoryInput) => ipcRenderer.invoke(IPC.category.create, input),
     update: (input: UpdateCategoryInput) => ipcRenderer.invoke(IPC.category.update, input),
+    reorder: (updates: UpdateCategoryInput[]) => ipcRenderer.invoke(IPC.category.reorder, updates),
     remove: (id: string) => ipcRenderer.invoke(IPC.category.remove, id)
   },
   task: {
@@ -33,10 +34,12 @@ const api: Api = {
       ipcRenderer.invoke(IPC.task.listByCategory, categoryId),
     listByWorkspace: (workspaceId: string) =>
       ipcRenderer.invoke(IPC.task.listByWorkspace, workspaceId),
+    listUpcoming: (endIso: string) => ipcRenderer.invoke(IPC.task.listUpcoming, endIso),
     create: (input: CreateTaskInput) => ipcRenderer.invoke(IPC.task.create, input),
     update: (input: UpdateTaskInput) => ipcRenderer.invoke(IPC.task.update, input),
     setStatus: (id: string, status: TaskStatus, sortOrder?: number) =>
       ipcRenderer.invoke(IPC.task.setStatus, id, status, sortOrder),
+    reorder: (updates: UpdateTaskInput[]) => ipcRenderer.invoke(IPC.task.reorder, updates),
     remove: (id: string) => ipcRenderer.invoke(IPC.task.remove, id)
   },
   goal: {
@@ -45,6 +48,14 @@ const api: Api = {
     create: (input: CreateGoalInput) => ipcRenderer.invoke(IPC.goal.create, input),
     update: (input: UpdateGoalInput) => ipcRenderer.invoke(IPC.goal.update, input),
     remove: (id: string) => ipcRenderer.invoke(IPC.goal.remove, id)
+  },
+  search: {
+    query: (text: string) => ipcRenderer.invoke(IPC.search.query, text)
+  },
+  onNavigateToTask: (cb: (payload: NavigatePayload) => void) => {
+    const listener = (_e: IpcRendererEvent, payload: NavigatePayload): void => cb(payload)
+    ipcRenderer.on(IPC.events.navigateToTask, listener)
+    return () => ipcRenderer.removeListener(IPC.events.navigateToTask, listener)
   }
 }
 

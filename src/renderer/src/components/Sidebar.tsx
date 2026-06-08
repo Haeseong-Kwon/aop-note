@@ -1,14 +1,26 @@
 import { useState } from 'react'
-import { Plus, Check, X } from 'lucide-react'
+import { Plus, Check, X, Search, Sun, CalendarCheck, Moon, Monitor } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import type { Theme } from '@/store/useStore'
+
+const THEMES: { value: Theme; icon: typeof Sun; label: string }[] = [
+  { value: 'light', icon: Sun, label: '라이트' },
+  { value: 'dark', icon: Moon, label: '다크' },
+  { value: 'system', icon: Monitor, label: '시스템' }
+]
 
 export function Sidebar(): JSX.Element {
   const workspaces = useStore((s) => s.workspaces)
   const activeId = useStore((s) => s.activeWorkspaceId)
+  const smartView = useStore((s) => s.smartView)
   const selectWorkspace = useStore((s) => s.selectWorkspace)
   const createWorkspace = useStore((s) => s.createWorkspace)
+  const selectSmartView = useStore((s) => s.selectSmartView)
+  const openPalette = useStore((s) => s.openPalette)
+  const theme = useStore((s) => s.theme)
+  const setTheme = useStore((s) => s.setTheme)
 
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
@@ -28,7 +40,34 @@ export function Sidebar(): JSX.Element {
         <span className="text-sm font-semibold tracking-tight">AOP Note</span>
       </div>
 
-      <div className="px-4 pb-2 pt-2">
+      <div className="px-2 pt-1">
+        <button
+          onClick={openPalette}
+          className="no-drag flex w-full items-center gap-2 rounded-md border border-border bg-background/60 px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-accent"
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span className="flex-1">검색 / 이동</span>
+          <kbd className="rounded bg-muted px-1 text-[10px]">⌘P</kbd>
+        </button>
+      </div>
+
+      {/* Smart views — cross-workspace, due-date driven */}
+      <nav className="space-y-0.5 px-2 pt-2">
+        <SmartItem
+          icon={Sun}
+          label="오늘"
+          active={smartView === 'today'}
+          onClick={() => selectSmartView('today')}
+        />
+        <SmartItem
+          icon={CalendarCheck}
+          label="이번 주"
+          active={smartView === 'week'}
+          onClick={() => selectSmartView('week')}
+        />
+      </nav>
+
+      <div className="px-4 pb-2 pt-3">
         <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">데스크</h2>
       </div>
 
@@ -39,7 +78,7 @@ export function Sidebar(): JSX.Element {
             onClick={() => selectWorkspace(ws.id)}
             className={cn(
               'no-drag flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors',
-              ws.id === activeId
+              ws.id === activeId && smartView === null
                 ? 'bg-accent font-medium text-accent-foreground'
                 : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
             )}
@@ -54,7 +93,7 @@ export function Sidebar(): JSX.Element {
         )}
       </nav>
 
-      <div className="border-t border-border p-2">
+      <div className="space-y-2 border-t border-border p-2">
         {adding ? (
           <div className="flex items-center gap-1">
             <input
@@ -95,7 +134,53 @@ export function Sidebar(): JSX.Element {
             <Plus className="h-4 w-4" />새 데스크
           </Button>
         )}
+
+        {/* Theme switch */}
+        <div className="flex items-center gap-1 rounded-md bg-muted/50 p-1">
+          {THEMES.map(({ value, icon: Icon, label }) => (
+            <button
+              key={value}
+              onClick={() => setTheme(value)}
+              title={label}
+              className={cn(
+                'no-drag flex flex-1 items-center justify-center rounded py-1 transition-colors',
+                theme === value
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </button>
+          ))}
+        </div>
       </div>
     </aside>
+  )
+}
+
+function SmartItem({
+  icon: Icon,
+  label,
+  active,
+  onClick
+}: {
+  icon: typeof Sun
+  label: string
+  active: boolean
+  onClick: () => void
+}): JSX.Element {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'no-drag flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors',
+        active
+          ? 'bg-accent font-medium text-accent-foreground'
+          : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="truncate">{label}</span>
+    </button>
   )
 }

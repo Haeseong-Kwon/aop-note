@@ -66,6 +66,26 @@ export interface GoalWithProgress extends Goal {
   progress: number
 }
 
+/** Task joined with its category + workspace, for cross-workspace views. */
+export interface TaskWithContext extends Task {
+  category_name: string
+  category_color: string
+  workspace_id: string
+  workspace_name: string
+  workspace_color: string
+}
+
+/** A hit in the command palette / quick switcher. */
+export interface SearchHit {
+  type: 'task' | 'category' | 'workspace'
+  id: string
+  title: string
+  subtitle: string
+  color: string
+  workspace_id: string
+  category_id: string | null
+}
+
 // ---- Input payloads (renderer -> main) ----
 
 export interface CreateWorkspaceInput {

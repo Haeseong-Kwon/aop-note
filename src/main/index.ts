@@ -2,8 +2,11 @@ import { join } from 'path'
 import { app, shell, BrowserWindow } from 'electron'
 import { getDb, closeDb } from './db'
 import { registerIpcHandlers } from './ipc/handlers'
+import { startDueNotifier } from './notifications'
 
-function createWindow(): void {
+let stopNotifier: (() => void) | null = null
+
+function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1280,
     height: 820,
@@ -34,16 +37,22 @@ function createWindow(): void {
   } else {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  return win
 }
 
 app.whenReady().then(() => {
-  // Open DB + run migrations + seed before the UI asks for data.
+  // Open DB + run migrations before the UI asks for data.
   getDb()
   registerIpcHandlers()
-  createWindow()
+  const win = createWindow()
+  stopNotifier = startDueNotifier(win)
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      stopNotifier?.()
+      stopNotifier = startDueNotifier(createWindow())
+    }
   })
 })
 
@@ -52,5 +61,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  stopNotifier?.()
   closeDb()
 })

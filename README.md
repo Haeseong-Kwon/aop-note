@@ -9,6 +9,15 @@
 - **달력**: 마감일 기반 오프라인 월간 달력. 데스크 전체 일정을 한눈에.
 - **목표**: 데스크별 목표를 만들고 작업을 연결하면 완료율 기반 **진행률**이 자동 계산됩니다.
 
+### v0.2 — UX 개선
+- **키보드 우선 조작**: `j/k` 이동, `Enter` 열기, `Space/x` 완료, `e` 제목 편집, `0–3` 우선순위. `?`로 단축키 도움말. ([단축키 표](#단축키))
+- **인라인 편집**: 제목(더블클릭·`e`), 기한(인라인 날짜 피커), 우선순위(클릭 순환·숫자키) — 모달 없이 즉시 반영.
+- **드래그앤드롭 정렬**: 리스트 순서, 칸반 컬럼 내·컬럼 간 이동, 카테고리 순서 (@dnd-kit).
+- **스마트 뷰 "오늘 / 이번 주"**: 모든 데스크를 가로질러 마감일로 작업을 모아 봅니다. 사업/카테고리 컨텍스트 라벨 + 지난 작업 강조.
+- **검색 / 빠른 이동 팔레트**: `⌘/Ctrl + P`로 작업·카테고리·데스크 통합 검색 후 키보드로 즉시 이동.
+- **OS 네이티브 알림**: 오늘 마감 작업을 알림으로. 클릭 시 앱 포커스 + 해당 작업으로 이동.
+- **다크 / 라이트 / 시스템 테마**: 토글 + OS 설정 따라가기 (선택값 영속).
+
 ## 기술 스택
 
 | 영역 | 사용 |
@@ -30,20 +39,29 @@ src/
 │   ├── db/
 │   │   ├── index.ts      # SQLite 연결 (userData 경로, WAL, FK)
 │   │   └── migrations.ts # user_version 기반 자동 마이그레이션
-│   ├── repositories/     # DB 쿼리 계층 (workspace / category / task / goal)
+│   ├── repositories/     # DB 쿼리 계층 (workspace / category / task / goal / search)
+│   ├── notifications.ts  # 오늘 마감 작업 OS 알림 (60초 주기 + 포커스 시)
 │   └── ipc/handlers.ts   # ipcMain.handle 등록
-├── preload/index.ts      # contextBridge로 window.api 노출
+├── preload/index.ts      # contextBridge로 window.api 노출 (+ 알림 클릭 이벤트)
 ├── shared/               # 메인·렌더러 공용 타입 + IPC 채널 계약
 └── renderer/src/         # React UI
-    ├── store/useStore.ts # Zustand 스토어 (window.api 호출)
+    ├── store/useStore.ts          # Zustand 스토어 (window.api 호출)
+    ├── shortcuts.ts               # 단축키 키맵 (단일 출처) + 도움말 데이터
+    ├── hooks/useTaskListKeyboard.ts # 리스트 j/k/Enter/Space/e/0-3
     └── components/
-        ├── Sidebar.tsx           # 데스크 전환 + 브랜딩
-        ├── MainArea.tsx          # 데스크 헤더 + 작업/달력/목표 모드 탭
-        ├── CategoryPanel.tsx     # 카테고리 트리 (1단계 중첩)
+        ├── Sidebar.tsx           # 데스크/스마트뷰 전환 + 검색 + 테마
+        ├── MainArea.tsx          # 데스크 헤더 + 작업/달력/목표 + 스마트뷰 라우팅
+        ├── CategoryPanel.tsx     # 카테고리 트리 (1단계 중첩, DnD 정렬)
         ├── TaskPanel.tsx         # 리스트/칸반 + 카테고리 패널
-        ├── TaskInlineEditor.tsx  # 인라인 확장 편집기
+        ├── TaskRow.tsx           # 리스트/스마트뷰 공용 행 (선택·인라인 편집)
+        ├── ListView.tsx          # 리스트 (DnD 정렬 + 키보드)
+        ├── KanbanView.tsx        # 칸반 (DnD 컬럼 내·간)
+        ├── SmartView.tsx         # 오늘/이번 주 cross-workspace
+        ├── TaskInlineEditor.tsx  # 인라인 확장 상세 편집기
         ├── CalendarView.tsx      # 오프라인 월간 달력
-        └── GoalsView.tsx         # 목표 + 진행률
+        ├── GoalsView.tsx         # 목표 + 진행률
+        ├── CommandPalette.tsx    # ⌘P 검색/이동 팔레트
+        └── HelpOverlay.tsx       # ? 단축키 도움말
 ```
 
 ### 보안 원칙
@@ -106,10 +124,26 @@ npm run package:mac    # macOS dmg
 - **목표**: 진행률 바 + 완료 작업 수. 목표 완료 토글, 인라인 편집(설명·기한).
 - 색상 코딩과 임박 기한 강조로 가시성 우선.
 
+## 단축키
+
+| 범위 | 키 | 동작 |
+| --- | --- | --- |
+| 전역 | `⌘/Ctrl + N` | 퀵 캡처 (빠른 작업 추가) |
+| 전역 | `⌘/Ctrl + P` | 빠른 이동 / 검색 팔레트 |
+| 전역 | `?` | 단축키 도움말 |
+| 전역 | `Esc` | 열린 패널/모달 닫기 |
+| 리스트 | `J` / `K` | 아래 / 위 작업으로 이동 |
+| 리스트 | `Enter` | 상세 편집 열기 (스마트 뷰: 해당 작업으로 이동) |
+| 리스트 | `Space` / `X` | 완료 토글 |
+| 리스트 | `E` | 제목 인라인 편집 |
+| 리스트 | `1` / `2` / `3` | 우선순위 낮음 / 보통 / 높음 |
+| 리스트 | `0` | 우선순위 해제 |
+
+> 입력창(input/textarea/select)에 포커스가 있을 때 리스트 단축키와 `?`는 비활성화됩니다. (`⌘/Ctrl` 조합은 동작)
+
 ## 범위 밖 (미구현)
 - 클라우드 동기화 / 로그인 / 협업·공유
-- 알림 / 리마인더
-- **외부** 캘린더 연동(Google 등) — 현재는 오프라인 인앱 달력만 제공
+- **외부** 캘린더 연동(Google 등) — 오프라인 인앱 달력만 제공
 - 모바일
 
 ## 데이터 초기화

@@ -1,17 +1,41 @@
 import { getDb } from '../db'
 import { newId, nowIso } from './util'
-import type { Task, CreateTaskInput, UpdateTaskInput, TaskStatus } from '@shared/types'
+import type {
+  Task,
+  TaskWithContext,
+  CreateTaskInput,
+  UpdateTaskInput,
+  TaskStatus
+} from '@shared/types'
 
-// List ordering for the list view: incomplete first, then priority desc,
-// then due date (nulls last), then manual sort_order.
+// List/kanban ordering: done last, then the user's manual order (sort_order).
+// Manual order is primary so drag-and-drop reordering is meaningful (priority
+// and due date are still surfaced as badges, not used for sorting here).
 const LIST_ORDER = `
   ORDER BY
     CASE status WHEN 'done' THEN 1 ELSE 0 END ASC,
-    priority DESC,
-    CASE WHEN due_date IS NULL THEN 1 ELSE 0 END ASC,
-    due_date ASC,
     sort_order ASC,
     created_at ASC
+`
+
+// Cross-workspace select enriched with category + workspace context.
+const CONTEXT_SELECT = `
+  SELECT t.*,
+    c.name  AS category_name,  c.color AS category_color,
+    w.id    AS workspace_id,    w.name  AS workspace_name, w.color AS workspace_color
+  FROM tasks t
+  JOIN categories c ON c.id = t.category_id
+  JOIN workspaces w ON w.id = c.workspace_id
+  WHERE t.deleted_at IS NULL AND c.deleted_at IS NULL AND w.deleted_at IS NULL
+`
+
+// Smart-view ordering: due date ascending (overdue first), then priority desc.
+const CONTEXT_ORDER = `
+  ORDER BY
+    CASE t.status WHEN 'done' THEN 1 ELSE 0 END ASC,
+    t.due_date ASC,
+    t.priority DESC,
+    t.created_at ASC
 `
 
 export const taskRepo = {
@@ -30,6 +54,25 @@ export const taskRepo = {
          ${LIST_ORDER.replace(/\b(status|priority|due_date|sort_order|created_at)\b/g, 't.$1')}`
       )
       .all(workspaceId) as Task[]
+  },
+
+  /** Cross-workspace: tasks due on or before endIso (overdue included), for smart views. */
+  listUpcoming(endIso: string): TaskWithContext[] {
+    return getDb()
+      .prepare(
+        `${CONTEXT_SELECT} AND t.due_date IS NOT NULL AND t.due_date <= ? ${CONTEXT_ORDER}`
+      )
+      .all(endIso) as TaskWithContext[]
+  },
+
+  /** Cross-workspace: incomplete tasks with due_date in [startIso, endIso]. Used by the notifier. */
+  listDueBetween(startIso: string, endIso: string): TaskWithContext[] {
+    return getDb()
+      .prepare(
+        `${CONTEXT_SELECT} AND t.status != 'done'
+           AND t.due_date IS NOT NULL AND t.due_date >= ? AND t.due_date <= ? ${CONTEXT_ORDER}`
+      )
+      .all(startIso, endIso) as TaskWithContext[]
   },
 
   getById(id: string): Task | undefined {
@@ -120,6 +163,21 @@ export const taskRepo = {
   /** Kanban drag: move to a status column and set its position there. */
   setStatus(id: string, status: TaskStatus, sortOrder?: number): Task {
     return this.update({ id, status, sort_order: sortOrder })
+  },
+
+  /**
+   * Bulk reorder after a drag. Each update carries the new sort_order (and
+   * optionally a new status for cross-column kanban moves). We re-index with
+   * plain integers in one transaction rather than fractional indexing: the
+   * dataset per category/column is small, so a full reindex is cheap and keeps
+   * sort_order values clean. Reuses update() so updated_at/completed_at rules hold.
+   */
+  reorder(updates: UpdateTaskInput[]): void {
+    const db = getDb()
+    const tx = db.transaction((items: UpdateTaskInput[]) => {
+      items.forEach((item) => this.update(item))
+    })
+    tx(updates)
   },
 
   remove(id: string): void {

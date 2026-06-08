@@ -51,6 +51,20 @@ export function formatDue(dueIso: string | null): DueMeta | null {
   return { label: md, tone: 'normal' }
 }
 
+/** End of today (local), as an ISO timestamp. */
+export function endOfTodayIso(): string {
+  const n = new Date()
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate(), 23, 59, 59, 999).toISOString()
+}
+
+/** End of this week (local). Week ends Saturday to match the Sun-start calendar. */
+export function endOfWeekIso(): string {
+  const n = new Date()
+  const daysToSat = 6 - n.getDay() // getDay: 0=Sun … 6=Sat
+  const sat = new Date(n.getFullYear(), n.getMonth(), n.getDate() + daysToSat, 23, 59, 59, 999)
+  return sat.toISOString()
+}
+
 /** ISO date (no time) for <input type="date"> binding. */
 export function toDateInput(iso: string | null): string {
   if (!iso) return ''

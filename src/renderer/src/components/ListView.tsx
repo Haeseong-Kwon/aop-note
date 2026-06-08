@@ -1,14 +1,58 @@
-import { Check, ChevronRight } from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { GripVertical } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { PriorityBadge, DueBadge } from './TaskBadges'
-import { TaskInlineEditor } from './TaskInlineEditor'
-import { cn } from '@/lib/utils'
-import type { Task } from '@shared/types'
+import { TaskRow } from './TaskRow'
+import { useTaskListKeyboard } from '@/hooks/useTaskListKeyboard'
+import type { Task, UpdateTaskInput } from '@shared/types'
+
+function SortableTaskRow({ task }: { task: Task }): JSX.Element {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id
+  })
+
+  const handle = (
+    <button
+      {...attributes}
+      {...listeners}
+      onClick={(e) => e.stopPropagation()}
+      title="드래그하여 순서 변경"
+      className="no-drag cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  )
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={isDragging ? 'relative z-10 opacity-80' : ''}
+    >
+      <TaskRow task={task} mode="list" handle={handle} />
+    </li>
+  )
+}
 
 export function ListView({ tasks }: { tasks: Task[] }): JSX.Element {
-  const toggleDone = useStore((s) => s.toggleDone)
+  const reorderTasks = useStore((s) => s.reorderTasks)
   const toggleExpand = useStore((s) => s.toggleExpand)
-  const expandedTaskId = useStore((s) => s.expandedTaskId)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  useTaskListKeyboard(tasks, (t) => toggleExpand(t.id))
 
   if (tasks.length === 0) {
     return (
@@ -22,62 +66,26 @@ export function ListView({ tasks }: { tasks: Task[] }): JSX.Element {
     )
   }
 
+  const onDragEnd = (e: DragEndEvent): void => {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const from = tasks.findIndex((t) => t.id === active.id)
+    const to = tasks.findIndex((t) => t.id === over.id)
+    if (from < 0 || to < 0) return
+    const reordered = arrayMove(tasks, from, to)
+    const updates: UpdateTaskInput[] = reordered.map((t, i) => ({ id: t.id, sort_order: i }))
+    reorderTasks(updates)
+  }
+
   return (
-    <ul className="h-full overflow-y-auto p-3">
-      {tasks.map((task) => {
-        const done = task.status === 'done'
-        const expanded = expandedTaskId === task.id
-        return (
-          <li
-            key={task.id}
-            className={cn(
-              'mb-1.5 overflow-hidden rounded-lg border transition-colors',
-              expanded ? 'border-border bg-card' : 'border-transparent'
-            )}
-          >
-            <div
-              className={cn(
-                'group flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-accent/50',
-                done && 'opacity-55'
-              )}
-              onClick={() => toggleExpand(task.id)}
-            >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggleDone(task)
-                }}
-                className={cn(
-                  'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors',
-                  done
-                    ? 'border-emerald-500 bg-emerald-500 text-white'
-                    : 'border-input hover:border-primary'
-                )}
-                title={done ? '완료 취소' : '완료'}
-              >
-                {done && <Check className="h-3.5 w-3.5" />}
-              </button>
-
-              <span className={cn('min-w-0 flex-1 truncate text-sm', done && 'line-through')}>
-                {task.title}
-              </span>
-
-              <div className="flex shrink-0 items-center gap-1.5">
-                <PriorityBadge priority={task.priority} />
-                <DueBadge due={task.due_date} />
-                <ChevronRight
-                  className={cn(
-                    'h-4 w-4 text-muted-foreground transition-transform',
-                    expanded && 'rotate-90'
-                  )}
-                />
-              </div>
-            </div>
-
-            {expanded && <TaskInlineEditor task={task} />}
-          </li>
-        )
-      })}
-    </ul>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <ul className="h-full space-y-1 overflow-y-auto p-3">
+        <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+          {tasks.map((task) => (
+            <SortableTaskRow key={task.id} task={task} />
+          ))}
+        </SortableContext>
+      </ul>
+    </DndContext>
   )
 }

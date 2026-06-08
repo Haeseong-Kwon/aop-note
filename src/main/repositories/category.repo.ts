@@ -82,6 +82,15 @@ export const categoryRepo = {
     return updated
   },
 
+  /** Bulk reorder after a drag — integer reindex in one transaction (see task.repo.reorder). */
+  reorder(updates: UpdateCategoryInput[]): void {
+    const db = getDb()
+    const tx = db.transaction((items: UpdateCategoryInput[]) => {
+      items.forEach((item) => this.update(item))
+    })
+    tx(updates)
+  },
+
   /** Soft-delete a category, its child categories, and all their tasks. */
   remove(id: string): void {
     const db = getDb()

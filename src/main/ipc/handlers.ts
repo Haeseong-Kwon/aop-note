@@ -4,6 +4,7 @@ import { workspaceRepo } from '../repositories/workspace.repo'
 import { categoryRepo } from '../repositories/category.repo'
 import { taskRepo } from '../repositories/task.repo'
 import { goalRepo } from '../repositories/goal.repo'
+import { searchRepo } from '../repositories/search.repo'
 import type {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
@@ -42,16 +43,19 @@ export function registerIpcHandlers(): void {
   )
   handle(IPC.category.create, (input: CreateCategoryInput) => categoryRepo.create(input))
   handle(IPC.category.update, (input: UpdateCategoryInput) => categoryRepo.update(input))
+  handle(IPC.category.reorder, (updates: UpdateCategoryInput[]) => categoryRepo.reorder(updates))
   handle(IPC.category.remove, (id: string) => categoryRepo.remove(id))
 
   // ---- Task ----
   handle(IPC.task.listByCategory, (categoryId: string) => taskRepo.listByCategory(categoryId))
   handle(IPC.task.listByWorkspace, (workspaceId: string) => taskRepo.listByWorkspace(workspaceId))
+  handle(IPC.task.listUpcoming, (endIso: string) => taskRepo.listUpcoming(endIso))
   handle(IPC.task.create, (input: CreateTaskInput) => taskRepo.create(input))
   handle(IPC.task.update, (input: UpdateTaskInput) => taskRepo.update(input))
   handle(IPC.task.setStatus, (id: string, status: TaskStatus, sortOrder?: number) =>
     taskRepo.setStatus(id, status, sortOrder)
   )
+  handle(IPC.task.reorder, (updates: UpdateTaskInput[]) => taskRepo.reorder(updates))
   handle(IPC.task.remove, (id: string) => taskRepo.remove(id))
 
   // ---- Goal ----
@@ -59,4 +63,7 @@ export function registerIpcHandlers(): void {
   handle(IPC.goal.create, (input: CreateGoalInput) => goalRepo.create(input))
   handle(IPC.goal.update, (input: UpdateGoalInput) => goalRepo.update(input))
   handle(IPC.goal.remove, (id: string) => goalRepo.remove(id))
+
+  // ---- Search ----
+  handle(IPC.search.query, (text: string) => searchRepo.query(text))
 }

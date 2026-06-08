@@ -1,30 +1,60 @@
 import { useEffect } from 'react'
 import { useStore } from './store/useStore'
+import { isTypingTarget } from './shortcuts'
 import { Sidebar } from './components/Sidebar'
 import { MainArea } from './components/MainArea'
 import { QuickCapture } from './components/QuickCapture'
+import { CommandPalette } from './components/CommandPalette'
+import { HelpOverlay } from './components/HelpOverlay'
 
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
   const loading = useStore((s) => s.loading)
   const error = useStore((s) => s.error)
   const openQuickCapture = useStore((s) => s.openQuickCapture)
+  const openPalette = useStore((s) => s.openPalette)
+  const toggleHelp = useStore((s) => s.toggleHelp)
+  const collapse = useStore((s) => s.collapse)
+  const navigateToTask = useStore((s) => s.navigateToTask)
 
   useEffect(() => {
     init()
   }, [init])
 
-  // Global shortcut: Cmd/Ctrl+N opens quick capture from anywhere.
+  // Navigation requests from notification clicks (main → renderer).
+  useEffect(() => {
+    return window.api.onNavigateToTask((payload) => {
+      navigateToTask(payload)
+    })
+  }, [navigateToTask])
+
+  // Global shortcuts. Cmd/Ctrl combos work even while typing; bare keys (?, Esc)
+  // yield to text inputs.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
+      const mod = e.metaKey || e.ctrlKey
+      if (mod && e.key.toLowerCase() === 'n') {
         e.preventDefault()
         openQuickCapture()
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        openPalette()
+        return
+      }
+      if (e.key === '?' && !isTypingTarget(e.target)) {
+        e.preventDefault()
+        toggleHelp()
+        return
+      }
+      if (e.key === 'Escape' && !isTypingTarget(e.target)) {
+        collapse()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [openQuickCapture])
+  }, [openQuickCapture, openPalette, toggleHelp, collapse])
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
@@ -43,6 +73,8 @@ function App(): JSX.Element {
       )}
 
       <QuickCapture />
+      <CommandPalette />
+      <HelpOverlay />
     </div>
   )
 }

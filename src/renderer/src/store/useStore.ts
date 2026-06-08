@@ -1,72 +1,119 @@
 import { create } from 'zustand'
+import { endOfTodayIso, endOfWeekIso } from '@/lib/format'
 import type {
   Workspace,
   Category,
   Task,
+  TaskWithContext,
   GoalWithProgress,
   TaskStatus,
+  Priority,
   CreateTaskInput,
   UpdateTaskInput,
+  UpdateCategoryInput,
   CreateCategoryInput,
   CreateGoalInput,
   UpdateGoalInput
 } from '@shared/types'
+import type { NavigatePayload } from '@shared/ipc'
 
 export type ViewMode = 'list' | 'kanban'
 export type MainView = 'tasks' | 'calendar' | 'goals'
+export type SmartView = 'today' | 'week'
+export type Theme = 'light' | 'dark' | 'system'
+
+// ---- theme (applied immediately, persisted to localStorage) ----
+function applyTheme(theme: Theme): void {
+  const root = document.documentElement
+  const dark =
+    theme === 'dark' ||
+    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  root.classList.toggle('dark', dark)
+}
+const savedTheme = ((): Theme => {
+  const t = localStorage.getItem('aop-theme')
+  return t === 'light' || t === 'dark' || t === 'system' ? t : 'system'
+})()
+applyTheme(savedTheme)
 
 interface AppState {
   // data
   workspaces: Workspace[]
   categories: Category[]
-  tasks: Task[] // all (non-deleted) tasks of the active workspace
+  tasks: Task[] // active workspace tasks
   goals: GoalWithProgress[]
+  smartTasks: TaskWithContext[] // cross-workspace, for smart views
 
-  // selection / ui
+  // navigation / selection
   activeWorkspaceId: string | null
   activeCategoryId: string | null
+  smartView: SmartView | null
   mainView: MainView
   view: ViewMode
+  selectedTaskId: string | null
   expandedTaskId: string | null
+  editingTitleId: string | null
+
+  // overlays
   quickCaptureOpen: boolean
+  paletteOpen: boolean
+  helpOpen: boolean
+
+  // calendar nav + misc
   calYear: number
-  calMonth: number // 0-based
+  calMonth: number
+  theme: Theme
   loading: boolean
   error: string | null
 
-  // bootstrap & selection
+  // bootstrap & navigation
   init: () => Promise<void>
+  refresh: () => Promise<void>
   selectWorkspace: (id: string) => Promise<void>
   selectCategory: (id: string | null) => void
+  selectSmartView: (view: SmartView) => Promise<void>
   setMainView: (view: MainView) => void
   setView: (view: ViewMode) => void
+  navigateToTask: (payload: NavigatePayload) => Promise<void>
 
-  // workspace / category mutations
+  // workspace / category
   createWorkspace: (name: string) => Promise<void>
   createCategory: (input: Omit<CreateCategoryInput, 'workspace_id'>) => Promise<void>
+  reorderCategories: (updates: UpdateCategoryInput[]) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
 
-  // task mutations
+  // tasks
   createTask: (input: CreateTaskInput) => Promise<Task | null>
   updateTask: (input: UpdateTaskInput) => Promise<void>
+  setPriority: (id: string, priority: Priority) => Promise<void>
   toggleDone: (task: Task) => Promise<void>
   moveTask: (id: string, status: TaskStatus, sortOrder: number) => Promise<void>
+  reorderTasks: (updates: UpdateTaskInput[]) => Promise<void>
   deleteTask: (id: string) => Promise<void>
 
-  // goal mutations
+  // goals
   createGoal: (input: Omit<CreateGoalInput, 'workspace_id'>) => Promise<void>
   updateGoal: (input: UpdateGoalInput) => Promise<void>
   deleteGoal: (id: string) => Promise<void>
   toggleGoalDone: (goal: GoalWithProgress) => Promise<void>
 
-  // inline detail + quick capture + calendar nav
+  // selection / inline edit
+  setSelectedTask: (id: string | null) => void
   toggleExpand: (id: string) => void
   collapse: () => void
+  setEditingTitle: (id: string | null) => void
   focusTask: (task: Task) => void
+
+  // overlays + calendar + theme
   openQuickCapture: () => void
   closeQuickCapture: () => void
+  openPalette: () => void
+  closePalette: () => void
+  toggleHelp: () => void
+  closeHelp: () => void
   shiftMonth: (delta: number) => void
   goToToday: () => void
+  setTheme: (theme: Theme) => void
 }
 
 async function reloadWorkspaceData(
@@ -80,21 +127,31 @@ async function reloadWorkspaceData(
   return { categories, tasks, goals }
 }
 
-const today = new Date()
+const loadSmart = (view: SmartView): Promise<TaskWithContext[]> =>
+  window.api.task.listUpcoming(view === 'today' ? endOfTodayIso() : endOfWeekIso())
+
+const now = new Date()
 
 export const useStore = create<AppState>((set, get) => ({
   workspaces: [],
   categories: [],
   tasks: [],
   goals: [],
+  smartTasks: [],
   activeWorkspaceId: null,
   activeCategoryId: null,
+  smartView: null,
   mainView: 'tasks',
   view: 'list',
+  selectedTaskId: null,
   expandedTaskId: null,
+  editingTitleId: null,
   quickCaptureOpen: false,
-  calYear: today.getFullYear(),
-  calMonth: today.getMonth(),
+  paletteOpen: false,
+  helpOpen: false,
+  calYear: now.getFullYear(),
+  calMonth: now.getMonth(),
+  theme: savedTheme,
   loading: true,
   error: null,
 
@@ -103,9 +160,7 @@ export const useStore = create<AppState>((set, get) => ({
       set({ loading: true, error: null })
       const workspaces = await window.api.workspace.list()
       set({ workspaces })
-      if (workspaces.length > 0) {
-        await get().selectWorkspace(workspaces[0].id)
-      }
+      if (workspaces.length > 0) await get().selectWorkspace(workspaces[0].id)
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e) })
     } finally {
@@ -113,21 +168,56 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  // Reload whatever views are currently active (workspace data and/or smart view).
+  refresh: async () => {
+    const { activeWorkspaceId, smartView } = get()
+    const jobs: Promise<void>[] = []
+    if (activeWorkspaceId) {
+      jobs.push(
+        reloadWorkspaceData(activeWorkspaceId).then((d) =>
+          set({ categories: d.categories, tasks: d.tasks, goals: d.goals })
+        )
+      )
+    }
+    if (smartView) jobs.push(loadSmart(smartView).then((smartTasks) => set({ smartTasks })))
+    await Promise.all(jobs)
+  },
+
   selectWorkspace: async (id) => {
     const { categories, tasks, goals } = await reloadWorkspaceData(id)
     set({
       activeWorkspaceId: id,
+      smartView: null,
       categories,
       tasks,
       goals,
       activeCategoryId: categories[0]?.id ?? null,
-      expandedTaskId: null
+      expandedTaskId: null,
+      selectedTaskId: null
     })
   },
 
-  selectCategory: (id) => set({ activeCategoryId: id, expandedTaskId: null }),
-  setMainView: (mainView) => set({ mainView, expandedTaskId: null }),
-  setView: (view) => set({ view, expandedTaskId: null }),
+  selectCategory: (id) => set({ activeCategoryId: id, expandedTaskId: null, selectedTaskId: null }),
+
+  selectSmartView: async (view) => {
+    const smartTasks = await loadSmart(view)
+    set({ smartView: view, smartTasks, expandedTaskId: null, selectedTaskId: null })
+  },
+
+  setMainView: (mainView) => set({ mainView, expandedTaskId: null, selectedTaskId: null }),
+  setView: (view) => set({ view, expandedTaskId: null, selectedTaskId: null }),
+
+  navigateToTask: async (payload) => {
+    set({ paletteOpen: false })
+    await get().selectWorkspace(payload.workspace_id)
+    set({
+      mainView: 'tasks',
+      view: 'list',
+      activeCategoryId: payload.category_id,
+      expandedTaskId: payload.task_id,
+      selectedTaskId: payload.task_id
+    })
+  },
 
   createWorkspace: async (name) => {
     const trimmed = name.trim()
@@ -143,67 +233,79 @@ export const useStore = create<AppState>((set, get) => ({
     const trimmed = input.name.trim()
     if (!trimmed) return
     await window.api.category.create({ ...input, name: trimmed, workspace_id: workspaceId })
-    const data = await reloadWorkspaceData(workspaceId)
-    set({ categories: data.categories, tasks: data.tasks, goals: data.goals })
+    await get().refresh()
+  },
+
+  reorderCategories: async (updates) => {
+    // optimistic
+    set((s) => ({
+      categories: s.categories.map((c) => {
+        const u = updates.find((x) => x.id === c.id)
+        return u && u.sort_order !== undefined ? { ...c, sort_order: u.sort_order } : c
+      })
+    }))
+    await window.api.category.reorder(updates)
+    await get().refresh()
   },
 
   deleteCategory: async (id) => {
-    const workspaceId = get().activeWorkspaceId
-    if (!workspaceId) return
     await window.api.category.remove(id)
-    const data = await reloadWorkspaceData(workspaceId)
+    await get().refresh()
     set((s) => ({
-      categories: data.categories,
-      tasks: data.tasks,
-      goals: data.goals,
       activeCategoryId:
-        s.activeCategoryId === id ? (data.categories[0]?.id ?? null) : s.activeCategoryId
+        s.activeCategoryId === id ? (s.categories[0]?.id ?? null) : s.activeCategoryId
     }))
   },
 
   createTask: async (input) => {
-    const workspaceId = get().activeWorkspaceId
-    if (!workspaceId) return null
     const task = await window.api.task.create(input)
-    const data = await reloadWorkspaceData(workspaceId)
-    set({ tasks: data.tasks, goals: data.goals })
+    await get().refresh()
     return task
   },
 
   updateTask: async (input) => {
-    const workspaceId = get().activeWorkspaceId
-    if (!workspaceId) return
     await window.api.task.update(input)
-    const data = await reloadWorkspaceData(workspaceId)
-    set({ tasks: data.tasks, goals: data.goals })
+    await get().refresh()
+  },
+
+  setPriority: async (id, priority) => {
+    await get().updateTask({ id, priority })
   },
 
   toggleDone: async (task) => {
-    const nextStatus: TaskStatus = task.status === 'done' ? 'todo' : 'done'
-    await get().updateTask({ id: task.id, status: nextStatus })
+    await get().updateTask({ id: task.id, status: task.status === 'done' ? 'todo' : 'done' })
   },
 
   moveTask: async (id, status, sortOrder) => {
-    const workspaceId = get().activeWorkspaceId
-    if (!workspaceId) return
-    // Optimistic column move for a snappy drag.
     set((s) => ({
       tasks: s.tasks.map((t) => (t.id === id ? { ...t, status, sort_order: sortOrder } : t))
     }))
     await window.api.task.setStatus(id, status, sortOrder)
-    const data = await reloadWorkspaceData(workspaceId)
-    set({ tasks: data.tasks, goals: data.goals })
+    await get().refresh()
+  },
+
+  reorderTasks: async (updates) => {
+    // optimistic: apply new sort_order/status locally so the list doesn't flicker
+    const apply = <T extends Task>(t: T): T => {
+      const u = updates.find((x) => x.id === t.id)
+      if (!u) return t
+      return {
+        ...t,
+        sort_order: u.sort_order ?? t.sort_order,
+        status: u.status ?? t.status
+      }
+    }
+    set((s) => ({ tasks: s.tasks.map(apply), smartTasks: s.smartTasks.map(apply) }))
+    await window.api.task.reorder(updates)
+    await get().refresh()
   },
 
   deleteTask: async (id) => {
-    const workspaceId = get().activeWorkspaceId
-    if (!workspaceId) return
     await window.api.task.remove(id)
-    const data = await reloadWorkspaceData(workspaceId)
+    await get().refresh()
     set((s) => ({
-      tasks: data.tasks,
-      goals: data.goals,
-      expandedTaskId: s.expandedTaskId === id ? null : s.expandedTaskId
+      expandedTaskId: s.expandedTaskId === id ? null : s.expandedTaskId,
+      selectedTaskId: s.selectedTaskId === id ? null : s.selectedTaskId
     }))
   },
 
@@ -224,31 +326,54 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteGoal: async (id) => {
-    const workspaceId = get().activeWorkspaceId
-    if (!workspaceId) return
     await window.api.goal.remove(id)
-    const data = await reloadWorkspaceData(workspaceId)
-    set({ goals: data.goals, tasks: data.tasks })
+    await get().refresh()
   },
 
   toggleGoalDone: async (goal) => {
-    const nextStatus: TaskStatus = goal.status === 'done' ? 'todo' : 'done'
-    await get().updateGoal({ id: goal.id, status: nextStatus })
+    await get().updateGoal({ id: goal.id, status: goal.status === 'done' ? 'todo' : 'done' })
   },
 
-  toggleExpand: (id) => set((s) => ({ expandedTaskId: s.expandedTaskId === id ? null : id })),
-  collapse: () => set({ expandedTaskId: null }),
+  setSelectedTask: (id) => set({ selectedTaskId: id }),
+  toggleExpand: (id) =>
+    set((s) => ({
+      expandedTaskId: s.expandedTaskId === id ? null : id,
+      selectedTaskId: id
+    })),
+  collapse: () => set({ expandedTaskId: null, editingTitleId: null }),
+  setEditingTitle: (id) => set({ editingTitleId: id }),
   focusTask: (task) =>
-    set({ mainView: 'tasks', activeCategoryId: task.category_id, expandedTaskId: task.id }),
+    set({
+      smartView: null,
+      mainView: 'tasks',
+      activeCategoryId: task.category_id,
+      expandedTaskId: task.id,
+      selectedTaskId: task.id
+    }),
+
   openQuickCapture: () => set({ quickCaptureOpen: true }),
   closeQuickCapture: () => set({ quickCaptureOpen: false }),
+  openPalette: () => set({ paletteOpen: true }),
+  closePalette: () => set({ paletteOpen: false }),
+  toggleHelp: () => set((s) => ({ helpOpen: !s.helpOpen })),
+  closeHelp: () => set({ helpOpen: false }),
   shiftMonth: (delta) =>
     set((s) => {
       const d = new Date(s.calYear, s.calMonth + delta, 1)
       return { calYear: d.getFullYear(), calMonth: d.getMonth() }
     }),
   goToToday: () => {
-    const now = new Date()
-    set({ calYear: now.getFullYear(), calMonth: now.getMonth() })
+    const n = new Date()
+    set({ calYear: n.getFullYear(), calMonth: n.getMonth() })
+  },
+  setTheme: (theme) => {
+    localStorage.setItem('aop-theme', theme)
+    applyTheme(theme)
+    set({ theme })
   }
 }))
+
+// Keep "system" theme in sync with OS changes.
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (useStore.getState().theme === 'system') applyTheme('system')
+})

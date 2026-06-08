@@ -4,13 +4,24 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TaskPanel } from './TaskPanel'
 import { CalendarView } from './CalendarView'
 import { GoalsView } from './GoalsView'
+import { SmartView } from './SmartView'
 import type { MainView } from '@/store/useStore'
 
 export function MainArea(): JSX.Element {
   const workspaces = useStore((s) => s.workspaces)
   const activeWorkspaceId = useStore((s) => s.activeWorkspaceId)
+  const smartView = useStore((s) => s.smartView)
   const mainView = useStore((s) => s.mainView)
   const setMainView = useStore((s) => s.setMainView)
+
+  // Smart views ("오늘"/"이번 주") span all desks and replace the desk layout.
+  if (smartView) {
+    return (
+      <main className="flex flex-1 flex-col overflow-hidden">
+        <SmartView />
+      </main>
+    )
+  }
 
   const desk = workspaces.find((w) => w.id === activeWorkspaceId) ?? null
 
