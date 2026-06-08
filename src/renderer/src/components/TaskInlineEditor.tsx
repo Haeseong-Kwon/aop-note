@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
 import { AttachmentsSection } from './AttachmentsSection'
+import { MemoEditor } from './MemoEditor'
 import { PRIORITY_META, STATUS_META, toDateInput, fromDateInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Priority, Task, TaskStatus } from '@shared/types'
@@ -22,15 +23,11 @@ export function TaskInlineEditor({ task }: { task: Task }): JSX.Element {
   const deleteTask = useStore((s) => s.deleteTask)
 
   const [title, setTitle] = useState(task.title)
-  const [note, setNote] = useState(task.note)
 
   const commitTitle = (): void => {
     const next = title.trim()
     if (next && next !== task.title) updateTask({ id: task.id, title: next })
     else setTitle(task.title)
-  }
-  const commitNote = (): void => {
-    if (note !== task.note) updateTask({ id: task.id, note })
   }
 
   return (
@@ -112,16 +109,7 @@ export function TaskInlineEditor({ task }: { task: Task }): JSX.Element {
         </select>
       </Field>
 
-      <Field label="메모 (Markdown)">
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          onBlur={commitNote}
-          rows={4}
-          placeholder="세부 내용, 체크리스트, 링크 등"
-          className="w-full resize-y rounded-md border border-input bg-background p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring"
-        />
-      </Field>
+      <MemoEditor task={task} />
 
       <AttachmentsSection taskId={task.id} />
 

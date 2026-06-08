@@ -12,6 +12,7 @@ import {
   openAttachmentExternal,
   removeAttachment
 } from '../attachments'
+import { exportMemo } from '../memo'
 import type {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
@@ -22,6 +23,7 @@ import type {
   CreateGoalInput,
   UpdateGoalInput,
   AttachmentAddInput,
+  ExportFormat,
   TaskStatus
 } from '@shared/types'
 
@@ -74,6 +76,9 @@ export function registerIpcHandlers(): void {
 
   // ---- Search ----
   handle(IPC.search.query, (text: string) => searchRepo.query(text))
+
+  // ---- Memo export ----
+  handle(IPC.memo.export, (taskId: string, format: ExportFormat) => exportMemo(taskId, format))
 
   // ---- Attachments ----
   handle(IPC.attachment.listByTask, (taskId: string) => attachmentRepo.listByTask(taskId))

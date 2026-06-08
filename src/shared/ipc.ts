@@ -11,6 +11,8 @@ import type {
   Attachment,
   AttachmentAddInput,
   AttachmentRender,
+  ExportFormat,
+  ExportResult,
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
   CreateCategoryInput,
@@ -62,6 +64,9 @@ export const IPC = {
   search: {
     query: 'search:query'
   },
+  memo: {
+    export: 'memo:export'
+  },
   attachment: {
     listByTask: 'attachment:listByTask',
     add: 'attachment:add',
@@ -108,6 +113,10 @@ export interface Api {
   }
   search: {
     query(text: string): Promise<SearchHit[]>
+  }
+  memo: {
+    /** Export a task's memo (title + note) to a file the user picks. */
+    export(taskId: string, format: ExportFormat): Promise<ExportResult>
   }
   attachment: {
     listByTask(taskId: string): Promise<Attachment[]>

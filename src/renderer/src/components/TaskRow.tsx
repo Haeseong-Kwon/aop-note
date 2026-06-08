@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
-import { Check, ChevronRight, CalendarPlus } from 'lucide-react'
+import { Check, ChevronRight, CalendarPlus, StickyNote } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { DueBadge } from './TaskBadges'
+import { MarkdownView } from './MarkdownView'
 import { TaskInlineEditor } from './TaskInlineEditor'
 import { PRIORITY_META, toDateInput, fromDateInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -30,7 +31,9 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
   const focusTask = useStore((s) => s.focusTask)
 
   const [editingDue, setEditingDue] = useState(false)
+  const [memoOpen, setMemoOpen] = useState(false)
   const done = task.status === 'done'
+  const hasMemo = Boolean(task.note && task.note.trim())
 
   const commitTitle = (value: string): void => {
     const next = value.trim()
@@ -126,6 +129,18 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
         )}
 
         <div className="flex shrink-0 items-center gap-1.5" onClick={stop}>
+          {hasMemo && (
+            <button
+              onClick={() => setMemoOpen((v) => !v)}
+              title={memoOpen ? '메모 접기' : '메모 펼치기'}
+              className={cn(
+                'rounded p-0.5 transition-colors',
+                memoOpen ? 'text-primary' : 'text-muted-foreground/60 hover:text-foreground'
+              )}
+            >
+              <StickyNote className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             onClick={cyclePriority}
             title="우선순위 (클릭하여 변경 / 숫자키 0–3)"
@@ -174,6 +189,12 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
           )}
         </div>
       </div>
+
+      {memoOpen && hasMemo && !expanded && (
+        <div className="border-t border-border bg-muted/20 px-4 py-3" onClick={stop}>
+          <MarkdownView source={task.note} />
+        </div>
+      )}
 
       {expanded && <TaskInlineEditor task={task} />}
     </div>

@@ -11,6 +11,7 @@ import type {
   CreateGoalInput,
   UpdateGoalInput,
   AttachmentAddInput,
+  ExportFormat,
   TaskStatus
 } from '@shared/types'
 
@@ -52,6 +53,10 @@ const api: Api = {
   },
   search: {
     query: (text: string) => ipcRenderer.invoke(IPC.search.query, text)
+  },
+  memo: {
+    export: (taskId: string, format: ExportFormat) =>
+      ipcRenderer.invoke(IPC.memo.export, taskId, format)
   },
   attachment: {
     listByTask: (taskId: string) => ipcRenderer.invoke(IPC.attachment.listByTask, taskId),

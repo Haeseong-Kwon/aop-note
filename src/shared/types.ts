@@ -88,6 +88,13 @@ export interface Attachment {
   deleted_at: string | null
 }
 
+export type ExportFormat = 'md' | 'html' | 'pdf'
+
+export interface ExportResult {
+  canceled: boolean
+  path?: string
+}
+
 export interface AttachmentAddInput {
   task_id: string
   source_path: string
