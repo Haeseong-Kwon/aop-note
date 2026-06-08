@@ -1,0 +1,119 @@
+# AOP Note
+
+업무 정리 메모 데스크톱 앱. 로컬 우선(offline-first) — 네트워크 없이 완전히 동작합니다.
+
+데스크(Desk) → 분야/프로젝트(Category, 1단계 중첩) → 작업(Task)의 3단계 구조로 일을 정리하고,
+데스크별 **작업 / 달력 / 목표** 3가지 모드로 관리합니다.
+
+- **작업**: 리스트 / 칸반 듀얼 뷰. 작업을 클릭하면 그 자리에서 **인라인 확장**되어 바로 편집합니다(별도 화면 전환 없음).
+- **달력**: 마감일 기반 오프라인 월간 달력. 데스크 전체 일정을 한눈에.
+- **목표**: 데스크별 목표를 만들고 작업을 연결하면 완료율 기반 **진행률**이 자동 계산됩니다.
+
+## 기술 스택
+
+| 영역 | 사용 |
+| --- | --- |
+| 셸 | Electron + electron-vite |
+| UI | React + TypeScript |
+| 상태관리 | Zustand |
+| 스타일 | Tailwind CSS + shadcn/ui 스타일 프리미티브 |
+| 로컬 DB | better-sqlite3 (메인 프로세스, IPC로 렌더러와 통신) |
+| 드래그앤드롭 | @dnd-kit |
+| 패키지 매니저 | npm |
+
+## 아키텍처
+
+```
+src/
+├── main/                 # 메인 프로세스 (Node)
+│   ├── index.ts          # 앱 진입점 + BrowserWindow (contextIsolation ON, nodeIntegration OFF)
+│   ├── db/
+│   │   ├── index.ts      # SQLite 연결 (userData 경로, WAL, FK)
+│   │   └── migrations.ts # user_version 기반 자동 마이그레이션
+│   ├── repositories/     # DB 쿼리 계층 (workspace / category / task / goal)
+│   └── ipc/handlers.ts   # ipcMain.handle 등록
+├── preload/index.ts      # contextBridge로 window.api 노출
+├── shared/               # 메인·렌더러 공용 타입 + IPC 채널 계약
+└── renderer/src/         # React UI
+    ├── store/useStore.ts # Zustand 스토어 (window.api 호출)
+    └── components/
+        ├── Sidebar.tsx           # 데스크 전환 + 브랜딩
+        ├── MainArea.tsx          # 데스크 헤더 + 작업/달력/목표 모드 탭
+        ├── CategoryPanel.tsx     # 카테고리 트리 (1단계 중첩)
+        ├── TaskPanel.tsx         # 리스트/칸반 + 카테고리 패널
+        ├── TaskInlineEditor.tsx  # 인라인 확장 편집기
+        ├── CalendarView.tsx      # 오프라인 월간 달력
+        └── GoalsView.tsx         # 목표 + 진행률
+```
+
+### 보안 원칙
+- 모든 DB 접근은 **메인 프로세스**에서만. 렌더러는 `contextBridge`로 노출된 `window.api`만 호출합니다.
+- `nodeIntegration: false`, `contextIsolation: true`, CSP 적용.
+
+### 데이터
+- 모든 테이블에 `created_at` / `updated_at` / `deleted_at`(soft delete) 보유 (추후 동기화 대비).
+- 기본 조회는 `deleted_at IS NULL`만 반환.
+- ID는 전부 UUID(`crypto.randomUUID`).
+- DB 파일 위치: `app.getPath('userData')/aop-note.db` (macOS: `~/Library/Application Support/aop-note/`).
+- 첫 실행 시 마이그레이션 자동 실행. **예시(시드) 데이터 없이 빈 상태로 시작**합니다.
+- 엔티티: 데스크(workspaces) · 카테고리(categories) · 작업(tasks) · 목표(goals). 작업은 `goal_id`로 목표에 연결되며, 목표 진행률은 연결된 작업의 완료 비율로 계산됩니다.
+
+## 시작하기
+
+### 요구 사항
+- Node.js 18+ (개발: Node 22 권장)
+
+### 설치
+```bash
+npm install
+```
+> `postinstall`에서 `electron-builder install-app-deps`가 better-sqlite3를 현재 Electron ABI에 맞게 자동 리빌드합니다.
+
+### 개발 실행 (HMR)
+```bash
+npm run dev
+```
+
+### 타입 체크
+```bash
+npm run typecheck
+```
+
+### 프로덕션 빌드 (번들만)
+```bash
+npm run build
+```
+
+### 미리보기 (빌드된 앱 실행)
+```bash
+npm run start
+```
+
+### 배포 패키지 생성
+```bash
+npm run package        # 현재 OS용
+npm run package:mac    # macOS dmg
+```
+결과물은 `dist/`에 생성됩니다.
+
+## 주요 UX
+
+- **퀵 캡처**: 어느 화면에서든 `⌘/Ctrl + N` → 제목만 입력해도 저장. 카테고리·목표 연결 선택 가능. 카테고리 미지정 시 현재 활성 카테고리(없으면 첫 카테고리)로 들어갑니다.
+- **인라인 편집**: 작업/목표를 클릭하면 그 자리에서 펼쳐져(별도 화면·드로어 없음) 제목·메모(Markdown)·상태·우선순위·기한·카테고리·목표를 즉시 편집. 선택값은 즉시 저장됩니다.
+- **리스트 뷰**: 우선순위·기한 정렬, 체크박스로 완료 토글.
+- **칸반 뷰**: `todo / doing / done` 3컬럼, 드래그로 상태 변경 + 정렬 갱신.
+- **달력**: 월간 그리드에서 마감일 기준으로 작업 표시. 작업 클릭 시 해당 카테고리로 이동해 펼쳐 편집.
+- **목표**: 진행률 바 + 완료 작업 수. 목표 완료 토글, 인라인 편집(설명·기한).
+- 색상 코딩과 임박 기한 강조로 가시성 우선.
+
+## 범위 밖 (미구현)
+- 클라우드 동기화 / 로그인 / 협업·공유
+- 알림 / 리마인더
+- **외부** 캘린더 연동(Google 등) — 현재는 오프라인 인앱 달력만 제공
+- 모바일
+
+## 데이터 초기화
+모든 데이터를 지우고 빈 상태로 다시 시작하려면 DB 파일을 삭제 후 재실행하세요:
+```bash
+rm -rf "$HOME/Library/Application Support/aop-note"
+```
