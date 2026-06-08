@@ -60,6 +60,8 @@ const api: Api = {
   },
   attachment: {
     listByTask: (taskId: string) => ipcRenderer.invoke(IPC.attachment.listByTask, taskId),
+    listByWorkspace: (workspaceId: string) =>
+      ipcRenderer.invoke(IPC.attachment.listByWorkspace, workspaceId),
     add: (input: AttachmentAddInput) => ipcRenderer.invoke(IPC.attachment.add, input),
     render: (id: string) => ipcRenderer.invoke(IPC.attachment.render, id),
     openExternal: (id: string) => ipcRenderer.invoke(IPC.attachment.openExternal, id),

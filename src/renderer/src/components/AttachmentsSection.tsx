@@ -1,26 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  Paperclip,
-  Upload,
-  FileText,
-  FileSpreadsheet,
-  Image as ImageIcon,
-  File as FileIcon,
-  Eye,
-  Trash2
-} from 'lucide-react'
+import { Paperclip, Upload, Eye, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DocumentViewer } from './DocumentViewer'
 import { formatFileSize } from '@/lib/format'
+import { fileIconFor } from '@/lib/fileIcon'
 import { cn } from '@/lib/utils'
 import type { Attachment } from '@shared/types'
-
-function iconFor(ext: string): typeof FileIcon {
-  if (['pdf', 'doc', 'docx', 'txt', 'md', 'markdown', 'rtf'].includes(ext)) return FileText
-  if (['xlsx', 'xls', 'xlsm', 'csv'].includes(ext)) return FileSpreadsheet
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) return ImageIcon
-  return FileIcon
-}
 
 export function AttachmentsSection({ taskId }: { taskId: string }): JSX.Element {
   const [items, setItems] = useState<Attachment[]>([])
@@ -102,7 +87,7 @@ export function AttachmentsSection({ taskId }: { taskId: string }): JSX.Element 
       {items.length > 0 && (
         <ul className="space-y-1">
           {items.map((a) => {
-            const Icon = iconFor(a.ext)
+            const Icon = fileIconFor(a.ext)
             return (
               <li
                 key={a.id}

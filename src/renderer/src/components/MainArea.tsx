@@ -1,9 +1,10 @@
-import { ListTodo, CalendarDays, Target } from 'lucide-react'
+import { ListTodo, CalendarDays, Target, FolderArchive } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TaskPanel } from './TaskPanel'
 import { CalendarView } from './CalendarView'
 import { GoalsView } from './GoalsView'
+import { DocumentsView } from './DocumentsView'
 import { SmartView } from './SmartView'
 import type { MainView } from '@/store/useStore'
 
@@ -56,6 +57,10 @@ export function MainArea(): JSX.Element {
                 <Target className="h-3.5 w-3.5" />
                 목표
               </TabsTrigger>
+              <TabsTrigger value="documents" className="gap-1.5">
+                <FolderArchive className="h-3.5 w-3.5" />
+                문서
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -68,6 +73,7 @@ export function MainArea(): JSX.Element {
         {mainView === 'tasks' && <TaskPanel />}
         {mainView === 'calendar' && <CalendarView />}
         {mainView === 'goals' && <GoalsView />}
+        {mainView === 'documents' && <DocumentsView />}
       </div>
     </main>
   )

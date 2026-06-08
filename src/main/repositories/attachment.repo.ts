@@ -1,6 +1,6 @@
 import { getDb } from '../db'
 import { nowIso } from './util'
-import type { Attachment } from '@shared/types'
+import type { Attachment, AttachmentWithContext } from '@shared/types'
 
 export const attachmentRepo = {
   listByTask(taskId: string): Attachment[] {
@@ -11,6 +11,23 @@ export const attachmentRepo = {
          ORDER BY created_at ASC`
       )
       .all(taskId) as Attachment[]
+  },
+
+  /** All attachments across a desk, joined with task + category context. */
+  listByWorkspace(workspaceId: string): AttachmentWithContext[] {
+    return getDb()
+      .prepare(
+        `SELECT a.*,
+            t.title AS task_title,
+            c.id AS category_id, c.name AS category_name, c.color AS category_color
+         FROM attachments a
+         JOIN tasks t ON t.id = a.task_id
+         JOIN categories c ON c.id = t.category_id
+         WHERE c.workspace_id = ?
+           AND a.deleted_at IS NULL AND t.deleted_at IS NULL AND c.deleted_at IS NULL
+         ORDER BY c.sort_order ASC, c.created_at ASC, a.created_at DESC`
+      )
+      .all(workspaceId) as AttachmentWithContext[]
   },
 
   getById(id: string): Attachment | undefined {

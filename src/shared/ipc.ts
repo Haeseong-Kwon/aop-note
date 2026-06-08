@@ -9,6 +9,7 @@ import type {
   GoalWithProgress,
   SearchHit,
   Attachment,
+  AttachmentWithContext,
   AttachmentAddInput,
   AttachmentRender,
   ExportFormat,
@@ -69,6 +70,7 @@ export const IPC = {
   },
   attachment: {
     listByTask: 'attachment:listByTask',
+    listByWorkspace: 'attachment:listByWorkspace',
     add: 'attachment:add',
     render: 'attachment:render',
     openExternal: 'attachment:openExternal',
@@ -120,6 +122,7 @@ export interface Api {
   }
   attachment: {
     listByTask(taskId: string): Promise<Attachment[]>
+    listByWorkspace(workspaceId: string): Promise<AttachmentWithContext[]>
     add(input: AttachmentAddInput): Promise<Attachment>
     render(id: string): Promise<AttachmentRender>
     openExternal(id: string): Promise<void>

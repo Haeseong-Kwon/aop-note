@@ -88,6 +88,14 @@ export interface Attachment {
   deleted_at: string | null
 }
 
+/** Attachment joined with its task + category, for the desk-wide document library. */
+export interface AttachmentWithContext extends Attachment {
+  task_title: string
+  category_id: string
+  category_name: string
+  category_color: string
+}
+
 export type ExportFormat = 'md' | 'html' | 'pdf'
 
 export interface ExportResult {

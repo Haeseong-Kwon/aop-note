@@ -82,6 +82,9 @@ export function registerIpcHandlers(): void {
 
   // ---- Attachments ----
   handle(IPC.attachment.listByTask, (taskId: string) => attachmentRepo.listByTask(taskId))
+  handle(IPC.attachment.listByWorkspace, (workspaceId: string) =>
+    attachmentRepo.listByWorkspace(workspaceId)
+  )
   handle(IPC.attachment.add, (input: AttachmentAddInput) =>
     addAttachment(input.task_id, input.source_path, input.file_name)
   )
