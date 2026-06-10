@@ -97,6 +97,12 @@
       "type": "file"
     },
     {
+      "path": "scripts/make-icon.py",
+      "accessCount": 3,
+      "lastAccessed": 1781070457054,
+      "type": "file"
+    },
+    {
       "path": "src/renderer/src/components/GoalsView.tsx",
       "accessCount": 2,
       "lastAccessed": 1781069092909,
@@ -196,6 +202,12 @@
       "path": "scripts/install-mac.sh",
       "accessCount": 1,
       "lastAccessed": 1781070055844,
+      "type": "file"
+    },
+    {
+      "path": "image/logo image.png",
+      "accessCount": 1,
+      "lastAccessed": 1781070231871,
       "type": "file"
     }
   ],
