@@ -4,6 +4,7 @@ import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CategoryPanel } from './CategoryPanel'
+import { GoalStrip } from './GoalStrip'
 import { ListView } from './ListView'
 import { KanbanView } from './KanbanView'
 import type { ViewMode } from '@/store/useStore'
@@ -59,6 +60,8 @@ export function TaskPanel(): JSX.Element {
             </Button>
           </div>
         </div>
+
+        <GoalStrip />
 
         <div className="flex-1 overflow-hidden">
           {!activeCategory ? (

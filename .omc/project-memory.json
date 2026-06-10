@@ -1,0 +1,191 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1781068651408,
+  "projectRoot": "/Users/haeseong/Desktop/Product/aop-note",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "vite",
+        "version": "5.4.14",
+        "category": "build"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "electron-vite dev",
+      "build": "electron-vite build",
+      "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+      "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+      "typecheck": "npm run typecheck:node && npm run typecheck:web",
+      "start": "electron-vite preview",
+      "package": "electron-vite build && electron-builder",
+      "package:mac": "electron-vite build && electron-builder --mac",
+      "postinstall": "electron-builder install-app-deps"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "out": {
+      "path": "out",
+      "purpose": "Build output",
+      "fileCount": 0,
+      "lastAccessed": 1781068651336,
+      "keyFiles": []
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1781068651338,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src/renderer/src/components/TaskPanel.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1781069336694,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/GoalsView.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1781069092909,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/types.ts",
+      "accessCount": 2,
+      "lastAccessed": 1781069092976,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/store/useStore.ts",
+      "accessCount": 2,
+      "lastAccessed": 1781069119882,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/MainArea.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1781068838554,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/CategoryPanel.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1781068841974,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/ListView.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1781068845185,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/KanbanView.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1781068845456,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/ipc.ts",
+      "accessCount": 1,
+      "lastAccessed": 1781068845543,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/goal.repo.ts",
+      "accessCount": 1,
+      "lastAccessed": 1781068848716,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/category.repo.ts",
+      "accessCount": 1,
+      "lastAccessed": 1781068848924,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/workspace.repo.ts",
+      "accessCount": 1,
+      "lastAccessed": 1781068851978,
+      "type": "file"
+    },
+    {
+      "path": "src/main/db/migrations.ts",
+      "accessCount": 1,
+      "lastAccessed": 1781068852270,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/TaskRow.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1781068858444,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/Sidebar.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1781068864266,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/GoalStrip.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1781069328678,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
