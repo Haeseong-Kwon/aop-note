@@ -115,6 +115,12 @@
       "type": "file"
     },
     {
+      "path": "package.json",
+      "accessCount": 2,
+      "lastAccessed": 1781070074018,
+      "type": "file"
+    },
+    {
       "path": "src/renderer/src/components/MainArea.tsx",
       "accessCount": 1,
       "lastAccessed": 1781068838554,
@@ -184,6 +190,12 @@
       "path": "src/renderer/src/components/GoalStrip.tsx",
       "accessCount": 1,
       "lastAccessed": 1781069328678,
+      "type": "file"
+    },
+    {
+      "path": "scripts/install-mac.sh",
+      "accessCount": 1,
+      "lastAccessed": 1781070055844,
       "type": "file"
     }
   ],
