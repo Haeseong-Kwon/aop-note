@@ -39,6 +39,7 @@ export const workspaceRepo = {
       id: newId(),
       name: input.name,
       color: input.color ?? DEFAULT_COLOR,
+      icon: input.icon ?? '',
       sort_order: nextOrder,
       created_at: now,
       updated_at: now,
@@ -46,8 +47,8 @@ export const workspaceRepo = {
     }
 
     db.prepare(
-      `INSERT INTO workspaces (id, name, color, sort_order, created_at, updated_at)
-       VALUES (@id, @name, @color, @sort_order, @created_at, @updated_at)`
+      `INSERT INTO workspaces (id, name, color, icon, sort_order, created_at, updated_at)
+       VALUES (@id, @name, @color, @icon, @sort_order, @created_at, @updated_at)`
     ).run(row)
 
     return row
@@ -62,17 +63,28 @@ export const workspaceRepo = {
       ...existing,
       name: input.name ?? existing.name,
       color: input.color ?? existing.color,
+      icon: input.icon ?? existing.icon,
       sort_order: input.sort_order ?? existing.sort_order,
       updated_at: nowIso()
     }
 
     db.prepare(
       `UPDATE workspaces
-       SET name = @name, color = @color, sort_order = @sort_order, updated_at = @updated_at
+       SET name = @name, color = @color, icon = @icon,
+           sort_order = @sort_order, updated_at = @updated_at
        WHERE id = @id`
     ).run(updated)
 
     return updated
+  },
+
+  /** Bulk reorder after a drag — integer reindex in one transaction. */
+  reorder(updates: UpdateWorkspaceInput[]): void {
+    const db = getDb()
+    const tx = db.transaction((items: UpdateWorkspaceInput[]) => {
+      items.forEach((item) => this.update(item))
+    })
+    tx(updates)
   },
 
   /** Soft-delete the workspace and cascade soft-delete to its categories & tasks. */

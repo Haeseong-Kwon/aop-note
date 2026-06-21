@@ -10,6 +10,8 @@ export interface Workspace {
   id: string
   name: string
   color: string
+  /** Emoji shown in place of the colored dot. Empty string = use the colored dot. */
+  icon: string
   sort_order: number
   created_at: string
   updated_at: string
@@ -134,12 +136,14 @@ export interface SearchHit {
 export interface CreateWorkspaceInput {
   name: string
   color?: string
+  icon?: string
 }
 
 export interface UpdateWorkspaceInput {
   id: string
   name?: string
   color?: string
+  icon?: string
   sort_order?: number
 }
 

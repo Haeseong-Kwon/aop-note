@@ -86,10 +86,10 @@ export function MemoEditor({ task }: { task: Task }): JSX.Element {
       </div>
 
       {mode === 'edit' ? (
-        <EditorPane value={note} onChange={setNote} onBlur={save} className="h-52" />
+        <EditorPane value={note} onChange={setNote} onBlur={save} className="h-80" />
       ) : (
         <div
-          className="max-h-72 min-h-[5rem] overflow-y-auto rounded-md border border-input bg-background p-3"
+          className="max-h-96 min-h-[5rem] overflow-y-auto rounded-md border border-input bg-background p-3"
           onClick={() => undefined}
         >
           <MarkdownView source={note} onToggleTask={toggleTask} />

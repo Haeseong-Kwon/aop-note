@@ -94,6 +94,11 @@ const migrations: Migration[] = [
 
       CREATE INDEX IF NOT EXISTS idx_attachments_task ON attachments(task_id);
     `)
+  },
+
+  // 0004 — per-desk emoji icon (empty string = colored dot)
+  (db) => {
+    db.exec(`ALTER TABLE workspaces ADD COLUMN icon TEXT NOT NULL DEFAULT '';`)
   }
 ]
 

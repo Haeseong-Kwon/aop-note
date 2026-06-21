@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cat package.json | grep -A 40 '\\\"build\\\"' | head -60; echo \\\"---FILES---\\\"; ls electron-builder.* 2>/dev/null; ls build/ resources/ 2>/dev/null\",\"description\":\"Check electron-builder confi...",
-  "error": "Exit code 1\n    \"build\": \"electron-vite build\",\n    \"typecheck:node\": \"tsc --noEmit -p tsconfig.node.json --composite false\",\n    \"typecheck:web\": \"tsc --noEmit -p tsconfig.web.json --composite false\",\n    \"typecheck\": \"npm run typecheck:node && npm run typecheck:web\",\n    \"start\": \"electron-vite preview\",\n    \"package\": \"electron-vite build && electron-builder\",\n    \"package:mac\": \"electron-vite build && electron-builder --mac\",\n    \"postinstall\": \"electron-builder install-app-deps\"\n  },\n  \"dep...",
-  "timestamp": "2026-06-10T05:32:33.648Z",
-  "retry_count": 1
-}

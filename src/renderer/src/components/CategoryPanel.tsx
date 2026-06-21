@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Plus, Trash2, CornerDownRight, GripVertical } from 'lucide-react'
 import {
   DndContext,
@@ -17,6 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
+import { StylePicker } from './StylePicker'
 import { cn } from '@/lib/utils'
 import type { Category, Task, UpdateCategoryInput } from '@shared/types'
 
@@ -41,10 +42,14 @@ function CategoryRow({
   onAddChild,
   onDelete
 }: CategoryRowProps): JSX.Element {
+  const updateCategory = useStore((s) => s.updateCategory)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const dotBtnRef = useRef<HTMLButtonElement>(null)
+
   return (
     <div
       className={cn(
-        'group flex items-center gap-1.5 rounded-md py-1.5 pr-1 text-sm transition-colors',
+        'group relative flex items-center gap-1.5 rounded-md py-1.5 pr-1 text-sm transition-colors',
         child ? 'pl-7' : 'pl-1.5',
         active
           ? 'bg-accent text-accent-foreground'
@@ -53,7 +58,22 @@ function CategoryRow({
     >
       {handle}
       {child && <CornerDownRight className="h-3 w-3 shrink-0 opacity-40" />}
-      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: category.color }} />
+      <button
+        ref={dotBtnRef}
+        onClick={() => setPickerOpen((v) => !v)}
+        title="색상 변경"
+        className="no-drag flex h-4 w-4 items-center justify-center rounded transition-colors hover:bg-accent"
+      >
+        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: category.color }} />
+      </button>
+      {pickerOpen && (
+        <StylePicker
+          anchorEl={dotBtnRef.current}
+          color={category.color}
+          onChange={(next) => updateCategory({ id: category.id, ...next })}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
       <button onClick={onSelect} className="no-drag flex-1 truncate text-left">
         {category.name}
       </button>
@@ -76,6 +96,58 @@ function CategoryRow({
   )
 }
 
+function dragHandle(
+  attributes: ReturnType<typeof useSortable>['attributes'],
+  listeners: ReturnType<typeof useSortable>['listeners']
+): JSX.Element {
+  return (
+    <button
+      {...attributes}
+      {...listeners}
+      title="드래그하여 순서 변경"
+      className="no-drag cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
+    >
+      <GripVertical className="h-3.5 w-3.5" />
+    </button>
+  )
+}
+
+// A sortable child category nested under its root.
+function ChildRow({
+  category,
+  active,
+  openCount,
+  onSelect,
+  onDelete
+}: {
+  category: Category
+  active: boolean
+  openCount: number
+  onSelect: () => void
+  onDelete: () => void
+}): JSX.Element {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: category.id
+  })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={isDragging ? 'relative z-10 opacity-80' : ''}
+    >
+      <CategoryRow
+        category={category}
+        child
+        active={active}
+        openCount={openCount}
+        handle={dragHandle(attributes, listeners)}
+        onSelect={onSelect}
+        onDelete={onDelete}
+      />
+    </div>
+  )
+}
+
 interface RootBlockProps {
   root: Category
   children: Category[]
@@ -87,7 +159,7 @@ interface RootBlockProps {
   addingNode: ReactNode
 }
 
-// Sortable wrapper for a root category and the (non-sortable) children beneath it.
+// Sortable wrapper for a root category and its (independently sortable) children.
 function RootBlock({
   root,
   children,
@@ -102,17 +174,6 @@ function RootBlock({
     id: root.id
   })
 
-  const handle = (
-    <button
-      {...attributes}
-      {...listeners}
-      title="드래그하여 순서 변경"
-      className="no-drag cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
-    >
-      <GripVertical className="h-3.5 w-3.5" />
-    </button>
-  )
-
   return (
     <div
       ref={setNodeRef}
@@ -123,22 +184,23 @@ function RootBlock({
         category={root}
         active={root.id === activeCategoryId}
         openCount={openCount.get(root.id) ?? 0}
-        handle={handle}
+        handle={dragHandle(attributes, listeners)}
         onSelect={() => onSelect(root.id)}
         onAddChild={() => onAddChild(root.id)}
         onDelete={() => onDelete(root.id)}
       />
-      {children.map((c) => (
-        <CategoryRow
-          key={c.id}
-          category={c}
-          child
-          active={c.id === activeCategoryId}
-          openCount={openCount.get(c.id) ?? 0}
-          onSelect={() => onSelect(c.id)}
-          onDelete={() => onDelete(c.id)}
-        />
-      ))}
+      <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+        {children.map((c) => (
+          <ChildRow
+            key={c.id}
+            category={c}
+            active={c.id === activeCategoryId}
+            openCount={openCount.get(c.id) ?? 0}
+            onSelect={() => onSelect(c.id)}
+            onDelete={() => onDelete(c.id)}
+          />
+        ))}
+      </SortableContext>
       {addingNode}
     </div>
   )
@@ -185,15 +247,25 @@ export function CategoryPanel(): JSX.Element {
     setName('')
   }
 
+  // Reorder roots among roots, or children among their own siblings (1-level only).
   const onDragEnd = (e: DragEndEvent): void => {
     const { active, over } = e
     if (!over || active.id === over.id) return
-    const roots = tree.map((t) => t.root)
-    const from = roots.findIndex((r) => r.id === active.id)
-    const to = roots.findIndex((r) => r.id === over.id)
+    const activeCat = categories.find((c) => c.id === active.id)
+    const overCat = categories.find((c) => c.id === over.id)
+    if (!activeCat || !overCat) return
+
+    const group = (parentId: string | null): Category[] =>
+      categories.filter((c) => (c.parent_id ?? null) === parentId)
+
+    if ((activeCat.parent_id ?? null) !== (overCat.parent_id ?? null)) return // no cross-group moves
+
+    const siblings = group(activeCat.parent_id ?? null)
+    const from = siblings.findIndex((c) => c.id === active.id)
+    const to = siblings.findIndex((c) => c.id === over.id)
     if (from < 0 || to < 0) return
-    const reordered = arrayMove(roots, from, to)
-    const updates: UpdateCategoryInput[] = reordered.map((r, i) => ({ id: r.id, sort_order: i }))
+    const reordered = arrayMove(siblings, from, to)
+    const updates: UpdateCategoryInput[] = reordered.map((c, i) => ({ id: c.id, sort_order: i }))
     reorderCategories(updates)
   }
 

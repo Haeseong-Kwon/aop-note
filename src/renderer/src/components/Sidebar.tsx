@@ -1,15 +1,163 @@
-import { useState } from 'react'
-import { Plus, Check, X, Search, Sun, CalendarCheck, Moon, Monitor, Pencil, Trash2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import {
+  Plus,
+  Check,
+  X,
+  Search,
+  Sun,
+  CalendarCheck,
+  Moon,
+  Monitor,
+  Pencil,
+  Trash2,
+  GripVertical
+} from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
+import { DeskIcon } from './DeskIcon'
+import { StylePicker } from './StylePicker'
 import { cn } from '@/lib/utils'
 import type { Theme } from '@/store/useStore'
+import type { Workspace, UpdateWorkspaceInput } from '@shared/types'
 
 const THEMES: { value: Theme; icon: typeof Sun; label: string }[] = [
   { value: 'light', icon: Sun, label: '라이트' },
   { value: 'dark', icon: Moon, label: '다크' },
   { value: 'system', icon: Monitor, label: '시스템' }
 ]
+
+interface DeskRowProps {
+  ws: Workspace
+  active: boolean
+  editing: boolean
+  editName: string
+  onEditNameChange: (v: string) => void
+  onSelect: () => void
+  onStartRename: () => void
+  onSaveRename: () => void
+  onCancelRename: () => void
+  onDelete: () => void
+}
+
+function DeskRow({
+  ws,
+  active,
+  editing,
+  editName,
+  onEditNameChange,
+  onSelect,
+  onStartRename,
+  onSaveRename,
+  onCancelRename,
+  onDelete
+}: DeskRowProps): JSX.Element {
+  const updateWorkspace = useStore((s) => s.updateWorkspace)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const iconBtnRef = useRef<HTMLButtonElement>(null)
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: ws.id
+  })
+
+  if (editing) {
+    return (
+      <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
+        <div className="flex items-center gap-1 px-1">
+          <input
+            autoFocus
+            value={editName}
+            onChange={(e) => onEditNameChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시
+              if (e.key === 'Enter') onSaveRename()
+              if (e.key === 'Escape') onCancelRename()
+            }}
+            className="no-drag h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          />
+          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onSaveRename}>
+            <Check className="h-4 w-4" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onCancelRename}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        'group relative flex items-center gap-1.5 rounded-md px-2 py-2 text-sm transition-colors',
+        active
+          ? 'bg-accent font-medium text-accent-foreground'
+          : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+        isDragging && 'z-10 opacity-80'
+      )}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        title="드래그하여 순서 변경"
+        className="no-drag -ml-0.5 cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+
+      <button
+        ref={iconBtnRef}
+        onClick={() => setPickerOpen((v) => !v)}
+        title="색상·아이콘 변경"
+        className="no-drag flex h-5 w-5 items-center justify-center rounded transition-colors hover:bg-accent"
+      >
+        <DeskIcon color={ws.color} icon={ws.icon} />
+      </button>
+      {pickerOpen && (
+        <StylePicker
+          anchorEl={iconBtnRef.current}
+          color={ws.color}
+          icon={ws.icon}
+          onChange={(next) => updateWorkspace({ id: ws.id, ...next })}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+
+      <button onClick={onSelect} className="no-drag min-w-0 flex-1 truncate text-left">
+        {ws.name}
+      </button>
+      <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-6 w-6"
+          onClick={onStartRename}
+          title="이름 변경"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onDelete} title="삭제">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  )
+}
 
 export function Sidebar(): JSX.Element {
   const workspaces = useStore((s) => s.workspaces)
@@ -20,6 +168,7 @@ export function Sidebar(): JSX.Element {
   const selectSmartView = useStore((s) => s.selectSmartView)
   const openPalette = useStore((s) => s.openPalette)
   const renameWorkspace = useStore((s) => s.renameWorkspace)
+  const reorderWorkspaces = useStore((s) => s.reorderWorkspaces)
   const deleteWorkspace = useStore((s) => s.deleteWorkspace)
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
@@ -28,6 +177,7 @@ export function Sidebar(): JSX.Element {
   const [name, setName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   // On macOS the traffic-light buttons overlay the top-left; inset the brand below them.
   const isMac = navigator.userAgent.includes('Macintosh')
@@ -50,6 +200,17 @@ export function Sidebar(): JSX.Element {
     if (window.confirm(`'${deskName}' 데스크와 포함된 모든 카테고리·작업이 삭제됩니다. 계속할까요?`)) {
       deleteWorkspace(id)
     }
+  }
+
+  const onDragEnd = (e: DragEndEvent): void => {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const from = workspaces.findIndex((w) => w.id === active.id)
+    const to = workspaces.findIndex((w) => w.id === over.id)
+    if (from < 0 || to < 0) return
+    const reordered = arrayMove(workspaces, from, to)
+    const updates: UpdateWorkspaceInput[] = reordered.map((w, i) => ({ id: w.id, sort_order: i }))
+    reorderWorkspaces(updates)
   }
 
   return (
@@ -103,67 +264,28 @@ export function Sidebar(): JSX.Element {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2">
-        {workspaces.map((ws) =>
-          editingId === ws.id ? (
-            <div key={ws.id} className="flex items-center gap-1 px-1">
-              <input
-                autoFocus
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시
-                  if (e.key === 'Enter') saveRename()
-                  if (e.key === 'Escape') setEditingId(null)
-                }}
-                className="no-drag h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext
+            items={workspaces.map((w) => w.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {workspaces.map((ws) => (
+              <DeskRow
+                key={ws.id}
+                ws={ws}
+                active={ws.id === activeId && smartView === null}
+                editing={editingId === ws.id}
+                editName={editName}
+                onEditNameChange={setEditName}
+                onSelect={() => selectWorkspace(ws.id)}
+                onStartRename={() => startRename(ws.id, ws.name)}
+                onSaveRename={saveRename}
+                onCancelRename={() => setEditingId(null)}
+                onDelete={() => confirmDelete(ws.id, ws.name)}
               />
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={saveRename}>
-                <Check className="h-4 w-4" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div
-              key={ws.id}
-              className={cn(
-                'group flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
-                ws.id === activeId && smartView === null
-                  ? 'bg-accent font-medium text-accent-foreground'
-                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-              )}
-            >
-              <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: ws.color }} />
-              <button
-                onClick={() => selectWorkspace(ws.id)}
-                className="no-drag min-w-0 flex-1 truncate text-left"
-              >
-                {ws.name}
-              </button>
-              <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={() => startRename(ws.id, ws.name)}
-                  title="이름 변경"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6"
-                  onClick={() => confirmDelete(ws.id, ws.name)}
-                  title="삭제"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          )
-        )}
+            ))}
+          </SortableContext>
+        </DndContext>
 
         {workspaces.length === 0 && !adding && (
           <p className="px-3 py-2 text-xs text-muted-foreground">아직 데스크가 없습니다.</p>

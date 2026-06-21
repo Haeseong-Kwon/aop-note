@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1781068651408,
+  "lastScanned": 1782052768619,
   "projectRoot": "/Users/haeseong/Desktop/Product/aop-note",
   "techStack": {
     "languages": [
@@ -55,6 +55,7 @@
       "start": "electron-vite preview",
       "package": "electron-vite build && electron-builder",
       "package:mac": "electron-vite build && electron-builder --mac",
+      "install:mac": "bash scripts/install-mac.sh",
       "postinstall": "electron-builder install-app-deps"
     }
   },
@@ -68,32 +69,122 @@
     "isMonorepo": false,
     "workspaces": [],
     "mainDirectories": [
+      "scripts",
       "src"
     ],
     "gitBranches": null
   },
   "customNotes": [],
   "directoryMap": {
+    "build": {
+      "path": "build",
+      "purpose": "Build output",
+      "fileCount": 2,
+      "lastAccessed": 1782052768561,
+      "keyFiles": [
+        "icon.icns",
+        "icon.png"
+      ]
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 4,
+      "lastAccessed": 1782052768564,
+      "keyFiles": [
+        "aop-note-0.1.0.dmg",
+        "aop-note-0.1.0.dmg.blockmap",
+        "builder-debug.yml",
+        "latest-mac.yml"
+      ]
+    },
+    "image": {
+      "path": "image",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1782052768573,
+      "keyFiles": [
+        "logo image.png"
+      ]
+    },
     "out": {
       "path": "out",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1781068651336,
+      "lastAccessed": 1782052768574,
       "keyFiles": []
+    },
+    "scripts": {
+      "path": "scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 2,
+      "lastAccessed": 1782052768578,
+      "keyFiles": [
+        "install-mac.sh",
+        "make-icon.py"
+      ]
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1781068651338,
+      "lastAccessed": 1782052768580,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
+      "path": "src/renderer/src/store/useStore.ts",
+      "accessCount": 7,
+      "lastAccessed": 1782053474709,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/types.ts",
+      "accessCount": 6,
+      "lastAccessed": 1782053384496,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/Sidebar.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1782053712545,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/CategoryPanel.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1782053737799,
+      "type": "file"
+    },
+    {
       "path": "src/renderer/src/components/TaskPanel.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1781197698799,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/GoalsView.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1781197742729,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/MainArea.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1782053530296,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/ipc.ts",
       "accessCount": 4,
-      "lastAccessed": 1781069336694,
+      "lastAccessed": 1782053421708,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/hooks/useMarkdownEditor.ts",
+      "accessCount": 4,
+      "lastAccessed": 1782053944775,
       "type": "file"
     },
     {
@@ -103,21 +194,21 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/GoalsView.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1781069092909,
+      "path": "src/renderer/src/components/GoalStrip.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1781197726456,
       "type": "file"
     },
     {
-      "path": "src/shared/types.ts",
-      "accessCount": 2,
-      "lastAccessed": 1781069092976,
+      "path": "src/main/db/migrations.ts",
+      "accessCount": 3,
+      "lastAccessed": 1782053394764,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/store/useStore.ts",
-      "accessCount": 2,
-      "lastAccessed": 1781069119882,
+      "path": "src/main/repositories/workspace.repo.ts",
+      "accessCount": 3,
+      "lastAccessed": 1782053407762,
       "type": "file"
     },
     {
@@ -127,33 +218,57 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/MainArea.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1781068838554,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/CategoryPanel.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1781068841974,
+      "path": "scripts/install-mac.sh",
+      "accessCount": 2,
+      "lastAccessed": 1781197980309,
       "type": "file"
     },
     {
       "path": "src/renderer/src/components/ListView.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1781068845185,
+      "accessCount": 2,
+      "lastAccessed": 1782052974789,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/category.repo.ts",
+      "accessCount": 2,
+      "lastAccessed": 1782053012151,
       "type": "file"
     },
     {
       "path": "src/renderer/src/components/KanbanView.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1781068845456,
+      "accessCount": 2,
+      "lastAccessed": 1782053023506,
       "type": "file"
     },
     {
-      "path": "src/shared/ipc.ts",
-      "accessCount": 1,
-      "lastAccessed": 1781068845543,
+      "path": "src/main/ipc/handlers.ts",
+      "accessCount": 2,
+      "lastAccessed": 1782053428158,
+      "type": "file"
+    },
+    {
+      "path": "src/preload/index.ts",
+      "accessCount": 2,
+      "lastAccessed": 1782053437096,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/StylePicker.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1782053685447,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/EditorPane.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1782053910939,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/MemoEditor.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1782053958177,
       "type": "file"
     },
     {
@@ -163,51 +278,45 @@
       "type": "file"
     },
     {
-      "path": "src/main/repositories/category.repo.ts",
-      "accessCount": 1,
-      "lastAccessed": 1781068848924,
-      "type": "file"
-    },
-    {
-      "path": "src/main/repositories/workspace.repo.ts",
-      "accessCount": 1,
-      "lastAccessed": 1781068851978,
-      "type": "file"
-    },
-    {
-      "path": "src/main/db/migrations.ts",
-      "accessCount": 1,
-      "lastAccessed": 1781068852270,
-      "type": "file"
-    },
-    {
       "path": "src/renderer/src/components/TaskRow.tsx",
       "accessCount": 1,
       "lastAccessed": 1781068858444,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/Sidebar.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1781068864266,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/GoalStrip.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1781069328678,
-      "type": "file"
-    },
-    {
-      "path": "scripts/install-mac.sh",
-      "accessCount": 1,
-      "lastAccessed": 1781070055844,
-      "type": "file"
-    },
-    {
       "path": "image/logo image.png",
       "accessCount": 1,
       "lastAccessed": 1781070231871,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/lib/palette.ts",
+      "accessCount": 1,
+      "lastAccessed": 1782053485995,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/DeskIcon.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1782053494666,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/lib/caretCoordinates.ts",
+      "accessCount": 1,
+      "lastAccessed": 1782053754452,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/lib/editorBlocks.ts",
+      "accessCount": 1,
+      "lastAccessed": 1782053803420,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/SlashMenu.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1782053823164,
       "type": "file"
     }
   ],

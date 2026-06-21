@@ -12,6 +12,7 @@ import type {
   UpdateTaskInput,
   UpdateCategoryInput,
   CreateCategoryInput,
+  UpdateWorkspaceInput,
   CreateGoalInput,
   UpdateGoalInput
 } from '@shared/types'
@@ -80,8 +81,11 @@ interface AppState {
   // workspace / category
   createWorkspace: (name: string) => Promise<void>
   renameWorkspace: (id: string, name: string) => Promise<void>
+  updateWorkspace: (input: UpdateWorkspaceInput) => Promise<void>
+  reorderWorkspaces: (updates: UpdateWorkspaceInput[]) => Promise<void>
   deleteWorkspace: (id: string) => Promise<void>
   createCategory: (input: Omit<CreateCategoryInput, 'workspace_id'>) => Promise<void>
+  updateCategory: (input: UpdateCategoryInput) => Promise<void>
   reorderCategories: (updates: UpdateCategoryInput[]) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
 
@@ -238,6 +242,37 @@ export const useStore = create<AppState>((set, get) => ({
     set({ workspaces: await window.api.workspace.list() })
   },
 
+  updateWorkspace: async (input) => {
+    // optimistic style change (color/icon) so the picker feels instant
+    set((s) => ({
+      workspaces: s.workspaces.map((w) =>
+        w.id === input.id
+          ? {
+              ...w,
+              color: input.color ?? w.color,
+              icon: input.icon ?? w.icon,
+              name: input.name ?? w.name
+            }
+          : w
+      )
+    }))
+    await window.api.workspace.update(input)
+    set({ workspaces: await window.api.workspace.list() })
+  },
+
+  reorderWorkspaces: async (updates) => {
+    set((s) => ({
+      workspaces: [...s.workspaces]
+        .map((w) => {
+          const u = updates.find((x) => x.id === w.id)
+          return u && u.sort_order !== undefined ? { ...w, sort_order: u.sort_order } : w
+        })
+        .sort((a, b) => a.sort_order - b.sort_order)
+    }))
+    await window.api.workspace.reorder(updates)
+    set({ workspaces: await window.api.workspace.list() })
+  },
+
   deleteWorkspace: async (id) => {
     await window.api.workspace.remove(id)
     const workspaces = await window.api.workspace.list()
@@ -268,6 +303,18 @@ export const useStore = create<AppState>((set, get) => ({
     const trimmed = input.name.trim()
     if (!trimmed) return
     await window.api.category.create({ ...input, name: trimmed, workspace_id: workspaceId })
+    await get().refresh()
+  },
+
+  updateCategory: async (input) => {
+    set((s) => ({
+      categories: s.categories.map((c) =>
+        c.id === input.id
+          ? { ...c, color: input.color ?? c.color, name: input.name ?? c.name }
+          : c
+      )
+    }))
+    await window.api.category.update(input)
     await get().refresh()
   },
 

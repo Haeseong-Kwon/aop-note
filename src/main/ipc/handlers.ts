@@ -45,6 +45,7 @@ export function registerIpcHandlers(): void {
   handle(IPC.workspace.list, () => workspaceRepo.list())
   handle(IPC.workspace.create, (input: CreateWorkspaceInput) => workspaceRepo.create(input))
   handle(IPC.workspace.update, (input: UpdateWorkspaceInput) => workspaceRepo.update(input))
+  handle(IPC.workspace.reorder, (updates: UpdateWorkspaceInput[]) => workspaceRepo.reorder(updates))
   handle(IPC.workspace.remove, (id: string) => workspaceRepo.remove(id))
 
   // ---- Category ----

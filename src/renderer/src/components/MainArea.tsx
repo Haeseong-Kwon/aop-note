@@ -1,6 +1,7 @@
 import { ListTodo, CalendarDays, Target, FolderArchive } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DeskIcon } from './DeskIcon'
 import { TaskPanel } from './TaskPanel'
 import { CalendarView } from './CalendarView'
 import { GoalsView } from './GoalsView'
@@ -38,7 +39,7 @@ export function MainArea(): JSX.Element {
     <main className="flex flex-1 flex-col overflow-hidden">
       <header className="drag-region flex h-12 shrink-0 items-center gap-4 border-b border-border px-5">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: desk.color }} />
+          <DeskIcon color={desk.color} icon={desk.icon} />
           <h1 className="truncate text-sm font-semibold tracking-tight">{desk.name}</h1>
         </div>
 

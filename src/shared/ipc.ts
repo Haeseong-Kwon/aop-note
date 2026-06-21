@@ -37,6 +37,7 @@ export const IPC = {
     list: 'workspace:list',
     create: 'workspace:create',
     update: 'workspace:update',
+    reorder: 'workspace:reorder',
     remove: 'workspace:remove'
   },
   category: {
@@ -87,6 +88,7 @@ export interface Api {
     list(): Promise<Workspace[]>
     create(input: CreateWorkspaceInput): Promise<Workspace>
     update(input: UpdateWorkspaceInput): Promise<Workspace>
+    reorder(updates: UpdateWorkspaceInput[]): Promise<void>
     remove(id: string): Promise<void>
   }
   category: {

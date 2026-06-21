@@ -21,6 +21,7 @@ const api: Api = {
     list: () => ipcRenderer.invoke(IPC.workspace.list),
     create: (input: CreateWorkspaceInput) => ipcRenderer.invoke(IPC.workspace.create, input),
     update: (input: UpdateWorkspaceInput) => ipcRenderer.invoke(IPC.workspace.update, input),
+    reorder: (updates: UpdateWorkspaceInput[]) => ipcRenderer.invoke(IPC.workspace.reorder, updates),
     remove: (id: string) => ipcRenderer.invoke(IPC.workspace.remove, id)
   },
   category: {

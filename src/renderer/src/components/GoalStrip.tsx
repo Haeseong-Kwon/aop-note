@@ -1,34 +1,67 @@
 import { Check, Target } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { cn } from '@/lib/utils'
+import { DueBadge } from './TaskBadges'
 import type { GoalWithProgress } from '@shared/types'
 
 function GoalChip({ goal, onOpen }: { goal: GoalWithProgress; onOpen: () => void }): JSX.Element {
   const done = goal.status === 'done'
-  const pct = Math.round(goal.progress * 100)
 
   return (
     <button
       onClick={onOpen}
-      title={`${goal.title} · ${goal.done_tasks}/${goal.total_tasks} 완료`}
-      className="flex w-56 shrink-0 flex-col gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary/60 hover:bg-accent/40"
+      title={goal.description || goal.title}
+      className={cn(
+        'group relative flex w-60 shrink-0 flex-col gap-1.5 overflow-hidden rounded-xl border px-3.5 py-3 text-left',
+        'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+        done
+          ? 'border-emerald-500/30 bg-emerald-500/[0.06] hover:border-emerald-500/50'
+          : 'border-border bg-card hover:border-primary/50'
+      )}
     >
-      <div className="flex items-center gap-2">
-        {done ? (
-          <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-        ) : (
-          <Target className="h-3.5 w-3.5 shrink-0 text-primary" />
+      {/* 좌측 강조 바 */}
+      <span
+        className={cn(
+          'absolute inset-y-0 left-0 w-1 transition-colors',
+          done ? 'bg-emerald-500' : 'bg-primary/70 group-hover:bg-primary'
         )}
-        <span className={cn('min-w-0 flex-1 truncate text-xs font-medium', done && 'line-through opacity-60')}>
+      />
+
+      <div className="flex items-center gap-2 pl-1">
+        <span
+          className={cn(
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg',
+            done ? 'bg-emerald-500/15 text-emerald-500' : 'bg-primary/10 text-primary'
+          )}
+        >
+          {done ? <Check className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
+        </span>
+        <span
+          className={cn(
+            'min-w-0 flex-1 truncate text-sm font-semibold leading-tight',
+            done && 'line-through opacity-60'
+          )}
+        >
           {goal.title}
         </span>
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{pct}%</span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className={cn('h-full rounded-full transition-all', done ? 'bg-emerald-500' : 'bg-primary')}
-          style={{ width: `${pct}%` }}
-        />
+
+      {goal.description && (
+        <p className="line-clamp-2 pl-1 text-xs leading-snug text-muted-foreground">
+          {goal.description}
+        </p>
+      )}
+
+      <div className="flex items-center gap-2 pl-1 text-[11px] text-muted-foreground">
+        <span className="tabular-nums">
+          작업 {goal.done_tasks}/{goal.total_tasks}
+        </span>
+        {goal.due_date && (
+          <>
+            <span className="text-border">·</span>
+            <DueBadge due={goal.due_date} />
+          </>
+        )}
       </div>
     </button>
   )
@@ -42,7 +75,7 @@ export function GoalStrip(): JSX.Element | null {
   if (goals.length === 0) return null
 
   return (
-    <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-border px-5 py-3">
+    <div className="flex shrink-0 gap-2.5 overflow-x-auto border-b border-border bg-muted/20 px-5 py-3">
       {goals.map((goal) => (
         <GoalChip key={goal.id} goal={goal} onOpen={() => setMainView('goals')} />
       ))}

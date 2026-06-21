@@ -17,7 +17,6 @@ function GoalCard({ goal }: { goal: GoalWithProgress }): JSX.Element {
   const [description, setDescription] = useState(goal.description)
 
   const done = goal.status === 'done'
-  const pct = Math.round(goal.progress * 100)
 
   const commitTitle = (): void => {
     const next = title.trim()
@@ -52,18 +51,14 @@ function GoalCard({ goal }: { goal: GoalWithProgress }): JSX.Element {
             />
           </button>
 
-          <div className="mt-2 flex items-center gap-2">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-              <div
-                className={cn('h-full rounded-full transition-all', done ? 'bg-emerald-500' : 'bg-primary')}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-            <span className="text-xs tabular-nums text-muted-foreground">{pct}%</span>
-          </div>
+          {goal.description && !expanded && (
+            <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+              {goal.description}
+            </p>
+          )}
 
-          <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
-            <span>
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="tabular-nums">
               작업 {goal.done_tasks}/{goal.total_tasks} 완료
             </span>
             <DueBadge due={goal.due_date} />
