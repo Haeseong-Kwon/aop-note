@@ -30,6 +30,9 @@ function applyTheme(theme: Theme): void {
     theme === 'dark' ||
     (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   root.classList.toggle('dark', dark)
+  // Keep the native window backdrop on the same appearance as the UI; otherwise
+  // the macOS vibrancy blur follows the OS and the glass tint sits on the wrong base.
+  window.api?.setTheme(dark ? 'dark' : 'light')
 }
 const savedTheme = ((): Theme => {
   const t = localStorage.getItem('aop-theme')

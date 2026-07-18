@@ -71,6 +71,7 @@ const api: Api = {
     openExternal: (id: string) => ipcRenderer.invoke(IPC.attachment.openExternal, id),
     remove: (id: string) => ipcRenderer.invoke(IPC.attachment.remove, id)
   },
+  setTheme: (theme: 'light' | 'dark') => ipcRenderer.invoke(IPC.theme.set, theme),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   onNavigateToTask: (cb: (payload: NavigatePayload) => void) => {
     const listener = (_e: IpcRendererEvent, payload: NavigatePayload): void => cb(payload)

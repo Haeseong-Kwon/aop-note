@@ -79,6 +79,9 @@ export const IPC = {
     openExternal: 'attachment:openExternal',
     remove: 'attachment:remove'
   },
+  theme: {
+    set: 'theme:set'
+  },
   events: {
     navigateToTask: 'event:navigateToTask'
   }
@@ -136,6 +139,12 @@ export interface Api {
     openExternal(id: string): Promise<void>
     remove(id: string): Promise<void>
   }
+  /**
+   * Tell main which appearance the UI is showing, so the native window backdrop
+   * (macOS vibrancy / other platforms' background) matches. Without this the
+   * backdrop follows the OS, and light UI over a dark blur reads as grey mud.
+   */
+  setTheme(theme: 'light' | 'dark'): Promise<void>
   /** Electron 32+: resolve the absolute filesystem path of a picked/dropped File. */
   getPathForFile(file: File): string
   /** Subscribe to "open this task" requests from notification clicks. Returns an unsubscribe fn. */

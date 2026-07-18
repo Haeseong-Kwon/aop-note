@@ -22,22 +22,33 @@
     --accent-foreground: 220 18% 13%;
     --destructive: 0 62% 47%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 12% 86%;
-    --input: 220 12% 86%;
+    --border: 220 14% 80%;
+    --input: 220 14% 80%;
     --ring: 210 47% 46%;
     --radius: 0.6rem;
+    --border-alpha: 0.85;
 
-    /* Glass surfaces, most translucent first. Every layer pairs a low-alpha tint
-       with a heavy blur, so the vibrancy behind reads as frosted glass rather
-       than as a flat fill. Blur is what keeps text legible at these alphas. */
-    --glass-chrome: rgb(255 255 255 / 0.44);
-    --glass-panel: rgb(255 255 255 / 0.7);
-    --glass-card: rgb(255 255 255 / 0.5);
-    --glass-overlay: rgb(255 255 255 / 0.72);
-    --glass-border: rgb(255 255 255 / 0.65);
-    --glass-hairline: rgb(0 0 0 / 0.07);
-    --glass-highlight: rgb(255 255 255 / 0.9);
-    --glass-shadow: 0 18px 44px -16px rgb(15 20 30 / 0.28);
+    /* Glass surfaces, most translucent first. Light glass needs a much higher
+       alpha than dark glass: white-on-bright-backdrop has no contrast to spare,
+       so the tint — not the blur — is what carries legibility here. Edges are
+       DARK hairlines; a white border on a white surface is simply invisible. */
+    --glass-chrome: rgb(248 249 251 / 0.82);
+    --glass-panel: rgb(255 255 255 / 0.9);
+    --glass-card: rgb(255 255 255 / 0.75);
+    --glass-overlay: rgb(252 252 253 / 0.94);
+    --glass-border: rgb(17 24 39 / 0.12);
+    --glass-hairline: rgb(17 24 39 / 0.08);
+    --glass-highlight: rgb(255 255 255 / 0.85);
+    /* Low saturation in light mode: boosting it just drags the desktop
+       wallpaper's colour up through the surface and tints the text. */
+    --glass-sat: 118%;
+    /* A dark scrim greys out light UI. Dim just enough to push it back. */
+    --glass-scrim: rgb(17 24 39 / 0.18);
+    /* Two-part shadow: a tight contact edge for definition, a wide soft one for
+       lift. One big blurry shadow just greys the area under the pane. */
+    --glass-shadow:
+      0 1px 2px rgb(17 24 39 / 0.06),
+      0 10px 28px -14px rgb(17 24 39 / 0.2);
   }
 
   .dark {
@@ -60,6 +71,7 @@
     --border: 220 8% 21%;
     --input: 220 8% 21%;
     --ring: 210 45% 58%;
+    --border-alpha: 0.6;
 
     --glass-chrome: rgb(30 33 38 / 0.38);
     --glass-panel: rgb(18 20 24 / 0.66);
@@ -68,6 +80,8 @@
     --glass-border: rgb(255 255 255 / 0.1);
     --glass-hairline: rgb(255 255 255 / 0.06);
     --glass-highlight: rgb(255 255 255 / 0.14);
+    --glass-sat: 180%;
+    --glass-scrim: rgb(0 0 0 / 0.35);
     --glass-shadow: 0 22px 52px -16px rgb(0 0 0 / 0.7);
   }
 
@@ -100,23 +114,23 @@
   /* Window chrome — sidebar, headers, tool strips. Most translucent layer. */
   .glass-chrome {
     background: var(--glass-chrome);
-    backdrop-filter: blur(44px) saturate(190%);
-    -webkit-backdrop-filter: blur(44px) saturate(190%);
+    backdrop-filter: blur(44px) saturate(var(--glass-sat));
+    -webkit-backdrop-filter: blur(44px) saturate(var(--glass-sat));
   }
 
   /* Content surfaces that hold long-form text. The heavy blur is what buys the
      legibility a higher alpha would otherwise be needed for. */
   .glass-panel {
     background: var(--glass-panel);
-    backdrop-filter: blur(40px) saturate(170%);
-    -webkit-backdrop-filter: blur(40px) saturate(170%);
+    backdrop-filter: blur(40px) saturate(var(--glass-sat));
+    -webkit-backdrop-filter: blur(40px) saturate(var(--glass-sat));
   }
 
   /* Floating surfaces — dialogs, palettes, popovers. */
   .glass-overlay {
     background: var(--glass-overlay);
-    backdrop-filter: blur(48px) saturate(200%);
-    -webkit-backdrop-filter: blur(48px) saturate(200%);
+    backdrop-filter: blur(48px) saturate(var(--glass-sat));
+    -webkit-backdrop-filter: blur(48px) saturate(var(--glass-sat));
     border: 1px solid var(--glass-border);
     box-shadow:
       var(--glass-shadow),
@@ -144,6 +158,12 @@
   .glass-divider {
     border-color: var(--glass-hairline);
   }
+
+  /* Modal scrim. Tuned per theme — a scrim heavy enough for dark UI turns
+     light UI grey and muddy. */
+  .glass-scrim {
+    background: var(--glass-scrim);
+  }
 }
 
 @layer utilities {
@@ -151,8 +171,8 @@
      across the app pick this up without touching each component. */
   .bg-card {
     background-color: var(--glass-card);
-    backdrop-filter: blur(20px) saturate(170%);
-    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    backdrop-filter: blur(20px) saturate(var(--glass-sat));
+    -webkit-backdrop-filter: blur(20px) saturate(var(--glass-sat));
     border-color: var(--glass-border);
     box-shadow: inset 0 1px 0 var(--glass-highlight);
   }

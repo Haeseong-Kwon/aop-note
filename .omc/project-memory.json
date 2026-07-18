@@ -135,15 +135,15 @@
   },
   "hotPaths": [
     {
-      "path": "src/renderer/src/components/BlockNoteEditor.tsx",
-      "accessCount": 18,
-      "lastAccessed": 1784408094403,
+      "path": "src/renderer/src/index.css",
+      "accessCount": 25,
+      "lastAccessed": 1784410543553,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/index.css",
-      "accessCount": 13,
-      "lastAccessed": 1784408047353,
+      "path": "src/renderer/src/components/BlockNoteEditor.tsx",
+      "accessCount": 18,
+      "lastAccessed": 1784408094403,
       "type": "file"
     },
     {
@@ -165,21 +165,27 @@
       "type": "file"
     },
     {
+      "path": "src/main/ipc/handlers.ts",
+      "accessCount": 7,
+      "lastAccessed": 1784410276945,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/ipc.ts",
+      "accessCount": 6,
+      "lastAccessed": 1784410253272,
+      "type": "file"
+    },
+    {
       "path": "src/main/attachments.ts",
       "accessCount": 4,
       "lastAccessed": 1784407835669,
       "type": "file"
     },
     {
-      "path": "src/shared/ipc.ts",
+      "path": "src/renderer/src/App.tsx",
       "accessCount": 4,
-      "lastAccessed": 1784407845150,
-      "type": "file"
-    },
-    {
-      "path": "src/main/ipc/handlers.ts",
-      "accessCount": 4,
-      "lastAccessed": 1784407851967,
+      "lastAccessed": 1784410197951,
       "type": "file"
     },
     {
@@ -189,15 +195,21 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/src/App.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1784407771026,
-      "type": "file"
-    },
-    {
       "path": "src/renderer/src/components/Sidebar.tsx",
       "accessCount": 3,
       "lastAccessed": 1784407803202,
+      "type": "file"
+    },
+    {
+      "path": "src/preload/index.ts",
+      "accessCount": 3,
+      "lastAccessed": 1784410258194,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/ui/dialog.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1784410545180,
       "type": "file"
     },
     {
@@ -207,15 +219,15 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/ui/dialog.tsx",
+      "path": "src/main/index.ts",
       "accessCount": 2,
-      "lastAccessed": 1784406810545,
+      "lastAccessed": 1784410197388,
       "type": "file"
     },
     {
-      "path": "src/preload/index.ts",
+      "path": "tailwind.config.js",
       "accessCount": 2,
-      "lastAccessed": 1784407853817,
+      "lastAccessed": 1784410306310,
       "type": "file"
     },
     {
@@ -228,12 +240,6 @@
       "path": "scripts/install-mac.sh",
       "accessCount": 1,
       "lastAccessed": 1784406276311,
-      "type": "file"
-    },
-    {
-      "path": "src/main/index.ts",
-      "accessCount": 1,
-      "lastAccessed": 1784406755936,
       "type": "file"
     },
     {
@@ -252,12 +258,6 @@
       "path": "src/renderer/src/components/DocumentViewer.tsx",
       "accessCount": 1,
       "lastAccessed": 1784407517320,
-      "type": "file"
-    },
-    {
-      "path": "tailwind.config.js",
-      "accessCount": 1,
-      "lastAccessed": 1784407796997,
       "type": "file"
     },
     {
@@ -282,6 +282,12 @@
       "path": "src/main/repositories/attachment.repo.ts",
       "accessCount": 1,
       "lastAccessed": 1784407829092,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/store/useStore.ts",
+      "accessCount": 1,
+      "lastAccessed": 1784410260066,
       "type": "file"
     }
   ],

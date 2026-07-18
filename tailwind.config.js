@@ -10,7 +10,8 @@ export default {
     extend: {
       colors: {
         // Translucent so dividers read as hairlines on glass instead of hard rules.
-        border: 'hsl(var(--border) / 0.6)',
+        // Light glass needs a higher alpha than dark to stay visible at all.
+        border: 'hsl(var(--border) / var(--border-alpha))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',

@@ -71,7 +71,7 @@ export function DocumentViewer({ attachmentId, fileName, onClose }: DocumentView
 
         {/* Canvas */}
         {!render ? (
-          <div className="flex flex-1 items-center justify-center bg-zinc-100 text-sm text-muted-foreground dark:bg-zinc-900">
+          <div className="flex flex-1 items-center justify-center bg-muted/50 text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             문서를 여는 중…
           </div>
@@ -102,7 +102,7 @@ function Body({
   // Image: neutral canvas, centered, zoomable.
   if (render.kind === 'image') {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-zinc-100 p-6 dark:bg-zinc-900">
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-muted/50 p-6">
         <img
           src={render.url}
           alt=""
@@ -120,7 +120,7 @@ function Body({
   if (render.kind === 'sheets') {
     const sheet = render.sheets[sheetIndex] ?? render.sheets[0]
     return (
-      <div className="flex min-h-0 flex-1 flex-col bg-zinc-100 dark:bg-zinc-900">
+      <div className="flex min-h-0 flex-1 flex-col bg-muted/50">
         {render.sheets.length > 1 && (
           <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-card/60 px-3 py-1.5 backdrop-blur">
             {render.sheets.map((s, i) => (
@@ -177,7 +177,7 @@ function Body({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 bg-zinc-100 text-sm text-muted-foreground dark:bg-zinc-900">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 bg-muted/50 text-sm text-muted-foreground">
       <p>{render.reason}</p>
       <p>오른쪽 위 “외부 앱으로 열기”로 확인하세요.</p>
     </div>
@@ -186,7 +186,7 @@ function Body({
 
 function Canvas({ children }: { children: ReactNode }): JSX.Element {
   return (
-    <div className="min-h-0 flex-1 overflow-auto bg-zinc-100 p-6 dark:bg-zinc-900">{children}</div>
+    <div className="min-h-0 flex-1 overflow-auto bg-muted/50 p-6">{children}</div>
   )
 }
 

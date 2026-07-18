@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, nativeTheme, BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc'
 import { workspaceRepo } from '../repositories/workspace.repo'
 import { categoryRepo } from '../repositories/category.repo'
@@ -98,4 +98,14 @@ export function registerIpcHandlers(): void {
   handle(IPC.attachment.render, (id: string) => renderAttachmentAsync(id))
   handle(IPC.attachment.openExternal, (id: string) => openAttachmentExternal(id))
   handle(IPC.attachment.remove, (id: string) => removeAttachment(id))
+
+  // Pin the native backdrop to the UI's appearance. On macOS this repaints the
+  // under-window vibrancy; elsewhere the window has a solid backdrop to repaint.
+  handle(IPC.theme.set, (theme: 'light' | 'dark') => {
+    nativeTheme.themeSource = theme
+    if (process.platform !== 'darwin') {
+      const backdrop = theme === 'dark' ? '#0b0b0f' : '#eef0f4'
+      for (const win of BrowserWindow.getAllWindows()) win.setBackgroundColor(backdrop)
+    }
+  })
 }
