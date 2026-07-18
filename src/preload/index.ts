@@ -64,6 +64,8 @@ const api: Api = {
     listByWorkspace: (workspaceId: string) =>
       ipcRenderer.invoke(IPC.attachment.listByWorkspace, workspaceId),
     add: (input: AttachmentAddInput) => ipcRenderer.invoke(IPC.attachment.add, input),
+    addBytes: (taskId: string, fileName: string, bytes: ArrayBuffer) =>
+      ipcRenderer.invoke(IPC.attachment.addBytes, taskId, fileName, bytes),
     render: (id: string) => ipcRenderer.invoke(IPC.attachment.render, id),
     openExternal: (id: string) => ipcRenderer.invoke(IPC.attachment.openExternal, id),
     remove: (id: string) => ipcRenderer.invoke(IPC.attachment.remove, id)

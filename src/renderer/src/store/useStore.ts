@@ -19,7 +19,7 @@ import type {
 import type { NavigatePayload } from '@shared/ipc'
 
 export type ViewMode = 'list' | 'kanban'
-export type MainView = 'tasks' | 'calendar' | 'goals' | 'documents'
+export type MainView = 'tasks' | 'notes' | 'calendar' | 'goals' | 'documents'
 export type SmartView = 'today' | 'week'
 export type Theme = 'light' | 'dark' | 'system'
 

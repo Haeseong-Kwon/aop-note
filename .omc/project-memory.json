@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1782052768619,
+  "lastScanned": 1784404688177,
   "projectRoot": "/Users/haeseong/Desktop/Product/aop-note",
   "techStack": {
     "languages": [
@@ -80,7 +80,7 @@
       "path": "build",
       "purpose": "Build output",
       "fileCount": 2,
-      "lastAccessed": 1782052768561,
+      "lastAccessed": 1784404688109,
       "keyFiles": [
         "icon.icns",
         "icon.png"
@@ -89,12 +89,13 @@
     "dist": {
       "path": "dist",
       "purpose": "Distribution/build output",
-      "fileCount": 4,
-      "lastAccessed": 1782052768564,
+      "fileCount": 5,
+      "lastAccessed": 1784404688111,
       "keyFiles": [
         "aop-note-0.1.0.dmg",
         "aop-note-0.1.0.dmg.blockmap",
         "builder-debug.yml",
+        "builder-effective-config.yaml",
         "latest-mac.yml"
       ]
     },
@@ -102,7 +103,7 @@
       "path": "image",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1782052768573,
+      "lastAccessed": 1784404688136,
       "keyFiles": [
         "logo image.png"
       ]
@@ -111,14 +112,14 @@
       "path": "out",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1782052768574,
+      "lastAccessed": 1784404688137,
       "keyFiles": []
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 2,
-      "lastAccessed": 1782052768578,
+      "lastAccessed": 1784404688137,
       "keyFiles": [
         "install-mac.sh",
         "make-icon.py"
@@ -128,195 +129,69 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1782052768580,
+      "lastAccessed": 1784404688138,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
-      "path": "src/renderer/src/store/useStore.ts",
-      "accessCount": 7,
-      "lastAccessed": 1782053474709,
+      "path": "src/renderer/src/components/BlockNoteEditor.tsx",
+      "accessCount": 12,
+      "lastAccessed": 1784405970040,
       "type": "file"
     },
     {
-      "path": "src/shared/types.ts",
-      "accessCount": 6,
-      "lastAccessed": 1782053384496,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/Sidebar.tsx",
-      "accessCount": 6,
-      "lastAccessed": 1782053712545,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/CategoryPanel.tsx",
-      "accessCount": 6,
-      "lastAccessed": 1782053737799,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/TaskPanel.tsx",
+      "path": "src/renderer/src/components/NotePage.tsx",
       "accessCount": 5,
-      "lastAccessed": 1781197698799,
+      "lastAccessed": 1784405180659,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/GoalsView.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1781197742729,
+      "path": "src/main/attachments.ts",
+      "accessCount": 3,
+      "lastAccessed": 1784405105846,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/MainArea.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1782053530296,
+      "path": "src/renderer/src/components/MemoEditor.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1784405186981,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/lib/smartTypography.ts",
+      "accessCount": 3,
+      "lastAccessed": 1784405372734,
       "type": "file"
     },
     {
       "path": "src/shared/ipc.ts",
-      "accessCount": 4,
-      "lastAccessed": 1782053421708,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/hooks/useMarkdownEditor.ts",
-      "accessCount": 4,
-      "lastAccessed": 1782053944775,
-      "type": "file"
-    },
-    {
-      "path": "scripts/make-icon.py",
-      "accessCount": 3,
-      "lastAccessed": 1781070457054,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/GoalStrip.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1781197726456,
-      "type": "file"
-    },
-    {
-      "path": "src/main/db/migrations.ts",
-      "accessCount": 3,
-      "lastAccessed": 1782053394764,
-      "type": "file"
-    },
-    {
-      "path": "src/main/repositories/workspace.repo.ts",
-      "accessCount": 3,
-      "lastAccessed": 1782053407762,
-      "type": "file"
-    },
-    {
-      "path": "package.json",
       "accessCount": 2,
-      "lastAccessed": 1781070074018,
-      "type": "file"
-    },
-    {
-      "path": "scripts/install-mac.sh",
-      "accessCount": 2,
-      "lastAccessed": 1781197980309,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/ListView.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1782052974789,
-      "type": "file"
-    },
-    {
-      "path": "src/main/repositories/category.repo.ts",
-      "accessCount": 2,
-      "lastAccessed": 1782053012151,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/KanbanView.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1782053023506,
+      "lastAccessed": 1784405112858,
       "type": "file"
     },
     {
       "path": "src/main/ipc/handlers.ts",
       "accessCount": 2,
-      "lastAccessed": 1782053428158,
+      "lastAccessed": 1784405119451,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/hooks/useMemoPersist.ts",
+      "accessCount": 1,
+      "lastAccessed": 1784404905723,
       "type": "file"
     },
     {
       "path": "src/preload/index.ts",
-      "accessCount": 2,
-      "lastAccessed": 1782053437096,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/StylePicker.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1782053685447,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/EditorPane.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1782053910939,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/MemoEditor.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1782053958177,
-      "type": "file"
-    },
-    {
-      "path": "src/main/repositories/goal.repo.ts",
       "accessCount": 1,
-      "lastAccessed": 1781068848716,
+      "lastAccessed": 1784405121327,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/TaskRow.tsx",
+      "path": "src/renderer/src/components/NotesView.tsx",
       "accessCount": 1,
-      "lastAccessed": 1781068858444,
-      "type": "file"
-    },
-    {
-      "path": "image/logo image.png",
-      "accessCount": 1,
-      "lastAccessed": 1781070231871,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/lib/palette.ts",
-      "accessCount": 1,
-      "lastAccessed": 1782053485995,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/DeskIcon.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1782053494666,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/lib/caretCoordinates.ts",
-      "accessCount": 1,
-      "lastAccessed": 1782053754452,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/lib/editorBlocks.ts",
-      "accessCount": 1,
-      "lastAccessed": 1782053803420,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/SlashMenu.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1782053823164,
+      "lastAccessed": 1784405479498,
       "type": "file"
     }
   ],

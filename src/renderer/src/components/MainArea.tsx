@@ -1,8 +1,9 @@
-import { ListTodo, CalendarDays, Target, FolderArchive } from 'lucide-react'
+import { ListTodo, NotebookPen, CalendarDays, Target, FolderArchive } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DeskIcon } from './DeskIcon'
 import { TaskPanel } from './TaskPanel'
+import { NotesView } from './NotesView'
 import { CalendarView } from './CalendarView'
 import { GoalsView } from './GoalsView'
 import { DocumentsView } from './DocumentsView'
@@ -50,6 +51,10 @@ export function MainArea(): JSX.Element {
                 <ListTodo className="h-3.5 w-3.5" />
                 작업
               </TabsTrigger>
+              <TabsTrigger value="notes" className="gap-1.5">
+                <NotebookPen className="h-3.5 w-3.5" />
+                메모
+              </TabsTrigger>
               <TabsTrigger value="calendar" className="gap-1.5">
                 <CalendarDays className="h-3.5 w-3.5" />
                 달력
@@ -72,6 +77,7 @@ export function MainArea(): JSX.Element {
 
       <div className="flex-1 overflow-hidden">
         {mainView === 'tasks' && <TaskPanel />}
+        {mainView === 'notes' && <NotesView key={desk.id} />}
         {mainView === 'calendar' && <CalendarView />}
         {mainView === 'goals' && <GoalsView />}
         {mainView === 'documents' && <DocumentsView />}

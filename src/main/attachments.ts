@@ -1,5 +1,5 @@
 import { join, extname, basename } from 'path'
-import { existsSync, mkdirSync, copyFileSync, statSync, readFileSync, rmSync } from 'fs'
+import { existsSync, mkdirSync, copyFileSync, statSync, readFileSync, writeFileSync, rmSync } from 'fs'
 import { randomUUID } from 'crypto'
 import { app, shell } from 'electron'
 import mammoth from 'mammoth'
@@ -42,13 +42,8 @@ export function pathForStored(storedName: string): string {
 
 const extOf = (name: string): string => extname(name).replace(/^\./, '').toLowerCase()
 
-/** Copy a picked/dropped file into the attachments dir and record it. */
-export function addAttachment(taskId: string, sourcePath: string, fileName: string): Attachment {
-  const ext = extOf(fileName) || extOf(sourcePath)
-  const size = statSync(sourcePath).size
-  const storedName = ext ? `${randomUUID()}.${ext}` : randomUUID()
-  copyFileSync(sourcePath, pathForStored(storedName))
-
+function record(taskId: string, fileName: string, storedName: string, size: number): Attachment {
+  const ext = extOf(storedName)
   const now = nowIso()
   return attachmentRepo.insert({
     id: randomUUID(),
@@ -64,7 +59,41 @@ export function addAttachment(taskId: string, sourcePath: string, fileName: stri
   })
 }
 
+const newStoredName = (ext: string): string => (ext ? `${randomUUID()}.${ext}` : randomUUID())
+
+/** Copy a picked/dropped file into the attachments dir and record it. */
+export function addAttachment(taskId: string, sourcePath: string, fileName: string): Attachment {
+  const storedName = newStoredName(extOf(fileName) || extOf(sourcePath))
+  copyFileSync(sourcePath, pathForStored(storedName))
+  return record(taskId, fileName, storedName, statSync(sourcePath).size)
+}
+
 const fileUrl = (storedName: string): string => `aop-file:///${encodeURIComponent(storedName)}`
+
+/** Max size for a file embedded in a memo — keeps the SQLite-backed app responsive. */
+const MAX_EMBED_BYTES = 50 * 1024 * 1024
+
+/**
+ * Store raw bytes sent from the renderer (memo drag & drop / paste) and return the
+ * `aop-file://` URL the editor embeds. Bytes are used instead of a source path so
+ * clipboard images — which have no file on disk — work too.
+ */
+export function addAttachmentBytes(
+  taskId: string,
+  fileName: string,
+  bytes: ArrayBuffer | Uint8Array
+): string {
+  const name = basename(fileName || 'file').trim()
+  if (!name) throw new Error('파일 이름이 비어 있습니다.')
+  const buf = Buffer.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes))
+  if (buf.byteLength === 0) throw new Error('빈 파일은 첨부할 수 없습니다.')
+  if (buf.byteLength > MAX_EMBED_BYTES) throw new Error('50MB 이하 파일만 첨부할 수 있습니다.')
+
+  const storedName = newStoredName(extOf(name))
+  writeFileSync(pathForStored(storedName), buf)
+  record(taskId, name, storedName, buf.byteLength)
+  return fileUrl(storedName)
+}
 
 /** Produce viewable content for the in-app document viewer. */
 export function renderAttachment(id: string): AttachmentRender {
