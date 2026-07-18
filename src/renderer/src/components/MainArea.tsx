@@ -20,7 +20,7 @@ export function MainArea(): JSX.Element {
   // Smart views ("오늘"/"이번 주") span all desks and replace the desk layout.
   if (smartView) {
     return (
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="glass-panel glass-pane flex flex-1 flex-col">
         <SmartView />
       </main>
     )
@@ -30,15 +30,15 @@ export function MainArea(): JSX.Element {
 
   if (!desk) {
     return (
-      <main className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+      <main className="glass-panel glass-pane flex flex-1 items-center justify-center text-sm text-muted-foreground">
         좌측에서 데스크를 선택하거나 새로 만들어 주세요.
       </main>
     )
   }
 
   return (
-    <main className="flex flex-1 flex-col overflow-hidden">
-      <header className="drag-region flex h-12 shrink-0 items-center gap-4 border-b border-border px-5">
+    <main className="glass-pane flex flex-1 flex-col">
+      <header className="glass-chrome drag-region flex h-12 shrink-0 items-center gap-4 border-b border-border px-5">
         <div className="flex min-w-0 items-center gap-2">
           <DeskIcon color={desk.color} icon={desk.icon} />
           <h1 className="truncate text-sm font-semibold tracking-tight">{desk.name}</h1>
@@ -75,7 +75,7 @@ export function MainArea(): JSX.Element {
         <div className="w-[120px] shrink-0" />
       </header>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="glass-panel flex-1 overflow-hidden">
         {mainView === 'tasks' && <TaskPanel />}
         {mainView === 'notes' && <NotesView key={desk.id} />}
         {mainView === 'calendar' && <CalendarView />}

@@ -104,7 +104,7 @@ export function NotesView(): JSX.Element {
 
   return (
     <div className="flex h-full">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-border">
+      <aside className="glass-chrome flex w-64 shrink-0 flex-col border-r border-border">
         <div className="space-y-2 border-b border-border p-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />

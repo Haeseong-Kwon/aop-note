@@ -18,6 +18,8 @@ protocol.registerSchemesAsPrivileged([
   }
 ])
 
+const isMac = process.platform === 'darwin'
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1280,
@@ -25,8 +27,13 @@ function createWindow(): BrowserWindow {
     minWidth: 940,
     minHeight: 600,
     show: false,
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    backgroundColor: '#0b0b0f',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    // macOS: a transparent backdrop lets the native vibrancy blur show through the
+    // translucent panels in the renderer. Other platforms keep a solid backdrop.
+    backgroundColor: isMac ? '#00000000' : '#0b0b0f',
+    ...(isMac
+      ? { vibrancy: 'under-window' as const, visualEffectState: 'active' as const }
+      : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

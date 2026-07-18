@@ -276,7 +276,7 @@ export function CategoryPanel(): JSX.Element {
   const rootIds = tree.map((t) => t.root.id)
 
   return (
-    <section className="flex w-64 shrink-0 flex-col border-r border-border bg-card/20">
+    <section className="glass-chrome flex w-64 shrink-0 flex-col border-r border-border">
       <div className="drag-region flex h-12 items-center justify-between px-4">
         <h2 className="no-drag text-sm font-semibold tracking-tight">카테고리</h2>
         <Button

@@ -4,15 +4,17 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { BlockNoteEditor } from './BlockNoteEditor'
 import { MemoExportMenu, EXPORTS } from './MemoExportMenu'
+import { DocumentViewer } from './DocumentViewer'
 import { useMemoPersist } from '@/hooks/useMemoPersist'
 import { useStore } from '@/store/useStore'
-import type { ExportFormat, Task } from '@shared/types'
+import type { Attachment, ExportFormat, Task } from '@shared/types'
 
 /** Inline memo shown under an expanded task row, with a fullscreen escape hatch. */
 export function MemoEditor({ task }: { task: Task }): JSX.Element {
   const setMainView = useStore((s) => s.setMainView)
   const { dark, initialMarkdown, onMarkdownChange, persistNow } = useMemoPersist(task)
   const [fullscreen, setFullscreen] = useState(false)
+  const [viewing, setViewing] = useState<Attachment | null>(null)
 
   const exportAs = async (fmt: ExportFormat): Promise<void> => {
     await persistNow()
@@ -58,6 +60,7 @@ export function MemoEditor({ task }: { task: Task }): JSX.Element {
           onMarkdownChange={onMarkdownChange}
           dark={dark}
           variant="inline"
+          onOpenAttachment={setViewing}
           className="min-h-[12rem] max-h-[28rem] rounded-lg bg-muted/30 py-1"
         />
       )}
@@ -92,11 +95,20 @@ export function MemoEditor({ task }: { task: Task }): JSX.Element {
               dark={dark}
               variant="page"
               autoFocus
+              onOpenAttachment={setViewing}
               className="min-h-0 flex-1"
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {viewing && (
+        <DocumentViewer
+          attachmentId={viewing.id}
+          fileName={viewing.file_name}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   )
 }

@@ -68,7 +68,7 @@ function App(): JSX.Element {
   }, [openQuickCapture, openPalette, toggleHelp, collapse])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-screen gap-2 overflow-hidden p-2 text-foreground">
       <Sidebar />
       <MainArea />
 

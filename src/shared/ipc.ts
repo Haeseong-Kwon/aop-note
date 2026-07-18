@@ -74,6 +74,7 @@ export const IPC = {
     listByWorkspace: 'attachment:listByWorkspace',
     add: 'attachment:add',
     addBytes: 'attachment:addBytes',
+    findByUrl: 'attachment:findByUrl',
     render: 'attachment:render',
     openExternal: 'attachment:openExternal',
     remove: 'attachment:remove'
@@ -129,6 +130,8 @@ export interface Api {
     add(input: AttachmentAddInput): Promise<Attachment>
     /** Store bytes from a memo drop/paste; resolves to the `aop-file://` URL to embed. */
     addBytes(taskId: string, fileName: string, bytes: ArrayBuffer): Promise<string>
+    /** Resolve an `aop-file://` URL embedded in a memo to its attachment record. */
+    findByUrl(url: string): Promise<Attachment | null>
     render(id: string): Promise<AttachmentRender>
     openExternal(id: string): Promise<void>
     remove(id: string): Promise<void>

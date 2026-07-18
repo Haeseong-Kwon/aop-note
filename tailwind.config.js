@@ -9,7 +9,8 @@ export default {
     },
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
+        // Translucent so dividers read as hairlines on glass instead of hard rules.
+        border: 'hsl(var(--border) / 0.6)',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',

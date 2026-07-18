@@ -66,6 +66,7 @@ const api: Api = {
     add: (input: AttachmentAddInput) => ipcRenderer.invoke(IPC.attachment.add, input),
     addBytes: (taskId: string, fileName: string, bytes: ArrayBuffer) =>
       ipcRenderer.invoke(IPC.attachment.addBytes, taskId, fileName, bytes),
+    findByUrl: (url: string) => ipcRenderer.invoke(IPC.attachment.findByUrl, url),
     render: (id: string) => ipcRenderer.invoke(IPC.attachment.render, id),
     openExternal: (id: string) => ipcRenderer.invoke(IPC.attachment.openExternal, id),
     remove: (id: string) => ipcRenderer.invoke(IPC.attachment.remove, id)

@@ -214,14 +214,14 @@ export function Sidebar(): JSX.Element {
   }
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-card/40">
+    <aside className="glass-chrome glass-pane flex w-60 shrink-0 flex-col">
       <div
         className={cn(
           'drag-region flex shrink-0 items-center gap-2.5 px-4 pb-3',
           isMac ? 'pt-8' : 'pt-4'
         )}
       >
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white shadow-sm">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 bg-primary/90 text-sm font-bold text-primary-foreground shadow-sm">
           A
         </div>
         <div className="flex min-w-0 flex-col leading-none">

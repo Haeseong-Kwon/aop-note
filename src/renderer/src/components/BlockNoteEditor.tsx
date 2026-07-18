@@ -7,6 +7,7 @@ import '@blocknote/mantine/style.css'
 import { extractFiles, restoreFileBlocks } from '@/lib/memoMarkdown'
 import { SmartTypography } from '@/lib/smartTypography'
 import { cn } from '@/lib/utils'
+import type { Attachment } from '@shared/types'
 
 interface BlockNoteEditorProps {
   /** Task the memo belongs to — dropped files are attached to it. */
@@ -21,6 +22,8 @@ interface BlockNoteEditorProps {
   variant?: 'inline' | 'page'
   /** Called when the caret leaves the top of the document (Notion-style back-to-title). */
   onLeaveTop?: () => void
+  /** Called when an embedded attachment is opened, so the host can show the viewer. */
+  onOpenAttachment?: (attachment: Attachment) => void
   className?: string
 }
 
@@ -44,6 +47,7 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
       autoFocus,
       variant = 'inline',
       onLeaveTop,
+      onOpenAttachment,
       className
     },
     ref
@@ -109,6 +113,32 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
       }
     }
 
+    /**
+     * Open an embedded attachment in the app's document viewer instead of letting
+     * the browser navigate to the `aop-file://` URL. Clicks land on the file
+     * block's name/icon or on an image, so resolve the nearest block's url.
+     */
+    const handleClick = (e: React.MouseEvent): void => {
+      if (!onOpenAttachment) return
+      const target = e.target as HTMLElement
+      const content = target.closest('[data-content-type="file"], [data-content-type="image"]')
+      // The file block renders no anchor, so read the url off the block itself.
+      const blockId = content?.closest<HTMLElement>('[data-id]')?.dataset.id
+      if (!blockId) return
+
+      const url = (editor.getBlock(blockId)?.props as { url?: string } | undefined)?.url ?? ''
+      if (!url.startsWith('aop-file:')) return
+
+      e.preventDefault()
+      e.stopPropagation()
+      void window.api.attachment
+        .findByUrl(url)
+        .then((attachment) => {
+          if (attachment) onOpenAttachment(attachment)
+        })
+        .catch((error) => console.error('Failed to resolve memo attachment:', error))
+    }
+
     // ArrowUp on the first block hands focus back to the title above.
     const handleKeyDown = (e: React.KeyboardEvent): void => {
       if (!onLeaveTop || e.key !== 'ArrowUp' || e.nativeEvent.isComposing) return
@@ -121,6 +151,7 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
     return (
       <div
         onKeyDown={handleKeyDown}
+        onClickCapture={handleClick}
         className={cn(
           'bn-memo overflow-y-auto',
           variant === 'inline' ? 'bn-memo--inline' : 'bn-memo--page',

@@ -43,7 +43,7 @@ export function StylePicker({
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div
-        className="fixed z-50 w-52 rounded-lg border border-border bg-popover p-2.5 shadow-lg"
+        className="glass-overlay fixed z-50 w-52 rounded-lg p-2.5"
         style={{ top: pos.top, left: pos.left }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -136,26 +136,50 @@
   "hotPaths": [
     {
       "path": "src/renderer/src/components/BlockNoteEditor.tsx",
-      "accessCount": 12,
-      "lastAccessed": 1784405970040,
+      "accessCount": 18,
+      "lastAccessed": 1784408094403,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/index.css",
+      "accessCount": 13,
+      "lastAccessed": 1784408047353,
       "type": "file"
     },
     {
       "path": "src/renderer/src/components/NotePage.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1784405180659,
+      "accessCount": 8,
+      "lastAccessed": 1784407894286,
       "type": "file"
     },
     {
-      "path": "src/main/attachments.ts",
-      "accessCount": 3,
-      "lastAccessed": 1784405105846,
+      "path": "src/renderer/src/components/MainArea.tsx",
+      "accessCount": 8,
+      "lastAccessed": 1784407975147,
       "type": "file"
     },
     {
       "path": "src/renderer/src/components/MemoEditor.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1784405186981,
+      "accessCount": 7,
+      "lastAccessed": 1784407910822,
+      "type": "file"
+    },
+    {
+      "path": "src/main/attachments.ts",
+      "accessCount": 4,
+      "lastAccessed": 1784407835669,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/ipc.ts",
+      "accessCount": 4,
+      "lastAccessed": 1784407845150,
+      "type": "file"
+    },
+    {
+      "path": "src/main/ipc/handlers.ts",
+      "accessCount": 4,
+      "lastAccessed": 1784407851967,
       "type": "file"
     },
     {
@@ -165,15 +189,33 @@
       "type": "file"
     },
     {
-      "path": "src/shared/ipc.ts",
-      "accessCount": 2,
-      "lastAccessed": 1784405112858,
+      "path": "src/renderer/src/App.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1784407771026,
       "type": "file"
     },
     {
-      "path": "src/main/ipc/handlers.ts",
+      "path": "src/renderer/src/components/Sidebar.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1784407803202,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/NotesView.tsx",
       "accessCount": 2,
-      "lastAccessed": 1784405119451,
+      "lastAccessed": 1784406801500,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/ui/dialog.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1784406810545,
+      "type": "file"
+    },
+    {
+      "path": "src/preload/index.ts",
+      "accessCount": 2,
+      "lastAccessed": 1784407853817,
       "type": "file"
     },
     {
@@ -183,15 +225,63 @@
       "type": "file"
     },
     {
-      "path": "src/preload/index.ts",
+      "path": "scripts/install-mac.sh",
       "accessCount": 1,
-      "lastAccessed": 1784405121327,
+      "lastAccessed": 1784406276311,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/NotesView.tsx",
+      "path": "src/main/index.ts",
       "accessCount": 1,
-      "lastAccessed": 1784405479498,
+      "lastAccessed": 1784406755936,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/CategoryPanel.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1784406820732,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/StylePicker.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1784406822064,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/DocumentViewer.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1784407517320,
+      "type": "file"
+    },
+    {
+      "path": "tailwind.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1784407796997,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/lib/palette.ts",
+      "accessCount": 1,
+      "lastAccessed": 1784407808960,
+      "type": "file"
+    },
+    {
+      "path": "src/main/db/migrations.ts",
+      "accessCount": 1,
+      "lastAccessed": 1784407817315,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/workspace.repo.ts",
+      "accessCount": 1,
+      "lastAccessed": 1784407822904,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/attachment.repo.ts",
+      "accessCount": 1,
+      "lastAccessed": 1784407829092,
       "type": "file"
     }
   ],

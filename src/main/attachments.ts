@@ -95,6 +95,22 @@ export function addAttachmentBytes(
   return fileUrl(storedName)
 }
 
+/**
+ * Resolve an `aop-file://` URL embedded in a memo back to its attachment, so the
+ * memo can open it in the same viewer the documents tab uses. Chromium normalises
+ * the URL differently depending on slash count, so read host and path together.
+ */
+export function findAttachmentByUrl(url: string): Attachment | undefined {
+  if (!url.startsWith('aop-file:')) return undefined
+  try {
+    const u = new URL(url)
+    const storedName = basename(decodeURIComponent(u.hostname + u.pathname))
+    return storedName ? attachmentRepo.getByStoredName(storedName) : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** Produce viewable content for the in-app document viewer. */
 export function renderAttachment(id: string): AttachmentRender {
   const row = attachmentRepo.getById(id)

@@ -3,9 +3,10 @@ import { Trash2, CalendarDays, Hash } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { BlockNoteEditor, type MemoEditorHandle } from './BlockNoteEditor'
 import { MemoExportMenu } from './MemoExportMenu'
+import { DocumentViewer } from './DocumentViewer'
 import { useMemoPersist } from '@/hooks/useMemoPersist'
 import { cn } from '@/lib/utils'
-import type { Category, Task, TaskStatus } from '@shared/types'
+import type { Attachment, Category, Task, TaskStatus } from '@shared/types'
 
 const STATUSES: { value: TaskStatus; label: string; active: string }[] = [
   { value: 'todo', label: '할 일', active: 'bg-slate-500/15 text-slate-500 dark:text-slate-300' },
@@ -29,6 +30,7 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
   const [title, setTitle] = useState(task.title)
   const titleRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<MemoEditorHandle>(null)
+  const [viewing, setViewing] = useState<Attachment | null>(null)
 
   // Keep the input in sync when the same page is edited elsewhere (list view).
   useEffect(() => setTitle(task.title), [task.title])
@@ -131,9 +133,18 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
           dark={dark}
           variant="page"
           onLeaveTop={() => titleRef.current?.focus()}
+          onOpenAttachment={setViewing}
           className="h-full"
         />
       </div>
+
+      {viewing && (
+        <DocumentViewer
+          attachmentId={viewing.id}
+          fileName={viewing.file_name}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   )
 }

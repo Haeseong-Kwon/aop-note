@@ -6,7 +6,7 @@ import type {
   UpdateWorkspaceInput
 } from '@shared/types'
 
-const DEFAULT_COLOR = '#6366f1'
+const DEFAULT_COLOR = '#3b6ea5'
 
 export const workspaceRepo = {
   list(): Workspace[] {

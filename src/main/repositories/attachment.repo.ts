@@ -30,6 +30,13 @@ export const attachmentRepo = {
       .all(workspaceId) as AttachmentWithContext[]
   },
 
+  /** Resolve the attachment an `aop-file://` URL in a memo points at. */
+  getByStoredName(storedName: string): Attachment | undefined {
+    return getDb()
+      .prepare('SELECT * FROM attachments WHERE stored_name = ? AND deleted_at IS NULL')
+      .get(storedName) as Attachment | undefined
+  },
+
   getById(id: string): Attachment | undefined {
     return getDb()
       .prepare('SELECT * FROM attachments WHERE id = ? AND deleted_at IS NULL')

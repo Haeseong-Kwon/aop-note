@@ -9,6 +9,7 @@ import { attachmentRepo } from '../repositories/attachment.repo'
 import {
   addAttachment,
   addAttachmentBytes,
+  findAttachmentByUrl,
   renderAttachmentAsync,
   openAttachmentExternal,
   removeAttachment
@@ -93,6 +94,7 @@ export function registerIpcHandlers(): void {
   handle(IPC.attachment.addBytes, (taskId: string, fileName: string, bytes: ArrayBuffer) =>
     addAttachmentBytes(taskId, fileName, bytes)
   )
+  handle(IPC.attachment.findByUrl, (url: string) => findAttachmentByUrl(url) ?? null)
   handle(IPC.attachment.render, (id: string) => renderAttachmentAsync(id))
   handle(IPC.attachment.openExternal, (id: string) => openAttachmentExternal(id))
   handle(IPC.attachment.remove, (id: string) => removeAttachment(id))

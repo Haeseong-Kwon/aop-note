@@ -3,57 +3,83 @@
 @tailwind utilities;
 
 @layer base {
+  /* Neutral graphite base with a single low-chroma ink-blue accent. Hues stay in
+     the 210-220 range so nothing reads as a saturated "product purple". */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 220 16% 97%;
+    --foreground: 220 18% 13%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 18% 13%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 239 84% 67%;
+    --popover-foreground: 220 18% 13%;
+    --primary: 210 47% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 72% 51%;
+    --secondary: 220 13% 94%;
+    --secondary-foreground: 220 18% 13%;
+    --muted: 220 13% 94%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 220 13% 91%;
+    --accent-foreground: 220 18% 13%;
+    --destructive: 0 62% 47%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 239 84% 67%;
+    --border: 220 12% 86%;
+    --input: 220 12% 86%;
+    --ring: 210 47% 46%;
     --radius: 0.6rem;
+
+    /* Glass surfaces, most translucent first. Every layer pairs a low-alpha tint
+       with a heavy blur, so the vibrancy behind reads as frosted glass rather
+       than as a flat fill. Blur is what keeps text legible at these alphas. */
+    --glass-chrome: rgb(255 255 255 / 0.44);
+    --glass-panel: rgb(255 255 255 / 0.7);
+    --glass-card: rgb(255 255 255 / 0.5);
+    --glass-overlay: rgb(255 255 255 / 0.72);
+    --glass-border: rgb(255 255 255 / 0.65);
+    --glass-hairline: rgb(0 0 0 / 0.07);
+    --glass-highlight: rgb(255 255 255 / 0.9);
+    --glass-shadow: 0 18px 44px -16px rgb(15 20 30 / 0.28);
   }
 
   .dark {
-    --background: 240 10% 6%;
-    --foreground: 210 20% 96%;
-    --card: 240 8% 9%;
-    --card-foreground: 210 20% 96%;
-    --popover: 240 8% 9%;
-    --popover-foreground: 210 20% 96%;
-    --primary: 239 84% 67%;
+    --background: 220 12% 7%;
+    --foreground: 220 14% 91%;
+    --card: 220 10% 11%;
+    --card-foreground: 220 14% 91%;
+    --popover: 220 10% 11%;
+    --popover-foreground: 220 14% 91%;
+    --primary: 210 45% 52%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 15%;
-    --secondary-foreground: 210 20% 96%;
-    --muted: 240 5% 14%;
-    --muted-foreground: 220 9% 60%;
-    --accent: 240 5% 16%;
-    --accent-foreground: 210 20% 96%;
-    --destructive: 0 72% 51%;
+    --secondary: 220 8% 16%;
+    --secondary-foreground: 220 14% 91%;
+    --muted: 220 8% 15%;
+    --muted-foreground: 220 8% 58%;
+    --accent: 220 8% 19%;
+    --accent-foreground: 220 14% 91%;
+    --destructive: 0 62% 52%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 5% 18%;
-    --input: 240 5% 18%;
-    --ring: 239 84% 67%;
+    --border: 220 8% 21%;
+    --input: 220 8% 21%;
+    --ring: 210 45% 58%;
+
+    --glass-chrome: rgb(30 33 38 / 0.38);
+    --glass-panel: rgb(18 20 24 / 0.66);
+    --glass-card: rgb(255 255 255 / 0.05);
+    --glass-overlay: rgb(26 29 34 / 0.68);
+    --glass-border: rgb(255 255 255 / 0.1);
+    --glass-hairline: rgb(255 255 255 / 0.06);
+    --glass-highlight: rgb(255 255 255 / 0.14);
+    --glass-shadow: 0 22px 52px -16px rgb(0 0 0 / 0.7);
   }
 
   * {
     @apply border-border;
   }
 
+  /* Transparent so the macOS vibrancy layer shows through; on other platforms the
+     window's own backgroundColor sits behind the translucent panels instead. */
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: transparent;
     margin: 0;
     font-family:
       'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -67,6 +93,68 @@
   }
   .no-drag {
     -webkit-app-region: no-drag;
+  }
+}
+
+@layer components {
+  /* Window chrome — sidebar, headers, tool strips. Most translucent layer. */
+  .glass-chrome {
+    background: var(--glass-chrome);
+    backdrop-filter: blur(44px) saturate(190%);
+    -webkit-backdrop-filter: blur(44px) saturate(190%);
+  }
+
+  /* Content surfaces that hold long-form text. The heavy blur is what buys the
+     legibility a higher alpha would otherwise be needed for. */
+  .glass-panel {
+    background: var(--glass-panel);
+    backdrop-filter: blur(40px) saturate(170%);
+    -webkit-backdrop-filter: blur(40px) saturate(170%);
+  }
+
+  /* Floating surfaces — dialogs, palettes, popovers. */
+  .glass-overlay {
+    background: var(--glass-overlay);
+    backdrop-filter: blur(48px) saturate(200%);
+    -webkit-backdrop-filter: blur(48px) saturate(200%);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      var(--glass-shadow),
+      inset 0 1px 0 var(--glass-highlight);
+  }
+
+  /* A floating pane: rounded, edge-lit, shadowed. Combine with a glass-* tint.
+     The gaps between panes are where the window vibrancy actually shows, which
+     is what makes the effect read as glass instead of as a flat tint. */
+  .glass-pane {
+    border: 1px solid var(--glass-border);
+    border-radius: 0.875rem;
+    box-shadow:
+      var(--glass-shadow),
+      inset 0 1px 0 var(--glass-highlight);
+    overflow: hidden;
+  }
+
+  /* The 1px lit top edge that sells the "pane of glass" read. */
+  .glass-edge {
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+  }
+
+  /* Hairline divider that stays visible on glass, where solid borders muddy. */
+  .glass-divider {
+    border-color: var(--glass-hairline);
+  }
+}
+
+@layer utilities {
+  /* Every surface already painted with the card token becomes glass, so cards
+     across the app pick this up without touching each component. */
+  .bg-card {
+    background-color: var(--glass-card);
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    border-color: var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
   }
 }
 
@@ -103,6 +191,16 @@
   margin-inline: auto;
   padding-inline: 3.5rem;
   padding-bottom: 6rem;
+}
+
+/* Embedded attachments open in the in-app viewer, so signal that they're clickable. */
+.bn-memo [data-content-type='file'],
+.bn-memo [data-content-type='image'] {
+  cursor: pointer;
+}
+.bn-memo [data-content-type='file']:hover,
+.bn-memo [data-content-type='image']:hover {
+  filter: brightness(1.06);
 }
 
 /* Thin, unobtrusive scrollbars. */
