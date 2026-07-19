@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1784404688177,
+  "lastScanned": 1784494987205,
   "projectRoot": "/Users/haeseong/Desktop/Product/aop-note",
   "techStack": {
     "languages": [
@@ -43,7 +43,7 @@
   },
   "build": {
     "buildCommand": "npm run build",
-    "testCommand": null,
+    "testCommand": "npm test",
     "lintCommand": null,
     "devCommand": "npm run dev",
     "scripts": {
@@ -56,7 +56,8 @@
       "package": "electron-vite build && electron-builder",
       "package:mac": "electron-vite build && electron-builder --mac",
       "install:mac": "bash scripts/install-mac.sh",
-      "postinstall": "electron-builder install-app-deps"
+      "postinstall": "electron-builder install-app-deps",
+      "test": "esbuild src/renderer/src/lib/check.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/memo-check.mjs --log-level=error && node node_modules/.cache/memo-check.mjs"
     }
   },
   "conventions": {
@@ -80,7 +81,7 @@
       "path": "build",
       "purpose": "Build output",
       "fileCount": 2,
-      "lastAccessed": 1784404688109,
+      "lastAccessed": 1784494987124,
       "keyFiles": [
         "icon.icns",
         "icon.png"
@@ -90,7 +91,7 @@
       "path": "dist",
       "purpose": "Distribution/build output",
       "fileCount": 5,
-      "lastAccessed": 1784404688111,
+      "lastAccessed": 1784494987130,
       "keyFiles": [
         "aop-note-0.1.0.dmg",
         "aop-note-0.1.0.dmg.blockmap",
@@ -103,7 +104,7 @@
       "path": "image",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1784404688136,
+      "lastAccessed": 1784494987138,
       "keyFiles": [
         "logo image.png"
       ]
@@ -112,14 +113,14 @@
       "path": "out",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1784404688137,
+      "lastAccessed": 1784494987139,
       "keyFiles": []
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 2,
-      "lastAccessed": 1784404688137,
+      "lastAccessed": 1784494987139,
       "keyFiles": [
         "install-mac.sh",
         "make-icon.py"
@@ -129,21 +130,21 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1784404688138,
+      "lastAccessed": 1784494987140,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
       "path": "src/renderer/src/index.css",
-      "accessCount": 25,
-      "lastAccessed": 1784410543553,
+      "accessCount": 33,
+      "lastAccessed": 1784495824347,
       "type": "file"
     },
     {
       "path": "src/renderer/src/components/BlockNoteEditor.tsx",
-      "accessCount": 18,
-      "lastAccessed": 1784408094403,
+      "accessCount": 21,
+      "lastAccessed": 1784495543128,
       "type": "file"
     },
     {
@@ -213,15 +214,15 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/NotesView.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1784406801500,
+      "path": "src/main/index.ts",
+      "accessCount": 3,
+      "lastAccessed": 1784495546810,
       "type": "file"
     },
     {
-      "path": "src/main/index.ts",
+      "path": "src/renderer/src/components/NotesView.tsx",
       "accessCount": 2,
-      "lastAccessed": 1784410197388,
+      "lastAccessed": 1784406801500,
       "type": "file"
     },
     {

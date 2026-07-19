@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"npx electron-vite preview --outDir out -- --remote-debugging-port=9222 >/tmp/claude-501/-Users-haeseong-Desktop-Product-aop-note/01956be8-58e6-40d1-a6a8-f8c20cbc68e9/scratchpad/preview3.lo...",
-  "error": "Exit code 1\nnode:internal/deps/undici/undici:13502\n      Error.captureStackTrace(err);\n            ^\n\nTypeError: fetch failed\n    at node:internal/deps/undici/undici:13502:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async file:///private/tmp/claude-501/-Users-haeseong-Desktop-Product-aop-note/01956be8-58e6-40d1-a6a8-f8c20cbc68e9/scratchpad/probe2.mjs:1:20 {\n  [cause]: AggregateError [ECONNREFUSED]: \n      at internalConnectMultiple (node:net:1139:...",
-  "timestamp": "2026-07-18T21:38:39.210Z",
+  "tool_input_preview": "{\"command\":\"ls -d node_modules/ws 2>/dev/null && echo HAS_WS\"}",
+  "error": "Exit code 1",
+  "timestamp": "2026-07-19T21:08:05.641Z",
   "retry_count": 1
 }

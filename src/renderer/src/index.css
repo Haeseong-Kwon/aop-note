@@ -1,3 +1,6 @@
+/* Bundled locally (not CDN) — the app must render offline. */
+@import 'pretendard/dist/web/variable/pretendardvariable.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -96,7 +99,8 @@
     background: transparent;
     margin: 0;
     font-family:
-      'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
   }
@@ -180,7 +184,8 @@
 
 /* BlockNote memo editor — blend with the app theme + Korean (Pretendard) font. */
 .bn-container {
-  --bn-font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --bn-font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
   --bn-colors-editor-background: transparent;
   --bn-colors-editor-text: hsl(var(--foreground));
   background: transparent;
@@ -221,6 +226,19 @@
 .bn-memo [data-content-type='file']:hover,
 .bn-memo [data-content-type='image']:hover {
   filter: brightness(1.06);
+}
+
+/* BlockNote ships a light-mode-only selection: a hardcoded #e1e1e1 chip (white text
+   on it in dark mode) inside a 4px electric-blue outline. Retint both to the theme. */
+.bn-memo .ProseMirror-selectednode .bn-file-name-with-icon,
+.bn-memo [data-file-block] .bn-file-name-with-icon:hover {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+.bn-memo .bn-block-content.ProseMirror-selectednode > *,
+.bn-memo .ProseMirror-selectednode > .bn-block-content > * {
+  outline: 2px solid hsl(var(--ring) / 0.55);
+  outline-offset: 1px;
 }
 
 /* Thin, unobtrusive scrollbars. */

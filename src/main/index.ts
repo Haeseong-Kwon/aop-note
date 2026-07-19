@@ -39,7 +39,9 @@ function createWindow(): BrowserWindow {
       sandbox: false,
       // Security: renderer has no Node access; only window.api via contextBridge.
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      // Chromium has no Korean dictionary, so it red-underlines most of a memo.
+      spellcheck: false
     }
   })
 
