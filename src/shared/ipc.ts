@@ -22,7 +22,11 @@ import type {
   UpdateTaskInput,
   CreateGoalInput,
   UpdateGoalInput,
-  TaskStatus
+  TaskStatus,
+  TrashItem,
+  TrashKind,
+  BackupInfo,
+  AppSettings
 } from './types'
 
 /** Payload sent from main → renderer when a notification is clicked. */
@@ -82,8 +86,23 @@ export const IPC = {
   theme: {
     set: 'theme:set'
   },
+  trash: {
+    list: 'trash:list',
+    restore: 'trash:restore'
+  },
+  settings: {
+    get: 'settings:get',
+    update: 'settings:update'
+  },
+  backup: {
+    info: 'backup:info',
+    export: 'backup:export',
+    restore: 'backup:restore',
+    openDataFolder: 'backup:openDataFolder'
+  },
   events: {
-    navigateToTask: 'event:navigateToTask'
+    navigateToTask: 'event:navigateToTask',
+    quickCapture: 'event:quickCapture'
   }
 } as const
 
@@ -139,6 +158,24 @@ export interface Api {
     openExternal(id: string): Promise<void>
     remove(id: string): Promise<void>
   }
+  trash: {
+    list(): Promise<TrashItem[]>
+    /** Restore one delete (and any deleted parent it needs to be visible). */
+    restore(kind: TrashKind, id: string): Promise<void>
+  }
+  settings: {
+    get(): Promise<AppSettings>
+    /** Save and apply (login item, global shortcut). Resolves to the stored settings. */
+    update(patch: Partial<AppSettings>): Promise<AppSettings>
+  }
+  backup: {
+    info(): Promise<BackupInfo>
+    /** Pick a folder and write a backup into it; resolves to its path, or null if cancelled. */
+    export(): Promise<string | null>
+    /** Pick a backup folder, confirm, replace all data and relaunch. False if cancelled. */
+    restore(): Promise<boolean>
+    openDataFolder(): Promise<void>
+  }
   /**
    * Tell main which appearance the UI is showing, so the native window backdrop
    * (macOS vibrancy / other platforms' background) matches. Without this the
@@ -149,4 +186,6 @@ export interface Api {
   getPathForFile(file: File): string
   /** Subscribe to "open this task" requests from notification clicks. Returns an unsubscribe fn. */
   onNavigateToTask(cb: (payload: NavigatePayload) => void): () => void
+  /** Subscribe to the system-wide quick-capture shortcut / menu-bar item. */
+  onQuickCapture(cb: () => void): () => void
 }

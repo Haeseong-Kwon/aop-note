@@ -1,4 +1,4 @@
-import { ipcMain, nativeTheme, BrowserWindow } from 'electron'
+import { app, ipcMain, nativeTheme, BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc'
 import { workspaceRepo } from '../repositories/workspace.repo'
 import { categoryRepo } from '../repositories/category.repo'
@@ -15,6 +15,10 @@ import {
   removeAttachment
 } from '../attachments'
 import { exportMemo } from '../memo'
+import { trashRepo } from '../repositories/trash.repo'
+import { backupInfo, exportBackup, restoreBackup, openDataFolder } from '../backup'
+import { loadSettings, saveSettings } from '../settings'
+import { setShortcutEnabled } from '../quickCapture'
 import type {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
@@ -26,7 +30,9 @@ import type {
   UpdateGoalInput,
   AttachmentAddInput,
   ExportFormat,
-  TaskStatus
+  TaskStatus,
+  TrashKind,
+  AppSettings
 } from '@shared/types'
 
 // Wraps a handler so any thrown error is logged in main and surfaced to the
@@ -98,6 +104,36 @@ export function registerIpcHandlers(): void {
   handle(IPC.attachment.render, (id: string) => renderAttachmentAsync(id))
   handle(IPC.attachment.openExternal, (id: string) => openAttachmentExternal(id))
   handle(IPC.attachment.remove, (id: string) => removeAttachment(id))
+
+  // ---- Trash ----
+  handle(IPC.trash.list, () => trashRepo.list())
+  handle(IPC.trash.restore, (kind: TrashKind, id: string) => trashRepo.restore(kind, id))
+
+  // ---- Settings ----
+  handle(IPC.settings.get, () => ({
+    ...loadSettings(),
+    // The OS owns the login item (the user can change it in System Settings), so ask it.
+    launchAtLogin: app.getLoginItemSettings().openAtLogin
+  }))
+  handle(IPC.settings.update, (patch: Partial<AppSettings>) => {
+    const next = saveSettings(patch)
+    if (typeof patch.launchAtLogin === 'boolean') app.setLoginItemSettings({ openAtLogin: next.launchAtLogin })
+    if (typeof patch.globalShortcut === 'boolean' && !setShortcutEnabled(next.globalShortcut)) {
+      saveSettings({ globalShortcut: false }) // don't claim a shortcut we couldn't register
+      throw new Error('⌘⇧Space를 다른 앱이 이미 쓰고 있어 켤 수 없습니다.')
+    }
+    return next
+  })
+
+  // ---- Backup ----
+  const focused = (): BrowserWindow | null => BrowserWindow.getFocusedWindow()
+  handle(IPC.backup.info, () => backupInfo())
+  handle(IPC.backup.export, () => exportBackup(focused()))
+  handle(IPC.backup.restore, () => restoreBackup(focused()))
+  handle(IPC.backup.openDataFolder, async () => {
+    const error = await openDataFolder()
+    if (error) throw new Error(error)
+  })
 
   // Pin the native backdrop to the UI's appearance. On macOS this repaints the
   // under-window vibrancy; elsewhere the window has a solid backdrop to repaint.

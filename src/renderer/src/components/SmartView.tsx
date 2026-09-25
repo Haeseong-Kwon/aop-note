@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { CalendarCheck, Sun } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { TaskRow } from './TaskRow'
+import { PageHeader } from './PageHeader'
 import { useTaskListKeyboard } from '@/hooks/useTaskListKeyboard'
 import { daysUntil } from '@/lib/format'
 import type { TaskWithContext } from '@shared/types'
@@ -29,13 +30,7 @@ export function SmartView(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="drag-region flex h-12 shrink-0 items-center gap-2 border-b border-border px-5">
-        <Icon className="h-4 w-4 text-primary" />
-        <h1 className="text-sm font-semibold tracking-tight">{title}</h1>
-        <span className="rounded-full bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">
-          {ordered.length}
-        </span>
-      </div>
+      <PageHeader icon={Icon} title={title} count={ordered.length} />
 
       {ordered.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-sm text-muted-foreground">
@@ -46,7 +41,7 @@ export function SmartView(): JSX.Element {
         <div className="flex-1 space-y-1 overflow-y-auto p-3">
           {overdue.length > 0 && (
             <>
-              <h2 className="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-rose-400">
+              <h2 className="px-2 pb-1 pt-2 text-xs font-medium text-rose-600 dark:text-rose-400">
                 지남 · {overdue.length}
               </h2>
               {overdue.map((t) => (
@@ -58,7 +53,7 @@ export function SmartView(): JSX.Element {
           {rest.length > 0 && (
             <>
               {overdue.length > 0 && (
-                <h2 className="px-2 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <h2 className="px-2 pb-1 pt-3 text-xs font-medium text-muted-foreground">
                   예정
                 </h2>
               )}

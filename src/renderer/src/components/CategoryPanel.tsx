@@ -49,11 +49,11 @@ function CategoryRow({
   return (
     <div
       className={cn(
-        'group relative flex items-center gap-1.5 rounded-md py-1.5 pr-1 text-sm transition-colors',
+        'group relative flex h-[30px] items-center gap-1.5 rounded-md pr-1 text-sm transition-colors',
         child ? 'pl-7' : 'pl-1.5',
         active
-          ? 'bg-accent text-accent-foreground'
-          : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+          ? 'bg-accent font-medium text-foreground'
+          : 'text-foreground/80 hover:bg-accent/60 hover:text-foreground'
       )}
     >
       {handle}

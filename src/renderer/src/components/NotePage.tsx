@@ -54,9 +54,8 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
     bodyRef.current?.focusStart()
   }
 
-  const remove = (): void => {
-    if (window.confirm(`"${task.title || '제목 없음'}" 메모를 삭제할까요?`)) void deleteTask(task.id)
-  }
+  // No confirm: the delete toast offers undo and the trash keeps it.
+  const remove = (): void => void deleteTask(task.id)
 
   return (
     <div className="flex h-full flex-col">

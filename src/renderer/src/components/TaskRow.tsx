@@ -1,10 +1,17 @@
 import { useState, type ReactNode } from 'react'
-import { Check, ChevronRight, CalendarPlus, StickyNote } from 'lucide-react'
+import { Bell, Check, ChevronRight, CalendarPlus, StickyNote, Repeat, ListChecks } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { DueBadge } from './TaskBadges'
 import { MarkdownView } from './MarkdownView'
 import { TaskInlineEditor } from './TaskInlineEditor'
-import { PRIORITY_META, toDateInput, fromDateInput } from '@/lib/format'
+import {
+  PRIORITY_META,
+  RECURRENCE_LABEL,
+  checklistProgress,
+  formatReminder,
+  toDateInput,
+  fromDateInput
+} from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Priority, Task, TaskWithContext } from '@shared/types'
 
@@ -34,6 +41,7 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
   const [memoOpen, setMemoOpen] = useState(false)
   const done = task.status === 'done'
   const hasMemo = Boolean(task.note && task.note.trim())
+  const checklist = checklistProgress(task.note ?? '')
 
   const commitTitle = (value: string): void => {
     const next = value.trim()
@@ -129,6 +137,32 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
         )}
 
         <div className="flex shrink-0 items-center gap-1.5" onClick={stop}>
+          {task.remind_at && !done && (
+            <span
+              title={`알림: ${formatReminder(task.remind_at)}`}
+              className="inline-flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground"
+            >
+              <Bell className="h-3.5 w-3.5" />
+              {formatReminder(task.remind_at).split(' ')[1]}
+            </span>
+          )}
+          {task.recurrence && (
+            <span title={`반복: ${RECURRENCE_LABEL[task.recurrence]}`} className="text-muted-foreground">
+              <Repeat className="h-3.5 w-3.5" />
+            </span>
+          )}
+          {checklist && (
+            <span
+              title="메모 체크리스트 진행률"
+              className={cn(
+                'inline-flex items-center gap-1 text-[11px] tabular-nums',
+                checklist.done === checklist.total ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
+              )}
+            >
+              <ListChecks className="h-3.5 w-3.5" />
+              {checklist.done}/{checklist.total}
+            </span>
+          )}
           {hasMemo && (
             <button
               onClick={() => setMemoOpen((v) => !v)}
@@ -146,7 +180,9 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
             title="우선순위 (클릭하여 변경 / 숫자키 0–3)"
             className={cn(
               'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors',
-              PRIORITY_META[task.priority].className
+              PRIORITY_META[task.priority].className,
+              // Like an empty Notion property: hidden until the row is hovered or selected.
+              task.priority === 0 && !selected && 'opacity-0 focus-visible:opacity-100 group-hover:opacity-100'
             )}
           >
             <span className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_META[task.priority].dot)} />

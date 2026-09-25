@@ -19,12 +19,14 @@ import { TaskRow } from './TaskRow'
 import { useTaskListKeyboard } from '@/hooks/useTaskListKeyboard'
 import type { Task, UpdateTaskInput } from '@shared/types'
 
-function SortableTaskRow({ task }: { task: Task }): JSX.Element {
+function SortableTaskRow({ task, reorderable }: { task: Task; reorderable: boolean }): JSX.Element {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: task.id
+    id: task.id,
+    disabled: !reorderable
   })
 
-  const handle = (
+  // A sorted list's order comes from the data, so dragging would be meaningless.
+  const handle = reorderable && (
     <button
       {...attributes}
       {...listeners}
@@ -42,12 +44,20 @@ function SortableTaskRow({ task }: { task: Task }): JSX.Element {
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={isDragging ? 'relative z-10 opacity-80' : ''}
     >
-      <TaskRow task={task} mode="list" handle={handle} />
+      <TaskRow task={task} mode="list" handle={handle || undefined} />
     </li>
   )
 }
 
-export function ListView({ tasks }: { tasks: Task[] }): JSX.Element {
+interface ListViewProps {
+  tasks: Task[]
+  /** False while sorted by due/priority: drag handles are hidden. */
+  reorderable?: boolean
+  /** Completed tasks filtered out by "hide completed" (for the empty state). */
+  hiddenDone?: number
+}
+
+export function ListView({ tasks, reorderable = true, hiddenDone = 0 }: ListViewProps): JSX.Element {
   const reorderTasks = useStore((s) => s.reorderTasks)
   const toggleExpand = useStore((s) => s.toggleExpand)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -57,7 +67,7 @@ export function ListView({ tasks }: { tasks: Task[] }): JSX.Element {
   if (tasks.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-1 text-sm text-muted-foreground">
-        <p>작업이 없습니다.</p>
+        <p>{hiddenDone > 0 ? `완료된 작업 ${hiddenDone}개만 있고 숨겨져 있습니다.` : '작업이 없습니다.'}</p>
         <p>
           <kbd className="rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">⌘/Ctrl + N</kbd>
           으로 빠르게 추가하세요.
@@ -82,7 +92,7 @@ export function ListView({ tasks }: { tasks: Task[] }): JSX.Element {
       <ul className="h-full space-y-1 overflow-y-auto p-3">
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <SortableTaskRow key={task.id} task={task} />
+            <SortableTaskRow key={task.id} task={task} reorderable={reorderable} />
           ))}
         </SortableContext>
       </ul>

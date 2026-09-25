@@ -6,6 +6,9 @@ export type TaskStatus = 'todo' | 'doing' | 'done'
 /** Priority: 0 = none, 1 = low, 2 = medium, 3 = high */
 export type Priority = 0 | 1 | 2 | 3
 
+/** Repeat rule: completing the task schedules the next occurrence. */
+export type Recurrence = 'daily' | 'weekdays' | 'weekly' | 'monthly'
+
 export interface Workspace {
   id: string
   name: string
@@ -39,6 +42,9 @@ export interface Task {
   status: TaskStatus
   priority: Priority
   due_date: string | null
+  recurrence: Recurrence | null
+  /** When to send a reminder notification (ISO), or null. */
+  remind_at: string | null
   sort_order: number
   created_at: string
   updated_at: string
@@ -170,6 +176,8 @@ export interface CreateTaskInput {
   status?: TaskStatus
   priority?: Priority
   due_date?: string | null
+  recurrence?: Recurrence | null
+  remind_at?: string | null
 }
 
 export interface UpdateTaskInput {
@@ -182,6 +190,8 @@ export interface UpdateTaskInput {
   sort_order?: number
   category_id?: string
   goal_id?: string | null
+  recurrence?: Recurrence | null
+  remind_at?: string | null
 }
 
 export interface CreateGoalInput {
@@ -199,4 +209,39 @@ export interface UpdateGoalInput {
   due_date?: string | null
   status?: TaskStatus
   sort_order?: number
+}
+
+export type TrashKind = 'workspace' | 'category' | 'task'
+
+/**
+ * One delete action as shown in the trash. A cascading delete (desk → categories
+ * → tasks) stamps every row with the same deleted_at, so only its top item is listed.
+ */
+export interface TrashItem {
+  kind: TrashKind
+  id: string
+  title: string
+  /** Where it lived, e.g. "마케팅 / 캠페인". Empty for a desk. */
+  context: string
+  color: string
+  deleted_at: string
+  /** Tasks removed in the same delete (1 for a task). */
+  task_count: number
+}
+
+/** App-level preferences, persisted by main in userData/settings.json. */
+export interface AppSettings {
+  /** Start the app when the user logs in. */
+  launchAtLogin: boolean
+  /** Notify about tasks due today. Per-task reminders fire regardless. */
+  dueNotifications: boolean
+  /** System-wide ⌘⇧Space quick capture. */
+  globalShortcut: boolean
+}
+
+export interface BackupInfo {
+  /** Absolute path of the folder holding the database and attachments. */
+  data_dir: string
+  /** Date (YYYY-MM-DD) of the newest automatic backup, or null if none yet. */
+  last_auto_backup: string | null
 }

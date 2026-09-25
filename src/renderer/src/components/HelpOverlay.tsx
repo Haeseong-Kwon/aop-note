@@ -16,7 +16,7 @@ export function HelpOverlay(): JSX.Element {
         <div className="space-y-5">
           {SHORTCUT_GROUPS.map((group) => (
             <div key={group.title}>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h3 className="mb-2 text-xs font-medium text-muted-foreground">
                 {group.title}
               </h3>
               <ul className="space-y-1.5">

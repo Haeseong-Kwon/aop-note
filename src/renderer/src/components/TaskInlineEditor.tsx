@@ -4,9 +4,17 @@ import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
 import { AttachmentsSection } from './AttachmentsSection'
 import { MemoEditor } from './MemoEditor'
-import { PRIORITY_META, STATUS_META, toDateInput, fromDateInput } from '@/lib/format'
+import {
+  PRIORITY_META,
+  STATUS_META,
+  RECURRENCE_LABEL,
+  toDateInput,
+  fromDateInput,
+  toDateTimeInput,
+  fromDateTimeInput
+} from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { Priority, Task, TaskStatus } from '@shared/types'
+import type { Priority, Recurrence, Task, TaskStatus } from '@shared/types'
 
 const STATUSES: TaskStatus[] = ['todo', 'doing', 'done']
 const PRIORITIES: Priority[] = [0, 1, 2, 3]
@@ -92,22 +100,53 @@ export function TaskInlineEditor({ task }: { task: Task }): JSX.Element {
         </Field>
       </div>
 
-      <Field label="목표">
-        <select
-          value={task.goal_id ?? ''}
-          onChange={(e) =>
-            updateTask({ id: task.id, goal_id: e.target.value === '' ? null : e.target.value })
-          }
-          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="">연결 없음</option>
-          {goals.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.title}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="목표">
+          <select
+            value={task.goal_id ?? ''}
+            onChange={(e) =>
+              updateTask({ id: task.id, goal_id: e.target.value === '' ? null : e.target.value })
+            }
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">연결 없음</option>
+            {goals.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.title}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="반복">
+          <select
+            value={task.recurrence ?? ''}
+            onChange={(e) =>
+              updateTask({
+                id: task.id,
+                recurrence: e.target.value === '' ? null : (e.target.value as Recurrence)
+              })
+            }
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">반복 안 함</option>
+            {(Object.keys(RECURRENCE_LABEL) as Recurrence[]).map((r) => (
+              <option key={r} value={r}>
+                {RECURRENCE_LABEL[r]} — 완료하면 다음 일정 생성
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="알림">
+          <input
+            type="datetime-local"
+            value={toDateTimeInput(task.remind_at)}
+            onChange={(e) => updateTask({ id: task.id, remind_at: fromDateTimeInput(e.target.value) })}
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          />
+        </Field>
+      </div>
 
       <MemoEditor task={task} />
 

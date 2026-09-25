@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { endOfTodayIso, endOfWeekIso } from '@/lib/format'
+import { endOfTodayIso, endOfWeekIso, type TaskSort } from '@/lib/format'
+import { useToast, toastError } from './useToast'
 import type {
   Workspace,
   Category,
@@ -14,7 +15,8 @@ import type {
   CreateCategoryInput,
   UpdateWorkspaceInput,
   CreateGoalInput,
-  UpdateGoalInput
+  UpdateGoalInput,
+  TrashKind
 } from '@shared/types'
 import type { NavigatePayload } from '@shared/ipc'
 
@@ -22,6 +24,28 @@ export type ViewMode = 'list' | 'kanban'
 export type MainView = 'tasks' | 'notes' | 'calendar' | 'goals' | 'documents'
 export type SmartView = 'today' | 'week'
 export type Theme = 'light' | 'dark' | 'system'
+export type UtilityView = 'trash' | 'settings'
+
+export interface ListPrefs {
+  hideDone: boolean
+  sort: TaskSort
+}
+const LIST_PREFS_KEY = 'aop-list-prefs'
+const savedListPrefs = ((): ListPrefs => {
+  const fallback: ListPrefs = { hideDone: false, sort: 'manual' }
+  try {
+    const raw = JSON.parse(localStorage.getItem(LIST_PREFS_KEY) ?? '{}') as Partial<ListPrefs>
+    return {
+      hideDone: typeof raw.hideDone === 'boolean' ? raw.hideDone : fallback.hideDone,
+      sort: raw.sort === 'due' || raw.sort === 'priority' ? raw.sort : fallback.sort
+    }
+  } catch {
+    return fallback // corrupt value: start from defaults
+  }
+})()
+
+const undoToast = (message: string, undo: () => void): void =>
+  useToast.getState().show({ message, actionLabel: '실행 취소', onAction: undo })
 
 // ---- theme (applied immediately, persisted to localStorage) ----
 function applyTheme(theme: Theme): void {
@@ -53,6 +77,8 @@ interface AppState {
   activeCategoryId: string | null
   smartView: SmartView | null
   mainView: MainView
+  /** Trash / settings pages replace the desk area until a desk or smart view is picked. */
+  utilityView: UtilityView | null
   view: ViewMode
   selectedTaskId: string | null
   expandedTaskId: string | null
@@ -68,6 +94,8 @@ interface AppState {
   calYear: number
   calMonth: number
   theme: Theme
+  sidebarCollapsed: boolean
+  listPrefs: ListPrefs
   loading: boolean
   error: string | null
 
@@ -78,6 +106,8 @@ interface AppState {
   selectCategory: (id: string | null) => void
   selectSmartView: (view: SmartView) => Promise<void>
   setMainView: (view: MainView) => void
+  openUtility: (view: UtilityView) => void
+  restoreFromTrash: (kind: TrashKind, id: string) => Promise<void>
   setView: (view: ViewMode) => void
   navigateToTask: (payload: NavigatePayload) => Promise<void>
 
@@ -124,6 +154,8 @@ interface AppState {
   shiftMonth: (delta: number) => void
   goToToday: () => void
   setTheme: (theme: Theme) => void
+  toggleSidebar: () => void
+  setListPrefs: (prefs: Partial<ListPrefs>) => void
 }
 
 async function reloadWorkspaceData(
@@ -152,6 +184,7 @@ export const useStore = create<AppState>((set, get) => ({
   activeCategoryId: null,
   smartView: null,
   mainView: 'tasks',
+  utilityView: null,
   view: 'list',
   selectedTaskId: null,
   expandedTaskId: null,
@@ -163,6 +196,8 @@ export const useStore = create<AppState>((set, get) => ({
   calYear: now.getFullYear(),
   calMonth: now.getMonth(),
   theme: savedTheme,
+  sidebarCollapsed: localStorage.getItem('aop-sidebar-collapsed') === '1',
+  listPrefs: savedListPrefs,
   loading: true,
   error: null,
 
@@ -199,6 +234,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({
       activeWorkspaceId: id,
       smartView: null,
+      utilityView: null,
       categories,
       tasks,
       goals,
@@ -212,10 +248,26 @@ export const useStore = create<AppState>((set, get) => ({
 
   selectSmartView: async (view) => {
     const smartTasks = await loadSmart(view)
-    set({ smartView: view, smartTasks, expandedTaskId: null, selectedTaskId: null })
+    set({ smartView: view, utilityView: null, smartTasks, expandedTaskId: null, selectedTaskId: null })
   },
 
   setMainView: (mainView) => set({ mainView, expandedTaskId: null, selectedTaskId: null }),
+  openUtility: (utilityView) => set({ utilityView, expandedTaskId: null, selectedTaskId: null }),
+
+  restoreFromTrash: async (kind, id) => {
+    try {
+      await window.api.trash.restore(kind, id)
+      const workspaces = await window.api.workspace.list()
+      set({ workspaces })
+      const { activeWorkspaceId } = get()
+      if (kind === 'workspace' && get().utilityView === null) await get().selectWorkspace(id)
+      else if (!activeWorkspaceId && workspaces[0]) await get().selectWorkspace(workspaces[0].id)
+      else await get().refresh()
+      useToast.getState().show({ message: '복원했습니다.' })
+    } catch (e) {
+      toastError(e)
+    }
+  },
   setView: (view) => set({ view, expandedTaskId: null, selectedTaskId: null }),
 
   navigateToTask: async (payload) => {
@@ -277,7 +329,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteWorkspace: async (id) => {
+    const name = get().workspaces.find((w) => w.id === id)?.name ?? '데스크'
     await window.api.workspace.remove(id)
+    undoToast(`'${name}' 데스크를 휴지통으로 옮겼습니다.`, () => get().restoreFromTrash('workspace', id))
     const workspaces = await window.api.workspace.list()
     set({ workspaces })
     const { activeWorkspaceId, smartView } = get()
@@ -335,6 +389,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteCategory: async (id) => {
     await window.api.category.remove(id)
+    undoToast('카테고리를 휴지통으로 옮겼습니다.', () => get().restoreFromTrash('category', id))
     await get().refresh()
     set((s) => ({
       activeCategoryId:
@@ -358,7 +413,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   toggleDone: async (task) => {
-    await get().updateTask({ id: task.id, status: task.status === 'done' ? 'todo' : 'done' })
+    const completing = task.status !== 'done'
+    await get().updateTask({ id: task.id, status: completing ? 'done' : 'todo' })
+    // Main scheduled the next occurrence; say so, since it appears without being asked for.
+    if (completing && task.recurrence) useToast.getState().show({ message: '반복 작업의 다음 일정을 추가했습니다.' })
   },
 
   moveTask: async (id, status, sortOrder) => {
@@ -387,6 +445,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteTask: async (id) => {
     await window.api.task.remove(id)
+    undoToast('작업을 휴지통으로 옮겼습니다.', () => get().restoreFromTrash('task', id))
     await get().refresh()
     set((s) => ({
       expandedTaskId: s.expandedTaskId === id ? null : s.expandedTaskId,
@@ -455,7 +514,19 @@ export const useStore = create<AppState>((set, get) => ({
     localStorage.setItem('aop-theme', theme)
     applyTheme(theme)
     set({ theme })
-  }
+  },
+  toggleSidebar: () =>
+    set((s) => {
+      const sidebarCollapsed = !s.sidebarCollapsed
+      localStorage.setItem('aop-sidebar-collapsed', sidebarCollapsed ? '1' : '0')
+      return { sidebarCollapsed }
+    }),
+  setListPrefs: (prefs) =>
+    set((s) => {
+      const listPrefs = { ...s.listPrefs, ...prefs }
+      localStorage.setItem(LIST_PREFS_KEY, JSON.stringify(listPrefs))
+      return { listPrefs }
+    })
 }))
 
 // Keep "system" theme in sync with OS changes.

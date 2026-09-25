@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cat src/renderer/src/components/QuickCapture.tsx && grep -n \\\"openQuickCapture:\\\\|closeQuickCapture:\\\" -A6 src/renderer/src/store/useStore.ts && sed -n 1,20p src/main/notifications.ts && l...",
+  "error": "Exit code 2\nimport { useEffect, useState } from 'react'\nimport { useStore } from '@/store/useStore'\nimport { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'\nimport { Button } from '@/components/ui/button'\nimport { fromDateInput } from '@/lib/format'\n\nexport function QuickCapture(): JSX.Element {\n  const open = useStore((s) => s.quickCaptureOpen)\n  const close = useStore((s) => s.closeQuickCapture)\n  const categories = useStore((s) => s.categories)\n  const goals =...",
+  "timestamp": "2026-09-25T20:23:08.433Z",
+  "retry_count": 1
+}

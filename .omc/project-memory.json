@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1784494987205,
-  "projectRoot": "/Users/haeseong/Desktop/Product/aop-note",
+  "lastScanned": 1790330273657,
+  "projectRoot": "/Users/haeseong/Desktop/Products/aop-note",
   "techStack": {
     "languages": [
       {
@@ -73,7 +73,10 @@
       "scripts",
       "src"
     ],
-    "gitBranches": null
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
   },
   "customNotes": [],
   "directoryMap": {
@@ -81,46 +84,26 @@
       "path": "build",
       "purpose": "Build output",
       "fileCount": 2,
-      "lastAccessed": 1784494987124,
+      "lastAccessed": 1790330273649,
       "keyFiles": [
         "icon.icns",
         "icon.png"
-      ]
-    },
-    "dist": {
-      "path": "dist",
-      "purpose": "Distribution/build output",
-      "fileCount": 5,
-      "lastAccessed": 1784494987130,
-      "keyFiles": [
-        "aop-note-0.1.0.dmg",
-        "aop-note-0.1.0.dmg.blockmap",
-        "builder-debug.yml",
-        "builder-effective-config.yaml",
-        "latest-mac.yml"
       ]
     },
     "image": {
       "path": "image",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1784494987138,
+      "lastAccessed": 1790330273649,
       "keyFiles": [
         "logo image.png"
       ]
-    },
-    "out": {
-      "path": "out",
-      "purpose": "Build output",
-      "fileCount": 0,
-      "lastAccessed": 1784494987139,
-      "keyFiles": []
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 2,
-      "lastAccessed": 1784494987139,
+      "lastAccessed": 1790330273652,
       "keyFiles": [
         "install-mac.sh",
         "make-icon.py"
@@ -130,15 +113,15 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1784494987140,
+      "lastAccessed": 1790330273652,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
       "path": "src/renderer/src/index.css",
-      "accessCount": 33,
-      "lastAccessed": 1784495824347,
+      "accessCount": 35,
+      "lastAccessed": 1790333410759,
       "type": "file"
     },
     {
@@ -148,15 +131,15 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/NotePage.tsx",
-      "accessCount": 8,
-      "lastAccessed": 1784407894286,
+      "path": "src/renderer/src/components/MainArea.tsx",
+      "accessCount": 10,
+      "lastAccessed": 1790333351240,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/MainArea.tsx",
+      "path": "src/renderer/src/components/NotePage.tsx",
       "accessCount": 8,
-      "lastAccessed": 1784407975147,
+      "lastAccessed": 1784407894286,
       "type": "file"
     },
     {
@@ -172,9 +155,27 @@
       "type": "file"
     },
     {
+      "path": "src/renderer/src/App.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1790333352612,
+      "type": "file"
+    },
+    {
       "path": "src/shared/ipc.ts",
       "accessCount": 6,
       "lastAccessed": 1784410253272,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/store/useStore.ts",
+      "accessCount": 6,
+      "lastAccessed": 1790333241033,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/Sidebar.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1790333290796,
       "type": "file"
     },
     {
@@ -184,21 +185,9 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/src/App.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1784410197951,
-      "type": "file"
-    },
-    {
       "path": "src/renderer/src/lib/smartTypography.ts",
       "accessCount": 3,
       "lastAccessed": 1784405372734,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/Sidebar.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1784407803202,
       "type": "file"
     },
     {
@@ -220,6 +209,18 @@
       "type": "file"
     },
     {
+      "path": "scripts/install-mac.sh",
+      "accessCount": 3,
+      "lastAccessed": 1790330435358,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/CategoryPanel.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1790333503300,
+      "type": "file"
+    },
+    {
       "path": "src/renderer/src/components/NotesView.tsx",
       "accessCount": 2,
       "lastAccessed": 1784406801500,
@@ -235,18 +236,6 @@
       "path": "src/renderer/src/hooks/useMemoPersist.ts",
       "accessCount": 1,
       "lastAccessed": 1784404905723,
-      "type": "file"
-    },
-    {
-      "path": "scripts/install-mac.sh",
-      "accessCount": 1,
-      "lastAccessed": 1784406276311,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/CategoryPanel.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1784406820732,
       "type": "file"
     },
     {
@@ -286,9 +275,27 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/src/store/useStore.ts",
+      "path": "src/renderer/src/components/SmartView.tsx",
       "accessCount": 1,
-      "lastAccessed": 1784410260066,
+      "lastAccessed": 1790333351596,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/shortcuts.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790333352930,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/TaskInlineEditor.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790368126519,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 1,
+      "lastAccessed": 1790368614229,
       "type": "file"
     }
   ],

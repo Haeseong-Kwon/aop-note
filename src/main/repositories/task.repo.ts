@@ -1,5 +1,6 @@
 import { getDb } from '../db'
 import { newId, nowIso } from './util'
+import { nextOccurrence, resetChecklist } from './recurrence'
 import type {
   Task,
   TaskWithContext,
@@ -75,6 +76,20 @@ export const taskRepo = {
       .all(startIso, endIso) as TaskWithContext[]
   },
 
+  /** Open tasks whose reminder time has come and hasn't fired yet. */
+  listRemindersDue(nowIso: string): TaskWithContext[] {
+    return getDb()
+      .prepare(
+        `${CONTEXT_SELECT} AND t.status != 'done'
+           AND t.remind_at IS NOT NULL AND t.remind_at <= ? AND t.reminded_at IS NULL ${CONTEXT_ORDER}`
+      )
+      .all(nowIso) as TaskWithContext[]
+  },
+
+  markReminded(id: string): void {
+    getDb().prepare('UPDATE tasks SET reminded_at = ? WHERE id = ?').run(nowIso(), id)
+  },
+
   getById(id: string): Task | undefined {
     return getDb()
       .prepare('SELECT * FROM tasks WHERE id = ? AND deleted_at IS NULL')
@@ -104,6 +119,8 @@ export const taskRepo = {
       status,
       priority: input.priority ?? 0,
       due_date: input.due_date ?? null,
+      recurrence: input.recurrence ?? null,
+      remind_at: input.remind_at ?? null,
       sort_order: nextOrder,
       created_at: now,
       updated_at: now,
@@ -113,9 +130,9 @@ export const taskRepo = {
 
     db.prepare(
       `INSERT INTO tasks
-         (id, category_id, goal_id, title, note, status, priority, due_date, sort_order, created_at, updated_at, completed_at)
+         (id, category_id, goal_id, title, note, status, priority, due_date, recurrence, remind_at, sort_order, created_at, updated_at, completed_at)
        VALUES
-         (@id, @category_id, @goal_id, @title, @note, @status, @priority, @due_date, @sort_order, @created_at, @updated_at, @completed_at)`
+         (@id, @category_id, @goal_id, @title, @note, @status, @priority, @due_date, @recurrence, @remind_at, @sort_order, @created_at, @updated_at, @completed_at)`
     ).run(row)
 
     return row
@@ -145,19 +162,62 @@ export const taskRepo = {
       sort_order: input.sort_order ?? existing.sort_order,
       category_id: input.category_id ?? existing.category_id,
       goal_id: input.goal_id === undefined ? existing.goal_id : input.goal_id,
+      recurrence: input.recurrence === undefined ? existing.recurrence : input.recurrence,
+      remind_at: input.remind_at === undefined ? existing.remind_at : input.remind_at,
       completed_at: completedAt,
       updated_at: nowIso()
     }
 
-    db.prepare(
-      `UPDATE tasks SET
-         title = @title, note = @note, status = @status, priority = @priority,
-         due_date = @due_date, sort_order = @sort_order, category_id = @category_id,
-         goal_id = @goal_id, completed_at = @completed_at, updated_at = @updated_at
-       WHERE id = @id`
-    ).run(updated)
+    db.transaction(() => {
+      db.prepare(
+        `UPDATE tasks SET
+           title = @title, note = @note, status = @status, priority = @priority,
+           due_date = @due_date, recurrence = @recurrence, remind_at = @remind_at, sort_order = @sort_order,
+           category_id = @category_id, goal_id = @goal_id, completed_at = @completed_at,
+           updated_at = @updated_at
+         WHERE id = @id`
+      ).run(updated)
+      // A moved reminder is a new one: let it fire again.
+      if (updated.remind_at !== existing.remind_at) {
+        db.prepare('UPDATE tasks SET reminded_at = NULL WHERE id = ?').run(updated.id)
+      }
+      if (existing.status !== 'done' && updated.status === 'done') this.scheduleNext(updated)
+    })()
 
     return updated
+  },
+
+  /** When a repeating task is completed, create its next occurrence (once). */
+  scheduleNext(task: Task): void {
+    if (!task.recurrence) return
+    const today = new Date()
+    const base = task.due_date ? new Date(task.due_date) : today
+    const nextDue = nextOccurrence(base, task.recurrence, today)
+    const due = nextDue.toISOString()
+    // Keep the reminder at the same offset from the due date (e.g. 09:30 that day).
+    const remindAt =
+      task.remind_at && task.due_date
+        ? new Date(nextDue.getTime() + (new Date(task.remind_at).getTime() - base.getTime())).toISOString()
+        : null
+    // Un-completing and completing again must not stack up copies.
+    const exists = getDb()
+      .prepare(
+        `SELECT 1 FROM tasks
+         WHERE category_id = ? AND title = ? AND recurrence = ? AND due_date = ?
+           AND status != 'done' AND deleted_at IS NULL`
+      )
+      .get(task.category_id, task.title, task.recurrence, due)
+    if (exists) return
+    this.create({
+      category_id: task.category_id,
+      goal_id: task.goal_id,
+      title: task.title,
+      note: resetChecklist(task.note),
+      priority: task.priority,
+      due_date: due,
+      recurrence: task.recurrence,
+      remind_at: remindAt
+    })
   },
 
   /** Kanban drag: move to a status column and set its position there. */

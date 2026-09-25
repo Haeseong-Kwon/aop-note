@@ -141,7 +141,7 @@ export function NotesView(): JSX.Element {
           ) : (
             groups.map(({ category, notes }) => (
               <div key={category.id} className="mb-3 last:mb-0">
-                <p className="flex items-center gap-1.5 px-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="flex items-center gap-1.5 px-2 pb-1 text-xs font-medium text-muted-foreground">
                   <span
                     className="h-2 w-2 rounded-full"
                     style={{ backgroundColor: category.color }}

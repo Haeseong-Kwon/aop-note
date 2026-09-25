@@ -16,7 +16,9 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     title: '전역',
     items: [
       { keys: '⌘/Ctrl + N', desc: '퀵 캡처 (빠른 작업 추가)' },
+      { keys: '⌘/Ctrl + ⇧ + Space', desc: '다른 앱을 쓰는 중에도 퀵 캡처' },
       { keys: '⌘/Ctrl + P', desc: '빠른 이동 / 검색 팔레트' },
+      { keys: '⌘/Ctrl + \\', desc: '사이드바 접기 / 펼치기' },
       { keys: '?', desc: '단축키 도움말 열기' },
       { keys: 'Esc', desc: '열린 패널/모달 닫기' }
     ]

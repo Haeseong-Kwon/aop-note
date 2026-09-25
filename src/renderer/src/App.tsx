@@ -6,6 +6,7 @@ import { MainArea } from './components/MainArea'
 import { QuickCapture } from './components/QuickCapture'
 import { CommandPalette } from './components/CommandPalette'
 import { HelpOverlay } from './components/HelpOverlay'
+import { Toast } from './components/Toast'
 
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
@@ -16,6 +17,8 @@ function App(): JSX.Element {
   const toggleHelp = useStore((s) => s.toggleHelp)
   const collapse = useStore((s) => s.collapse)
   const navigateToTask = useStore((s) => s.navigateToTask)
+  const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
+  const toggleSidebar = useStore((s) => s.toggleSidebar)
 
   useEffect(() => {
     init()
@@ -27,6 +30,9 @@ function App(): JSX.Element {
       navigateToTask(payload)
     })
   }, [navigateToTask])
+
+  // System-wide quick capture (global shortcut / menu-bar icon).
+  useEffect(() => window.api.onQuickCapture(() => openQuickCapture()), [openQuickCapture])
 
   // Prevent the window from navigating away when a file is dropped outside a drop zone.
   useEffect(() => {
@@ -54,6 +60,11 @@ function App(): JSX.Element {
         openPalette()
         return
       }
+      if (mod && e.key === '\\') {
+        e.preventDefault()
+        toggleSidebar()
+        return
+      }
       if (e.key === '?' && !isTypingTarget(e.target)) {
         e.preventDefault()
         toggleHelp()
@@ -65,11 +76,11 @@ function App(): JSX.Element {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [openQuickCapture, openPalette, toggleHelp, collapse])
+  }, [openQuickCapture, openPalette, toggleHelp, collapse, toggleSidebar])
 
   return (
     <div className="flex h-screen w-screen gap-2 overflow-hidden p-2 text-foreground">
-      <Sidebar />
+      {!sidebarCollapsed && <Sidebar />}
       <MainArea />
 
       {loading && (
@@ -86,6 +97,7 @@ function App(): JSX.Element {
       <QuickCapture />
       <CommandPalette />
       <HelpOverlay />
+      <Toast />
     </div>
   )
 }

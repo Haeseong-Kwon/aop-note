@@ -16,7 +16,9 @@
     "package:mac": "electron-vite build && electron-builder --mac",
     "install:mac": "bash scripts/install-mac.sh",
     "postinstall": "electron-builder install-app-deps",
-    "test": "esbuild src/renderer/src/lib/check.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/memo-check.mjs --log-level=error && node node_modules/.cache/memo-check.mjs"
+    "test": "npm run test:renderer && npm run test:main",
+    "test:renderer": "esbuild src/renderer/src/lib/check.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/memo-check.mjs --log-level=error && node node_modules/.cache/memo-check.mjs",
+    "test:main": "esbuild src/main/check.ts --bundle --platform=node --format=cjs --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=node_modules/.cache/main-check.cjs --log-level=error && ELECTRON_RUN_AS_NODE=1 electron node_modules/.cache/main-check.cjs"
   },
   "dependencies": {
     "@tiptap/core": "^3.27.1",

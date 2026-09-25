@@ -6,8 +6,12 @@ import { getDb, closeDb } from './db'
 import { registerIpcHandlers } from './ipc/handlers'
 import { startDueNotifier } from './notifications'
 import { pathForStored } from './attachments'
+import { autoBackup } from './backup'
+import { setupQuickCapture } from './quickCapture'
+import { loadSettings } from './settings'
 
 let stopNotifier: (() => void) | null = null
+let stopQuickCapture: (() => void) | null = null
 
 // Custom scheme to serve attachment files to the renderer (PDF iframe, images)
 // without exposing file:// or relaxing sandboxing. Must be registered before ready.
@@ -79,12 +83,22 @@ app.whenReady().then(() => {
   registerIpcHandlers()
   const win = createWindow()
   stopNotifier = startDueNotifier(win)
+  // Daily safety snapshot. Never blocks startup; a failure is logged, not fatal.
+  autoBackup().catch((error) => console.error('[backup] auto backup failed:', error))
+
+  // The window may have been closed (macOS keeps the app running); recreate on demand.
+  const mainWindow = (): BrowserWindow => {
+    const existing = BrowserWindow.getAllWindows()[0]
+    if (existing) return existing
+    const created = createWindow()
+    stopNotifier?.()
+    stopNotifier = startDueNotifier(created)
+    return created
+  }
+  stopQuickCapture = setupQuickCapture(mainWindow, loadSettings().globalShortcut)
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      stopNotifier?.()
-      stopNotifier = startDueNotifier(createWindow())
-    }
+    mainWindow()
   })
 })
 
@@ -94,5 +108,6 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   stopNotifier?.()
+  stopQuickCapture?.()
   closeDb()
 })

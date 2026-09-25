@@ -12,7 +12,9 @@ import type {
   UpdateGoalInput,
   AttachmentAddInput,
   ExportFormat,
-  TaskStatus
+  TaskStatus,
+  TrashKind,
+  AppSettings
 } from '@shared/types'
 
 // The only bridge between renderer and main. No Node globals leak to the page.
@@ -71,12 +73,31 @@ const api: Api = {
     openExternal: (id: string) => ipcRenderer.invoke(IPC.attachment.openExternal, id),
     remove: (id: string) => ipcRenderer.invoke(IPC.attachment.remove, id)
   },
+  trash: {
+    list: () => ipcRenderer.invoke(IPC.trash.list),
+    restore: (kind: TrashKind, id: string) => ipcRenderer.invoke(IPC.trash.restore, kind, id)
+  },
+  settings: {
+    get: () => ipcRenderer.invoke(IPC.settings.get),
+    update: (patch: Partial<AppSettings>) => ipcRenderer.invoke(IPC.settings.update, patch)
+  },
+  backup: {
+    info: () => ipcRenderer.invoke(IPC.backup.info),
+    export: () => ipcRenderer.invoke(IPC.backup.export),
+    restore: () => ipcRenderer.invoke(IPC.backup.restore),
+    openDataFolder: () => ipcRenderer.invoke(IPC.backup.openDataFolder)
+  },
   setTheme: (theme: 'light' | 'dark') => ipcRenderer.invoke(IPC.theme.set, theme),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   onNavigateToTask: (cb: (payload: NavigatePayload) => void) => {
     const listener = (_e: IpcRendererEvent, payload: NavigatePayload): void => cb(payload)
     ipcRenderer.on(IPC.events.navigateToTask, listener)
     return () => ipcRenderer.removeListener(IPC.events.navigateToTask, listener)
+  },
+  onQuickCapture: (cb: () => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on(IPC.events.quickCapture, listener)
+    return () => ipcRenderer.removeListener(IPC.events.quickCapture, listener)
   }
 }
 

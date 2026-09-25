@@ -99,6 +99,23 @@ const migrations: Migration[] = [
   // 0004 — per-desk emoji icon (empty string = colored dot)
   (db) => {
     db.exec(`ALTER TABLE workspaces ADD COLUMN icon TEXT NOT NULL DEFAULT '';`)
+  },
+
+  // 0005 — repeating tasks (NULL = one-off)
+  (db) => {
+    db.exec(
+      `ALTER TABLE tasks ADD COLUMN recurrence TEXT
+         CHECK(recurrence IN ('daily','weekdays','weekly','monthly'));`
+    )
+  },
+
+  // 0006 — timed reminders; reminded_at makes each one fire once, across restarts
+  (db) => {
+    db.exec(`
+      ALTER TABLE tasks ADD COLUMN remind_at TEXT;
+      ALTER TABLE tasks ADD COLUMN reminded_at TEXT;
+      CREATE INDEX IF NOT EXISTS idx_tasks_remind ON tasks(remind_at) WHERE reminded_at IS NULL;
+    `)
   }
 ]
 

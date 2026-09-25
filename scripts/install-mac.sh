@@ -12,14 +12,15 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 APP_NAME="aop-note.app"
-SRC_APP="dist/mac/${APP_NAME}"
 DEST_APP="/Applications/${APP_NAME}"
 
 echo "==> 1/4  빌드 및 패키징 (electron-vite + electron-builder)"
 npm run package:mac
 
-if [ ! -d "$SRC_APP" ]; then
-  echo "ERROR: 빌드 산출물이 없습니다: $SRC_APP" >&2
+# Intel: dist/mac, Apple Silicon: dist/mac-arm64
+SRC_APP="$(ls -d dist/mac*/"${APP_NAME}" 2>/dev/null | head -1)"
+if [ -z "$SRC_APP" ]; then
+  echo "ERROR: 빌드 산출물이 없습니다: dist/mac*/${APP_NAME}" >&2
   exit 1
 fi
 

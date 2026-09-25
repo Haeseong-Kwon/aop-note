@@ -1,6 +1,8 @@
 import { Notification, BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc'
 import { taskRepo } from './repositories/task.repo'
+import { loadSettings } from './settings'
+import type { TaskWithContext } from '@shared/types'
 
 // Tasks already notified this session — in-memory only (intentionally not a DB
 // column; per the spec we avoid over-engineering and just dedupe per run).
@@ -13,44 +15,50 @@ function todayRange(): { start: string; end: string } {
   return { start: start.toISOString(), end: end.toISOString() }
 }
 
+function notify(win: BrowserWindow, title: string, t: TaskWithContext): void {
+  const n = new Notification({
+    title,
+    body: `${t.title}\n${t.workspace_name} · ${t.category_name}`,
+    silent: false
+  })
+  n.on('click', () => {
+    if (win.isDestroyed()) return
+    if (win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
+    win.webContents.send(IPC.events.navigateToTask, {
+      workspace_id: t.workspace_id,
+      category_id: t.category_id,
+      task_id: t.id
+    })
+  })
+  n.show()
+}
+
 function check(win: BrowserWindow): void {
   if (!Notification.isSupported()) return
-  const { start, end } = todayRange()
-  let due: ReturnType<typeof taskRepo.listDueBetween>
   try {
-    due = taskRepo.listDueBetween(start, end)
+    // Timed reminders: persisted as fired, so a restart doesn't repeat them.
+    for (const t of taskRepo.listRemindersDue(new Date().toISOString())) {
+      taskRepo.markReminded(t.id)
+      notify(win, '알림', t)
+    }
+
+    if (!loadSettings().dueNotifications) return
+    const { start, end } = todayRange()
+    for (const t of taskRepo.listDueBetween(start, end)) {
+      if (notified.has(t.id)) continue
+      notified.add(t.id)
+      notify(win, '오늘 마감 작업', t)
+    }
   } catch (e) {
-    console.error('[notifier] query failed:', e)
-    return
-  }
-
-  for (const t of due) {
-    if (notified.has(t.id)) continue
-    notified.add(t.id)
-
-    const n = new Notification({
-      title: '오늘 마감 작업',
-      body: `${t.title}\n${t.workspace_name} · ${t.category_name}`,
-      silent: false
-    })
-    n.on('click', () => {
-      if (win.isDestroyed()) return
-      if (win.isMinimized()) win.restore()
-      win.show()
-      win.focus()
-      win.webContents.send(IPC.events.navigateToTask, {
-        workspace_id: t.workspace_id,
-        category_id: t.category_id,
-        task_id: t.id
-      })
-    })
-    n.show()
+    console.error('[notifier] check failed:', e)
   }
 }
 
 /**
- * Notify about tasks due today: once on start, every 60s, and when the window
- * regains focus. Returns a stop() to clear the timer/listener.
+ * Fire due reminders and notify about tasks due today: once on start, every 60s,
+ * and when the window regains focus. Returns a stop() to clear the timer/listener.
  */
 export function startDueNotifier(win: BrowserWindow): () => void {
   check(win)

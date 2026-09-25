@@ -5,6 +5,8 @@ import { runMigrations } from './migrations'
 
 let db: Database.Database | null = null
 
+export const dbPath = (): string => join(app.getPath('userData'), 'aop-note.db')
+
 /**
  * Opens (once) the SQLite database living under the OS user-data dir,
  * runs pending migrations, and seeds example data on first run.
@@ -12,8 +14,7 @@ let db: Database.Database | null = null
 export function getDb(): Database.Database {
   if (db) return db
 
-  const dbPath = join(app.getPath('userData'), 'aop-note.db')
-  const instance = new Database(dbPath)
+  const instance = new Database(dbPath())
 
   // WAL = better concurrency + durability; foreign_keys for referential integrity.
   instance.pragma('journal_mode = WAL')
