@@ -1,10 +1,11 @@
-import { join, extname, basename } from 'path'
-import { existsSync, mkdirSync, copyFileSync, statSync, readFileSync, writeFileSync, rmSync } from 'fs'
+import { extname, basename } from 'path'
+import { existsSync, copyFileSync, statSync, readFileSync, writeFileSync, rmSync } from 'fs'
 import { randomUUID } from 'crypto'
-import { app, shell } from 'electron'
+import { shell } from 'electron'
 import mammoth from 'mammoth'
 import * as XLSX from 'xlsx'
 import { attachmentRepo } from './repositories/attachment.repo'
+import { pathForStored } from './attachmentPaths'
 import { nowIso } from './repositories/util'
 import type { Attachment, AttachmentRender } from '@shared/types'
 
@@ -29,16 +30,7 @@ const MIME: Record<string, string> = {
   md: 'text/markdown'
 }
 
-export function attachmentsDir(): string {
-  const dir = join(app.getPath('userData'), 'attachments')
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-  return dir
-}
-
-/** Resolve a stored file safely (basename only — no path traversal). */
-export function pathForStored(storedName: string): string {
-  return join(attachmentsDir(), basename(storedName))
-}
+export { attachmentsDir, pathForStored } from './attachmentPaths'
 
 const extOf = (name: string): string => extname(name).replace(/^\./, '').toLowerCase()
 

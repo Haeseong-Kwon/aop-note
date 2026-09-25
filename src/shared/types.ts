@@ -237,6 +237,14 @@ export interface AppSettings {
   dueNotifications: boolean
   /** System-wide ⌘⇧Space quick capture. */
   globalShortcut: boolean
+  /** Folder the Obsidian-style Markdown mirror is written into ('' = off). */
+  vaultPath: string
+}
+
+/** How to register the bundled MCP server with Claude Code. */
+export interface McpInfo {
+  /** One-line `claude mcp add …` command to paste into a terminal. */
+  command: string
 }
 
 export interface BackupInfo {
@@ -244,4 +252,36 @@ export interface BackupInfo {
   data_dir: string
   /** Date (YYYY-MM-DD) of the newest automatic backup, or null if none yet. */
   last_auto_backup: string | null
+}
+
+export interface BacklinkHit {
+  task: TaskWithContext
+  /** The line of the other note where the link / mention appears. */
+  snippet: string
+}
+
+export interface Backlinks {
+  /** Notes with a [[link]] to this one. */
+  linked: BacklinkHit[]
+  /** Notes that mention this title as plain text (candidates for a link). */
+  mentions: BacklinkHit[]
+}
+
+export interface GraphNode {
+  /** Task id, or "ghost:<title>" for a linked note that doesn't exist yet. */
+  id: string
+  title: string
+  color: string
+  ghost: boolean
+  /** Where the note lives (null for a ghost). */
+  workspace_id: string | null
+  workspace_name: string | null
+  category_id: string | null
+  /** Number of distinct neighbours. */
+  links: number
+}
+
+export interface GraphData {
+  nodes: GraphNode[]
+  edges: { source: string; target: string }[]
 }

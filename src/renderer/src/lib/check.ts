@@ -160,3 +160,47 @@ assert.equal(fromDateTimeInput('2026-09-26T15:05'), localIso)
 assert.equal(fromDateTimeInput(''), null)
 assert.equal(formatReminder(localIso), '9/26 15:05')
 console.log('datetime input: all assertions passed')
+
+// --- wiki links: [[title]] / [[title|alias]] -----------------------------------
+import { extractLinks, renameLinks, normalizeTitle } from '@shared/links'
+
+assert.deepEqual(
+  extractLinks('참고: [[광고 소재 A/B 테스트]] 와 [[주간 보고|보고서]], 그리고 [[ 공백 ]]').map((l) => [l.target, l.alias]),
+  [
+    ['광고 소재 A/B 테스트', null],
+    ['주간 보고', '보고서'],
+    ['공백', null]
+  ]
+)
+assert.deepEqual(extractLinks('[[]] [[a\nb]] [not] [[x]'), [], 'empty / multi-line / unclosed are not links')
+assert.equal(normalizeTitle('  Weekly Report '), 'weekly report')
+assert.equal(
+  renameLinks('[[주간 보고]] · [[주간 보고|보고서]] · [[주간 보고서]] · [[ 주간 보고 ]]', '주간 보고', '주간 리포트'),
+  '[[주간 리포트]] · [[주간 리포트|보고서]] · [[주간 보고서]] · [[주간 리포트]]',
+  'only exact targets (case/space-insensitive) are renamed; aliases kept'
+)
+assert.equal(renameLinks('[[A.B*]]', 'a.b*', 'c'), '[[c]]', 'regex characters in titles are literal')
+console.log('wiki links: all assertions passed')
+
+// --- forceLayout: linked notes settle together, nothing explodes --------------
+import { createLayout, tickLayout } from './forceLayout'
+
+// 0–1–2 form a chain; 3 and 4 are loners.
+const layout = createLayout(5, [
+  [0, 1],
+  [1, 2]
+])
+let energy = Infinity
+for (let i = 0; i < 400; i++) energy = tickLayout(layout)
+const dist = (i: number, j: number): number =>
+  Math.hypot(layout.x[i] - layout.x[j], layout.y[i] - layout.y[j])
+assert.ok([...layout.x, ...layout.y].every(Number.isFinite), 'no NaN / Infinity')
+assert.ok(dist(0, 1) < dist(3, 4), 'linked nodes sit closer than unrelated ones')
+assert.ok(energy < 0.05, `settles (energy ${energy})`)
+assert.ok(Math.max(...layout.x.map(Math.abs), ...layout.y.map(Math.abs)) < 1000, 'stays near the centre')
+// A pinned node (being dragged) doesn't move.
+layout.pinned[3] = true
+const before = [layout.x[3], layout.y[3]]
+tickLayout(layout)
+assert.deepEqual([layout.x[3], layout.y[3]], before)
+console.log('forceLayout: all assertions passed')

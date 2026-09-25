@@ -3,7 +3,7 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, rmSync } from
 import { app, dialog, shell, BrowserWindow } from 'electron'
 import Database from 'better-sqlite3'
 import { getDb, closeDb, dbPath } from './db'
-import { attachmentsDir } from './attachments'
+import { attachmentsDir } from './attachmentPaths'
 import type { BackupInfo } from '@shared/types'
 
 export const AUTO_BACKUP_KEEP = 7

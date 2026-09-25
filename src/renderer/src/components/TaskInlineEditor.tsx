@@ -4,6 +4,7 @@ import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
 import { AttachmentsSection } from './AttachmentsSection'
 import { MemoEditor } from './MemoEditor'
+import { Backlinks } from './Backlinks'
 import {
   PRIORITY_META,
   STATUS_META,
@@ -149,6 +150,8 @@ export function TaskInlineEditor({ task }: { task: Task }): JSX.Element {
       </div>
 
       <MemoEditor task={task} />
+
+      <Backlinks taskId={task.id} />
 
       <AttachmentsSection taskId={task.id} />
 

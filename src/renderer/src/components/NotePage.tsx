@@ -4,6 +4,7 @@ import { useStore } from '@/store/useStore'
 import { BlockNoteEditor, type MemoEditorHandle } from './BlockNoteEditor'
 import { MemoExportMenu } from './MemoExportMenu'
 import { DocumentViewer } from './DocumentViewer'
+import { Backlinks } from './Backlinks'
 import { useMemoPersist } from '@/hooks/useMemoPersist'
 import { cn } from '@/lib/utils'
 import type { Attachment, Category, Task, TaskStatus } from '@shared/types'
@@ -133,6 +134,7 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
           variant="page"
           onLeaveTop={() => titleRef.current?.focus()}
           onOpenAttachment={setViewing}
+          footer={<Backlinks taskId={task.id} className="mx-auto mb-12 max-w-3xl px-12" />}
           className="h-full"
         />
       </div>

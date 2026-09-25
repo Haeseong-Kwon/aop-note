@@ -13,6 +13,7 @@ import { DocumentsView } from './DocumentsView'
 import { SmartView } from './SmartView'
 import { TrashView } from './TrashView'
 import { SettingsView } from './SettingsView'
+import { GraphView } from './GraphView'
 import type { MainView } from '@/store/useStore'
 
 const VIEWS: { value: MainView; label: string; icon: LucideIcon }[] = [
@@ -35,7 +36,9 @@ export function MainArea(): JSX.Element {
   if (utilityView) {
     return (
       <main className="glass-panel glass-pane flex flex-1 flex-col">
-        {utilityView === 'trash' ? <TrashView /> : <SettingsView />}
+        {utilityView === 'trash' && <TrashView />}
+        {utilityView === 'settings' && <SettingsView />}
+        {utilityView === 'graph' && <GraphView />}
       </main>
     )
   }

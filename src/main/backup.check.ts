@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from '
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { autoBackup, backupsDir, exportBackupTo, validateBackupDir, AUTO_BACKUP_KEEP } from './backup'
-import { attachmentsDir } from './attachments'
+import { attachmentsDir } from './attachmentPaths'
 import { workspaceRepo } from './repositories/workspace.repo'
 
 async function main(): Promise<void> {

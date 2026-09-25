@@ -24,7 +24,14 @@ export type ViewMode = 'list' | 'kanban'
 export type MainView = 'tasks' | 'notes' | 'calendar' | 'goals' | 'documents'
 export type SmartView = 'today' | 'week'
 export type Theme = 'light' | 'dark' | 'system'
-export type UtilityView = 'trash' | 'settings'
+export type UtilityView = 'trash' | 'settings' | 'graph'
+
+/** Enough to open a note from anywhere (graph, backlinks, links). */
+export interface NoteRef {
+  id: string
+  workspace_id: string
+  category_id: string
+}
 
 export interface ListPrefs {
   hideDone: boolean
@@ -79,6 +86,8 @@ interface AppState {
   mainView: MainView
   /** Trash / settings pages replace the desk area until a desk or smart view is picked. */
   utilityView: UtilityView | null
+  /** Memo shown in the 메모 tab; null = its first note. */
+  selectedNoteId: string | null
   view: ViewMode
   selectedTaskId: string | null
   expandedTaskId: string | null
@@ -107,6 +116,10 @@ interface AppState {
   selectSmartView: (view: SmartView) => Promise<void>
   setMainView: (view: MainView) => void
   openUtility: (view: UtilityView) => void
+  selectNote: (id: string | null) => void
+  openNote: (note: NoteRef) => Promise<void>
+  /** Follow a [[title]] from a memo: open it, or create it next to the source (Obsidian-style). */
+  openLink: (title: string, from: Task) => Promise<void>
   restoreFromTrash: (kind: TrashKind, id: string) => Promise<void>
   setView: (view: ViewMode) => void
   navigateToTask: (payload: NavigatePayload) => Promise<void>
@@ -185,6 +198,7 @@ export const useStore = create<AppState>((set, get) => ({
   smartView: null,
   mainView: 'tasks',
   utilityView: null,
+  selectedNoteId: null,
   view: 'list',
   selectedTaskId: null,
   expandedTaskId: null,
@@ -253,6 +267,35 @@ export const useStore = create<AppState>((set, get) => ({
 
   setMainView: (mainView) => set({ mainView, expandedTaskId: null, selectedTaskId: null }),
   openUtility: (utilityView) => set({ utilityView, expandedTaskId: null, selectedTaskId: null }),
+  selectNote: (selectedNoteId) => set({ selectedNoteId }),
+
+  openNote: async (note) => {
+    if (get().activeWorkspaceId !== note.workspace_id || get().smartView) {
+      await get().selectWorkspace(note.workspace_id)
+    }
+    set({
+      utilityView: null,
+      smartView: null,
+      mainView: 'notes',
+      activeCategoryId: note.category_id,
+      selectedNoteId: note.id
+    })
+  },
+
+  openLink: async (title, from) => {
+    try {
+      const hit = await window.api.link.resolve(title, from.id)
+      if (hit) return get().openNote(hit)
+      const created = await window.api.task.create({ category_id: from.category_id, title })
+      const workspaceId = get().activeWorkspaceId
+      if (!workspaceId) return
+      await get().openNote({ id: created.id, workspace_id: workspaceId, category_id: from.category_id })
+      await get().refresh()
+      useToast.getState().show({ message: `'${title}' 메모를 새로 만들었습니다.` })
+    } catch (e) {
+      toastError(e)
+    }
+  },
 
   restoreFromTrash: async (kind, id) => {
     try {

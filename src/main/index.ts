@@ -9,6 +9,7 @@ import { pathForStored } from './attachments'
 import { autoBackup } from './backup'
 import { setupQuickCapture } from './quickCapture'
 import { loadSettings } from './settings'
+import { scheduleVaultSync } from './vault'
 
 let stopNotifier: (() => void) | null = null
 let stopQuickCapture: (() => void) | null = null
@@ -85,6 +86,8 @@ app.whenReady().then(() => {
   stopNotifier = startDueNotifier(win)
   // Daily safety snapshot. Never blocks startup; a failure is logged, not fatal.
   autoBackup().catch((error) => console.error('[backup] auto backup failed:', error))
+  // Bring the Markdown mirror up to date (e.g. after an app update changed its format).
+  scheduleVaultSync(() => loadSettings().vaultPath)
 
   // The window may have been closed (macOS keeps the app running); recreate on demand.
   const mainWindow = (): BrowserWindow => {

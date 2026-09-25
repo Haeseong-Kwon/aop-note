@@ -26,7 +26,10 @@ import type {
   TrashItem,
   TrashKind,
   BackupInfo,
-  AppSettings
+  AppSettings,
+  Backlinks,
+  GraphData,
+  McpInfo
 } from './types'
 
 /** Payload sent from main → renderer when a notification is clicked. */
@@ -86,9 +89,23 @@ export const IPC = {
   theme: {
     set: 'theme:set'
   },
+  link: {
+    backlinks: 'link:backlinks',
+    graph: 'link:graph',
+    resolve: 'link:resolve'
+  },
   trash: {
     list: 'trash:list',
     restore: 'trash:restore'
+  },
+  mcp: {
+    info: 'mcp:info'
+  },
+  vault: {
+    choose: 'vault:choose',
+    sync: 'vault:sync',
+    disable: 'vault:disable',
+    open: 'vault:open'
   },
   settings: {
     get: 'settings:get',
@@ -158,10 +175,27 @@ export interface Api {
     openExternal(id: string): Promise<void>
     remove(id: string): Promise<void>
   }
+  link: {
+    backlinks(taskId: string): Promise<Backlinks>
+    graph(): Promise<GraphData>
+    /** The note a [[title]] in fromTaskId's memo points at, or null if none exists yet. */
+    resolve(title: string, fromTaskId: string | null): Promise<TaskWithContext | null>
+  }
   trash: {
     list(): Promise<TrashItem[]>
     /** Restore one delete (and any deleted parent it needs to be visible). */
     restore(kind: TrashKind, id: string): Promise<void>
+  }
+  mcp: {
+    info(): Promise<McpInfo>
+  }
+  vault: {
+    /** Pick a folder, start mirroring into <folder>/AOP Note/. Null if cancelled. */
+    choose(): Promise<AppSettings | null>
+    /** Write the mirror now; resolves to the number of files it manages. */
+    sync(): Promise<number>
+    disable(): Promise<AppSettings>
+    open(): Promise<void>
   }
   settings: {
     get(): Promise<AppSettings>

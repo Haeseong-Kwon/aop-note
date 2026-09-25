@@ -1,13 +1,21 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
-import { useCreateBlockNote } from '@blocknote/react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, type ReactNode } from 'react'
+import {
+  SuggestionMenuController,
+  useCreateBlockNote,
+  type DefaultReactSuggestionItem
+} from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/mantine'
 import { ko as koLocale } from '@blocknote/core/locales'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
 import { extractFiles, restoreFileBlocks } from '@/lib/memoMarkdown'
 import { SmartTypography } from '@/lib/smartTypography'
+import { WikiLinks } from '@/lib/wikiLinks'
+import { useStore } from '@/store/useStore'
 import { cn } from '@/lib/utils'
 import type { Attachment } from '@shared/types'
+
+const LINK_SUGGESTIONS = 8
 
 interface BlockNoteEditorProps {
   /** Task the memo belongs to — dropped files are attached to it. */
@@ -24,6 +32,8 @@ interface BlockNoteEditorProps {
   onLeaveTop?: () => void
   /** Called when an embedded attachment is opened, so the host can show the viewer. */
   onOpenAttachment?: (attachment: Attachment) => void
+  /** Rendered after the document, inside the same scroll area (e.g. backlinks). */
+  footer?: ReactNode
   className?: string
 }
 
@@ -48,13 +58,25 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
       variant = 'inline',
       onLeaveTop,
       onOpenAttachment,
+      footer,
       className
     },
     ref
   ) {
     const editor = useCreateBlockNote({
       dictionary: koLocale,
-      _tiptapOptions: { extensions: [SmartTypography] },
+      _tiptapOptions: {
+        extensions: [
+          SmartTypography,
+          // The editor is created once, so read the source task at click time.
+          WikiLinks.configure({
+            onOpen: (title) => {
+              const from = useStore.getState().tasks.find((t) => t.id === taskId)
+              if (from) void useStore.getState().openLink(title, from)
+            }
+          })
+        ]
+      },
       // Drag & drop / paste of a file anywhere in the memo lands here.
       uploadFile: async (file: File): Promise<string> => {
         try {
@@ -139,6 +161,44 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
         .catch((error) => console.error('Failed to resolve memo attachment:', error))
     }
 
+    /**
+     * "[[" autocompletes note titles. The menu triggers on a single "[" (and restarts
+     * on the second), so read the text before the caret rather than the query:
+     * only "[[" followed by a title-in-progress offers suggestions ("[ ]" offers none).
+     */
+    const getLinkItems = async (): Promise<DefaultReactSuggestionItem[]> => {
+      const { $from } = editor.prosemirrorState.selection
+      const before = $from.parent.textBetween(Math.max(0, $from.parentOffset - 200), $from.parentOffset)
+      const open = before.match(/\[\[([^[\]\n]*)$/)
+      if (!open) return []
+      const q = open[1].trim()
+      const insert = (title: string) => (): void => {
+        // BlockNote has already removed the trigger "[" and what followed it; the
+        // first "[" of the pair may still be there — complete it rather than doubling it.
+        const { $from: at } = editor.prosemirrorState.selection
+        const leftover = at.parent.textBetween(Math.max(0, at.parentOffset - 1), at.parentOffset) === '['
+        const text = `${leftover ? '[' : '[['}${title}]] `
+        editor.insertInlineContent([{ type: 'text', text, styles: {} }])
+      }
+      const titles = q
+        ? (await window.api.search.query(q))
+            // Search also matches memo bodies; a link suggestion should match the title.
+            .filter((h) => h.type === 'task' && h.id !== taskId && h.title.toLowerCase().includes(q.toLowerCase()))
+            .map((h) => ({ title: h.title, subtext: h.subtitle }))
+        : useStore
+            .getState()
+            .tasks.filter((t) => t.id !== taskId)
+            .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+            .map((t) => ({ title: t.title, subtext: '최근 수정' }))
+      const items: DefaultReactSuggestionItem[] = titles
+        .slice(0, LINK_SUGGESTIONS)
+        .map((t) => ({ ...t, onItemClick: insert(t.title) }))
+      if (q && !titles.some((t) => t.title.toLowerCase() === q.toLowerCase())) {
+        items.push({ title: `[[${q}]]`, subtext: '아직 없는 메모 — ⌘+클릭하면 만들어집니다', onItemClick: insert(q) })
+      }
+      return items
+    }
+
     // ArrowUp on the first block hands focus back to the title above.
     const handleKeyDown = (e: React.KeyboardEvent): void => {
       if (!onLeaveTop || e.key !== 'ArrowUp' || e.nativeEvent.isComposing) return
@@ -158,7 +218,10 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
           className
         )}
       >
-        <BlockNoteView editor={editor} theme={dark ? 'dark' : 'light'} onChange={handleChange} />
+        <BlockNoteView editor={editor} theme={dark ? 'dark' : 'light'} onChange={handleChange}>
+          <SuggestionMenuController triggerCharacter="[" minQueryLength={1} getItems={getLinkItems} />
+        </BlockNoteView>
+        {footer}
       </div>
     )
   }

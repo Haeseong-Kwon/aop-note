@@ -73,7 +73,9 @@ export function NotesView(): JSX.Element {
   const categories = useStore((s) => s.categories)
   const activeCategoryId = useStore((s) => s.activeCategoryId)
   const createTask = useStore((s) => s.createTask)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // In the store so links, backlinks and the graph can open a specific note.
+  const selectedId = useStore((s) => s.selectedNoteId)
+  const setSelectedId = useStore((s) => s.selectNote)
   const [query, setQuery] = useState('')
 
   const groups = useMemo(() => {

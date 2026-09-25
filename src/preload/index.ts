@@ -73,9 +73,24 @@ const api: Api = {
     openExternal: (id: string) => ipcRenderer.invoke(IPC.attachment.openExternal, id),
     remove: (id: string) => ipcRenderer.invoke(IPC.attachment.remove, id)
   },
+  link: {
+    backlinks: (taskId: string) => ipcRenderer.invoke(IPC.link.backlinks, taskId),
+    graph: () => ipcRenderer.invoke(IPC.link.graph),
+    resolve: (title: string, fromTaskId: string | null) =>
+      ipcRenderer.invoke(IPC.link.resolve, title, fromTaskId)
+  },
   trash: {
     list: () => ipcRenderer.invoke(IPC.trash.list),
     restore: (kind: TrashKind, id: string) => ipcRenderer.invoke(IPC.trash.restore, kind, id)
+  },
+  mcp: {
+    info: () => ipcRenderer.invoke(IPC.mcp.info)
+  },
+  vault: {
+    choose: () => ipcRenderer.invoke(IPC.vault.choose),
+    sync: () => ipcRenderer.invoke(IPC.vault.sync),
+    disable: () => ipcRenderer.invoke(IPC.vault.disable),
+    open: () => ipcRenderer.invoke(IPC.vault.open)
   },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settings.get),

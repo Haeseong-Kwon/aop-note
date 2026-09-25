@@ -233,6 +233,12 @@
       "type": "file"
     },
     {
+      "path": "README.md",
+      "accessCount": 2,
+      "lastAccessed": 1790370029444,
+      "type": "file"
+    },
+    {
       "path": "src/renderer/src/hooks/useMemoPersist.ts",
       "accessCount": 1,
       "lastAccessed": 1784404905723,
@@ -293,9 +299,9 @@
       "type": "file"
     },
     {
-      "path": "README.md",
+      "path": "src/renderer/src/components/GraphView.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790368614229,
+      "lastAccessed": 1790369254046,
       "type": "file"
     }
   ],

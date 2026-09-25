@@ -16,6 +16,7 @@ import {
   ChevronsRight,
   Keyboard,
   Settings,
+  Waypoints,
   type LucideIcon
 } from 'lucide-react'
 import {
@@ -252,6 +253,12 @@ export function Sidebar(): JSX.Element {
           label="이번 주"
           active={smartView === 'week' && !utilityView}
           onClick={() => selectSmartView('week')}
+        />
+        <NavItem
+          icon={Waypoints}
+          label="그래프"
+          active={utilityView === 'graph'}
+          onClick={() => openUtility('graph')}
         />
       </nav>
 

@@ -7,18 +7,19 @@
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "electron-vite build && npm run build:mcp",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
-    "package": "electron-vite build && electron-builder",
-    "package:mac": "electron-vite build && electron-builder --mac",
+    "package": "npm run build && electron-builder",
+    "package:mac": "npm run build && electron-builder --mac",
     "install:mac": "bash scripts/install-mac.sh",
     "postinstall": "electron-builder install-app-deps",
     "test": "npm run test:renderer && npm run test:main",
-    "test:renderer": "esbuild src/renderer/src/lib/check.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/memo-check.mjs --log-level=error && node node_modules/.cache/memo-check.mjs",
-    "test:main": "esbuild src/main/check.ts --bundle --platform=node --format=cjs --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=node_modules/.cache/main-check.cjs --log-level=error && ELECTRON_RUN_AS_NODE=1 electron node_modules/.cache/main-check.cjs"
+    "test:renderer": "esbuild src/renderer/src/lib/check.ts --bundle --platform=node --format=esm --alias:@shared=./src/shared --outfile=node_modules/.cache/memo-check.mjs --log-level=error && node node_modules/.cache/memo-check.mjs",
+    "test:main": "esbuild src/main/check.ts --bundle --platform=node --format=cjs --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=node_modules/.cache/main-check.cjs --log-level=error && ELECTRON_RUN_AS_NODE=1 electron node_modules/.cache/main-check.cjs",
+    "build:mcp": "esbuild src/mcp/server.ts --bundle --platform=node --format=cjs --target=node20 --alias:electron=./src/mcp/electron-shim.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=out/mcp/server.js --log-level=warning"
   },
   "dependencies": {
     "@tiptap/core": "^3.27.1",
@@ -39,6 +40,7 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.3",
     "@tailwindcss/typography": "^0.5.16",
+    "@tiptap/pm": "^3.27.1",
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.13.5",
     "@types/react": "^18.3.18",

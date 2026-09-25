@@ -31,6 +31,13 @@ function App(): JSX.Element {
     })
   }, [navigateToTask])
 
+  // Claude Code (via MCP) can add notes while the app is in the background.
+  useEffect(() => {
+    const onFocus = (): void => void useStore.getState().refresh()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [])
+
   // System-wide quick capture (global shortcut / menu-bar icon).
   useEffect(() => window.api.onQuickCapture(() => openQuickCapture()), [openQuickCapture])
 

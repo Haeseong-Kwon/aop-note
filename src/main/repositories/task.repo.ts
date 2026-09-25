@@ -1,6 +1,7 @@
 import { getDb } from '../db'
 import { newId, nowIso } from './util'
 import { nextOccurrence, resetChecklist } from './recurrence'
+import { normalizeTitle, renameLinks } from '@shared/links'
 import type {
   Task,
   TaskWithContext,
@@ -67,6 +68,22 @@ export const taskRepo = {
   },
 
   /** Cross-workspace: incomplete tasks with due_date in [startIso, endIso]. Used by the notifier. */
+  /** Every live task with its desk/category context (links, graph, vault mirror). */
+  listAllWithContext(): TaskWithContext[] {
+    return getDb().prepare(`${CONTEXT_SELECT} ${CONTEXT_ORDER}`).all() as TaskWithContext[]
+  },
+
+  /** Child category id → its parent's name (for nesting folders in the vault mirror). */
+  listCategoryParents(): { id: string; parent_name: string }[] {
+    return getDb()
+      .prepare(
+        `SELECT c.id, p.name AS parent_name FROM categories c
+         JOIN categories p ON p.id = c.parent_id
+         WHERE c.deleted_at IS NULL`
+      )
+      .all() as { id: string; parent_name: string }[]
+  },
+
   listDueBetween(startIso: string, endIso: string): TaskWithContext[] {
     return getDb()
       .prepare(
@@ -181,10 +198,32 @@ export const taskRepo = {
       if (updated.remind_at !== existing.remind_at) {
         db.prepare('UPDATE tasks SET reminded_at = NULL WHERE id = ?').run(updated.id)
       }
+      if (updated.title !== existing.title) this.retargetLinks(existing.title, updated.title, updated.id)
       if (existing.status !== 'done' && updated.status === 'done') this.scheduleNext(updated)
     })()
 
     return updated
+  },
+
+  /**
+   * After a rename, point [[old title]] links at the new title — but only in notes
+   * where that link unambiguously meant this task (same rule as link resolution:
+   * a same-desk note wins; two same-titled candidates means "leave it alone").
+   */
+  retargetLinks(oldTitle: string, newTitle: string, taskId: string): void {
+    const key = normalizeTitle(oldTitle)
+    // Runs after the title UPDATE, so view this task under its old name.
+    const tasks = this.listAllWithContext().map((t) => (t.id === taskId ? { ...t, title: oldTitle } : t))
+    const holders = tasks.filter((t) => normalizeTitle(t.title) === key)
+    const save = getDb().prepare('UPDATE tasks SET note = ?, updated_at = ? WHERE id = ?')
+    for (const t of tasks) {
+      if (!t.note.includes('[[')) continue
+      const local = holders.filter((h) => h.workspace_id === t.workspace_id)
+      const pool = local.length > 0 ? local : holders
+      if (pool.length !== 1 || pool[0].id !== taskId) continue
+      const note = renameLinks(t.note, oldTitle, newTitle)
+      if (note !== t.note) save.run(note, nowIso(), t.id)
+    }
   },
 
   /** When a repeating task is completed, create its next occurrence (once). */

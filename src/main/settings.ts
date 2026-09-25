@@ -6,7 +6,8 @@ import type { AppSettings } from '@shared/types'
 export const DEFAULT_SETTINGS: AppSettings = {
   launchAtLogin: false,
   dueNotifications: true,
-  globalShortcut: true
+  globalShortcut: true,
+  vaultPath: ''
 }
 
 export const settingsPath = (): string => join(app.getPath('userData'), 'settings.json')

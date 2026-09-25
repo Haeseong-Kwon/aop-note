@@ -212,7 +212,9 @@
 }
 .bn-memo--page .bn-container,
 .bn-memo--page .bn-editor {
-  min-height: 100%; /* click anywhere in the empty page below the text to keep typing */
+  /* Click anywhere in the empty page below the text to keep typing; leave room so
+     the backlinks heading peeks above the fold. */
+  min-height: calc(100% - 7rem);
 }
 .bn-memo--page .bn-editor {
   max-width: 48rem;
@@ -285,4 +287,16 @@ textarea:focus-visible,
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Obsidian-style [[links]]: decorated in place, the stored text stays plain Markdown. */
+.bn-memo .bn-wikilink {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--primary) / 0.35);
+  text-underline-offset: 3px;
+  border-radius: 3px;
+}
+.bn-memo .bn-wikilink:hover {
+  background: hsl(var(--primary) / 0.08);
 }
