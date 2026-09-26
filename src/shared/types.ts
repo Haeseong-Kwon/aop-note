@@ -375,3 +375,28 @@ export interface ProjectSummary {
     last_commit_date: string | null
   } | null
 }
+
+/** A subscribed iCal feed (the secret address stays encrypted in main). */
+export interface CalendarInfo {
+  id: string
+  name: string
+  color: string
+  last_sync: string | null
+  /** Why the last sync failed; the previously fetched events are kept. */
+  last_error: string | null
+  event_count: number
+}
+
+/** One occurrence from a subscribed calendar (read-only). */
+export interface CalendarEvent {
+  id: string
+  calendar_id: string
+  calendar_name: string
+  color: string
+  title: string
+  location: string
+  description: string
+  start: string
+  end: string
+  all_day: boolean
+}

@@ -167,3 +167,31 @@ export function formatReminder(iso: string): string {
   const d = new Date(iso)
   return `${d.getMonth() + 1}/${d.getDate()} ${toDateTimeInput(iso).slice(11)}`
 }
+
+interface EventSpan {
+  start: string
+  end: string
+  all_day: boolean
+}
+
+/** Local YYYY-MM-DD keys of every day an event covers (end exclusive). */
+export function eventDayKeys(e: EventSpan): string[] {
+  const start = new Date(e.start)
+  // Exclusive end: an event ending exactly at midnight doesn't touch the next day.
+  const last = new Date(Math.max(start.getTime(), new Date(e.end).getTime() - 1))
+  const keys: string[] = []
+  for (let d = new Date(start.getFullYear(), start.getMonth(), start.getDate()); d <= last; d.setDate(d.getDate() + 1)) {
+    keys.push(formatDateInput(d))
+  }
+  return keys
+}
+
+const hhmm = (iso: string): string => {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** "09:05–10:30", or "종일" for all-day events. */
+export function formatEventTime(e: EventSpan): string {
+  return e.all_day ? '종일' : `${hhmm(e.start)}–${hhmm(e.end)}`
+}

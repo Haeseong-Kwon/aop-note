@@ -7,6 +7,7 @@ import { loadSettings } from '../main/settings'
 import { writeVault } from '../main/vault'
 import { getProjectIndex, validateFolder } from '../main/projectIndex'
 import { getGitInfo } from '../main/git'
+import { eventsBetween } from '../main/calendars'
 import { resolve, sep } from 'path'
 import { realpathSync } from 'fs'
 import { extractLinks } from '@shared/links'
@@ -83,6 +84,23 @@ const BRIEF_TASKS = 15
 const BRIEF_NOTES = 5
 const BRIEF_COMMITS = 5
 const BRIEF_DOCS = 20
+const BRIEF_EVENTS = 8
+const EVENTS_DEFAULT_DAYS = 7
+
+const hhmm = (iso: string): string => {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+const eventLine = (e: { title: string; start: string; end: string; all_day: boolean; location: string; calendar_name: string }): string =>
+  `- ${e.all_day ? '종일' : `${hhmm(e.start)}–${hhmm(e.end)}`} ${e.title}${e.location ? ` @${e.location}` : ''} (${e.calendar_name})`
+
+/** Local day [00:00, next 00:00) of a YYYY-MM-DD string. */
+function localDay(ymd: string, key: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) throw new Error(`'${key}' must be a date like 2026-10-01.`)
+  const d = new Date(`${ymd}T00:00:00`)
+  if (Number.isNaN(d.getTime())) throw new Error(`'${key}' is not a valid date.`)
+  return d
+}
 
 /** The desk whose linked folder contains `dir` (deepest link wins), or null. */
 function deskForDir(dir: string): Workspace | null {
@@ -112,7 +130,7 @@ function deskForDir(dir: string): Workspace | null {
  * tasks, recently touched notes, git state and docs. Null when no desk is linked,
  * so the SessionStart hook stays silent in unrelated repos.
  */
-export function projectBrief(dir: string): string | null {
+export function projectBrief(dir: string, now = new Date()): string | null {
   const desk = deskForDir(dir)
   if (!desk?.folder_path) return null
   const tasks = taskRepo.listAllWithContext().filter((t) => t.workspace_id === desk.id)
@@ -123,6 +141,8 @@ export function projectBrief(dir: string): string | null {
     .slice(0, BRIEF_NOTES)
   const git = getGitInfo(desk.folder_path)
   const docs = getProjectIndex(desk.folder_path)?.files ?? []
+  const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const today = eventsBetween(dayStart.toISOString(), new Date(dayStart.getTime() + 86_400_000).toISOString())
 
   const lines = [
     `# AOP Note 프로젝트: ${desk.name}`,
@@ -141,6 +161,9 @@ export function projectBrief(dir: string): string | null {
         )
       : ['- 없음']),
     '',
+    ...(today.length
+      ? ['## 오늘 일정 (구독 캘린더)', ...today.slice(0, BRIEF_EVENTS).map(eventLine), '']
+      : []),
     '## 최근 수정한 메모',
     ...(recent.length
       ? recent.map((t) => `- ${t.title} — id ${t.id}: ${t.note.trim().split('\n')[0].slice(0, 120)}`)
@@ -156,6 +179,25 @@ export function projectBrief(dir: string): string | null {
 }
 
 export const TOOLS: Tool[] = [
+  {
+    name: 'list_events',
+    description:
+      "Events from the user's subscribed calendars (e.g. Google Calendar), read-only. Dates are local YYYY-MM-DD, inclusive; defaults to today through the next 7 days.",
+    inputSchema: {
+      type: 'object',
+      properties: { from: { type: 'string', description: 'YYYY-MM-DD' }, to: { type: 'string', description: 'YYYY-MM-DD (inclusive)' } }
+    },
+    run: (args) => {
+      const fromArg = str(args, 'from', 10, false)
+      const toArg = str(args, 'to', 10, false)
+      const now = new Date()
+      const from = fromArg ? localDay(fromArg, 'from') : new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const to = toArg ? new Date(localDay(toArg, 'to').getTime() + 86_400_000) : new Date(from.getTime() + EVENTS_DEFAULT_DAYS * 86_400_000)
+      const events = eventsBetween(from.toISOString(), to.toISOString())
+      if (events.length === 0) return 'No events in that range (or no calendar is subscribed — the user can add one in AOP Note 설정 → 캘린더 구독).'
+      return events.map((e) => `${localDate(e.start)} ${eventLine(e).slice(2)}`).join('\n')
+    }
+  },
   {
     name: 'get_project_context',
     description:

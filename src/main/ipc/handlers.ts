@@ -22,6 +22,14 @@ import { backupInfo, exportBackup, restoreBackup, openDataFolder } from '../back
 import { loadSettings, saveSettings } from '../settings'
 import { setShortcutEnabled } from '../quickCapture'
 import { isHookInstalled, setHookInstalled } from '../claudeHook'
+import {
+  addCalendar,
+  eventsBetween,
+  listCalendars,
+  removeCalendar,
+  syncAllCalendars,
+  syncCalendar
+} from '../calendars'
 import { writeVault, scheduleVaultSync, vaultBase } from '../vault'
 import {
   chooseFolder,
@@ -157,6 +165,20 @@ export function registerIpcHandlers(): void {
     }
     return next
   })
+
+  // ---- Calendar subscriptions (read-only iCal feeds) ----
+  handle(IPC.calendar.list, () => listCalendars())
+  handle(IPC.calendar.subscribe, (input: { name: string; url: string; color: string }) => {
+    if (!input || typeof input.url !== 'string' || typeof input.name !== 'string') throw new Error('잘못된 요청입니다.')
+    return addCalendar({ name: input.name, url: input.url, color: String(input.color ?? '') })
+  })
+  handle(IPC.calendar.unsubscribe, (id: string) => removeCalendar(id))
+  handle(IPC.calendar.sync, async (id?: string) => {
+    if (id) await syncCalendar(id)
+    else await syncAllCalendars()
+    return listCalendars()
+  })
+  handle(IPC.calendar.events, (fromIso: string, toIso: string) => eventsBetween(fromIso, toIso))
 
   // ---- Claude Code (MCP server + SessionStart hook) ----
   // Both run this app's own Electron binary in Node mode, so the bundled SQLite

@@ -11,11 +11,14 @@ import { setupQuickCapture } from './quickCapture'
 import { loadSettings } from './settings'
 import { scheduleVaultSync } from './vault'
 import { startProjectWatching } from './projects'
+import { syncAllCalendars } from './calendars'
 import { IPC } from '@shared/ipc'
 
 let stopNotifier: (() => void) | null = null
 let stopQuickCapture: (() => void) | null = null
 let stopProjectWatching: (() => void) | null = null
+let calendarTimer: ReturnType<typeof setInterval> | null = null
+const CALENDAR_SYNC_MS = 30 * 60_000
 
 // Custom scheme to serve attachment files to the renderer (PDF iframe, images)
 // without exposing file:// or relaxing sandboxing. Must be registered before ready.
@@ -89,6 +92,16 @@ app.whenReady().then(() => {
   stopNotifier = startDueNotifier(win)
   // Daily safety snapshot. Never blocks startup; a failure is logged, not fatal.
   autoBackup().catch((error) => console.error('[backup] auto backup failed:', error))
+  // Subscribed calendars: refresh on start and every 30 min (errors are kept per calendar).
+  const syncCalendars = (): void => {
+    syncAllCalendars()
+      .then(() => {
+        for (const w of BrowserWindow.getAllWindows()) w.webContents.send(IPC.events.calendarsSynced)
+      })
+      .catch((error) => console.error('[calendar] sync failed:', error))
+  }
+  syncCalendars()
+  calendarTimer = setInterval(syncCalendars, CALENDAR_SYNC_MS)
   // Bring the Markdown mirror up to date (e.g. after an app update changed its format).
   scheduleVaultSync(() => loadSettings().vaultPath)
 
@@ -119,5 +132,6 @@ app.on('will-quit', () => {
   stopNotifier?.()
   stopQuickCapture?.()
   stopProjectWatching?.()
+  if (calendarTimer) clearInterval(calendarTimer)
   closeDb()
 })

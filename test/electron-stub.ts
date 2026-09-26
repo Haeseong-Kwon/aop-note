@@ -15,3 +15,10 @@ const unavailable = (name: string): never => {
 export const dialog = new Proxy({}, { get: (_t, p) => () => unavailable(`dialog.${String(p)}`) })
 export const shell = new Proxy({}, { get: (_t, p) => () => unavailable(`shell.${String(p)}`) })
 export class BrowserWindow {}
+
+// Test-only stand-in for the OS keychain: reversible, clearly not encryption.
+export const safeStorage = {
+  isEncryptionAvailable: (): boolean => true,
+  encryptString: (s: string): Buffer => Buffer.from(`test:${s}`),
+  decryptString: (b: Buffer): string => b.toString().replace(/^test:/, '')
+}

@@ -121,6 +121,24 @@ const migrations: Migration[] = [
   // 0007 — a desk can be linked to a local project folder (repo)
   (db) => {
     db.exec(`ALTER TABLE workspaces ADD COLUMN folder_path TEXT;`)
+  },
+
+  // 0008 — cached occurrences from subscribed iCal feeds (read-only, replaced on sync)
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS calendar_events (
+        id           TEXT PRIMARY KEY,
+        calendar_id  TEXT NOT NULL,
+        title        TEXT NOT NULL,
+        location     TEXT NOT NULL DEFAULT '',
+        description  TEXT NOT NULL DEFAULT '',
+        start        TEXT NOT NULL,
+        end          TEXT NOT NULL,
+        all_day      INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_calendar_events_start ON calendar_events(start);
+      CREATE INDEX IF NOT EXISTS idx_calendar_events_calendar ON calendar_events(calendar_id);
+    `)
   }
 ]
 

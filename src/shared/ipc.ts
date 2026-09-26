@@ -33,7 +33,9 @@ import type {
   FileBacklinks,
   ProjectOverview,
   ProjectFile,
-  ProjectSummary
+  ProjectSummary,
+  CalendarInfo,
+  CalendarEvent
 } from './types'
 
 /** Payload sent from main → renderer when a notification is clicked. */
@@ -112,6 +114,13 @@ export const IPC = {
     list: 'trash:list',
     restore: 'trash:restore'
   },
+  calendar: {
+    list: 'calendar:list',
+    subscribe: 'calendar:subscribe',
+    unsubscribe: 'calendar:unsubscribe',
+    sync: 'calendar:sync',
+    events: 'calendar:events'
+  },
   mcp: {
     info: 'mcp:info',
     setHook: 'mcp:setHook'
@@ -135,7 +144,8 @@ export const IPC = {
   events: {
     navigateToTask: 'event:navigateToTask',
     quickCapture: 'event:quickCapture',
-    projectChanged: 'event:projectChanged'
+    projectChanged: 'event:projectChanged',
+    calendarsSynced: 'event:calendarsSynced'
   }
 } as const
 
@@ -216,6 +226,15 @@ export interface Api {
     /** Restore one delete (and any deleted parent it needs to be visible). */
     restore(kind: TrashKind, id: string): Promise<void>
   }
+  calendar: {
+    list(): Promise<CalendarInfo[]>
+    /** Fetches once to validate; rejects (and stores nothing) if the feed can't be read. */
+    subscribe(input: { name: string; url: string; color: string }): Promise<CalendarInfo>
+    unsubscribe(id: string): Promise<void>
+    /** Re-fetch one calendar, or all of them. */
+    sync(id?: string): Promise<CalendarInfo[]>
+    events(fromIso: string, toIso: string): Promise<CalendarEvent[]>
+  }
   mcp: {
     info(): Promise<McpInfo>
     /** Add/remove the SessionStart hook in ~/.claude/settings.json; resolves to the new state. */
@@ -256,4 +275,6 @@ export interface Api {
   onQuickCapture(cb: () => void): () => void
   /** A linked project folder's docs or git state changed on disk. */
   onProjectChanged(cb: (deskId: string) => void): () => void
+  /** Subscribed calendars were re-fetched in the background. */
+  onCalendarsSynced(cb: () => void): () => void
 }

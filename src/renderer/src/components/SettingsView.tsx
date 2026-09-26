@@ -3,6 +3,7 @@ import { Settings, Download, Upload, FolderOpen, RefreshCw, Copy, Check } from '
 import { useToast, toastError } from '@/store/useToast'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from './PageHeader'
+import { CalendarSubscriptions } from './CalendarSubscriptions'
 import { cn } from '@/lib/utils'
 import type { AppSettings, BackupInfo, McpInfo } from '@shared/types'
 
@@ -131,6 +132,10 @@ export function SettingsView(): JSX.Element {
                 onChange={() => toggle('dueNotifications')}
               />
             </SettingRow>
+          </Section>
+
+          <Section title="캘린더 구독">
+            <CalendarSubscriptions />
           </Section>
 
           <Section title="Obsidian · Claude Code">

@@ -42,6 +42,8 @@ function App(): JSX.Element {
   // A linked project folder changed on disk (docs edited, commit made).
   useEffect(() => window.api.onProjectChanged(() => useStore.getState().bumpProjectVersion()), [])
 
+  useEffect(() => window.api.onCalendarsSynced(() => useStore.getState().bumpCalendarVersion()), [])
+
   // System-wide quick capture (global shortcut / menu-bar icon).
   useEffect(() => window.api.onQuickCapture(() => openQuickCapture()), [openQuickCapture])
 

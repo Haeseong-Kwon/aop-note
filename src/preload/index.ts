@@ -93,6 +93,14 @@ const api: Api = {
     list: () => ipcRenderer.invoke(IPC.trash.list),
     restore: (kind: TrashKind, id: string) => ipcRenderer.invoke(IPC.trash.restore, kind, id)
   },
+  calendar: {
+    list: () => ipcRenderer.invoke(IPC.calendar.list),
+    subscribe: (input: { name: string; url: string; color: string }) =>
+      ipcRenderer.invoke(IPC.calendar.subscribe, input),
+    unsubscribe: (id: string) => ipcRenderer.invoke(IPC.calendar.unsubscribe, id),
+    sync: (id?: string) => ipcRenderer.invoke(IPC.calendar.sync, id),
+    events: (fromIso: string, toIso: string) => ipcRenderer.invoke(IPC.calendar.events, fromIso, toIso)
+  },
   mcp: {
     info: () => ipcRenderer.invoke(IPC.mcp.info),
     setHook: (enabled: boolean) => ipcRenderer.invoke(IPC.mcp.setHook, enabled)
@@ -129,6 +137,11 @@ const api: Api = {
     const listener = (_e: IpcRendererEvent, deskId: string): void => cb(deskId)
     ipcRenderer.on(IPC.events.projectChanged, listener)
     return () => ipcRenderer.removeListener(IPC.events.projectChanged, listener)
+  },
+  onCalendarsSynced: (cb: () => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on(IPC.events.calendarsSynced, listener)
+    return () => ipcRenderer.removeListener(IPC.events.calendarsSynced, listener)
   }
 }
 

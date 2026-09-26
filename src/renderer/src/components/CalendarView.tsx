@@ -2,11 +2,13 @@ import { useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
-import { PRIORITY_META, formatDateInput } from '@/lib/format'
+import { PRIORITY_META, formatDateInput, formatEventTime } from '@/lib/format'
+import { useCalendarEvents } from '@/hooks/useCalendarEvents'
 import { cn } from '@/lib/utils'
 import type { Task } from '@shared/types'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+const PER_DAY = 3 // items shown per cell before "+N건"
 
 const dayKey = (y: number, m: number, d: number): string => `${y}-${m}-${d}`
 const keyOfIso = (iso: string): string => {
@@ -45,6 +47,8 @@ export function CalendarView(): JSX.Element {
       return d
     })
   }, [calYear, calMonth])
+
+  const { byDay: eventsByDay } = useCalendarEvents(cells[0], new Date(cells[41].getTime() + 86_400_000))
 
   const now = new Date()
   const todayKey = dayKey(now.getFullYear(), now.getMonth(), now.getDate())
@@ -89,6 +93,10 @@ export function CalendarView(): JSX.Element {
           const inMonth = d.getMonth() === calMonth
           const k = dayKey(d.getFullYear(), d.getMonth(), d.getDate())
           const dayTasks = byDay.get(k) ?? []
+          const dayEvents = eventsByDay.get(formatDateInput(d)) ?? []
+          const shownEvents = dayEvents.slice(0, PER_DAY)
+          const shownTasks = dayTasks.slice(0, Math.max(0, PER_DAY - shownEvents.length))
+          const hidden = dayEvents.length + dayTasks.length - shownEvents.length - shownTasks.length
           const isToday = k === todayKey
           return (
             <div
@@ -115,7 +123,21 @@ export function CalendarView(): JSX.Element {
               </div>
 
               <div className="flex flex-col gap-0.5 overflow-y-auto">
-                {dayTasks.slice(0, 3).map((t) => (
+                {shownEvents.map((e) => (
+                  <div
+                    key={e.id}
+                    onClick={(ev) => ev.stopPropagation()}
+                    title={`${e.title}\n${formatEventTime(e)}${e.location ? ` · ${e.location}` : ''}\n${e.calendar_name} (구독 캘린더, 읽기 전용)`}
+                    className="flex cursor-default items-center gap-1 truncate rounded border-l-2 px-1 py-0.5 text-[11px]"
+                    style={{ borderColor: e.color, backgroundColor: `${e.color}1a` }}
+                  >
+                    {!e.all_day && (
+                      <span className="shrink-0 tabular-nums text-muted-foreground">{formatEventTime(e).slice(0, 5)}</span>
+                    )}
+                    <span className="truncate">{e.title}</span>
+                  </div>
+                ))}
+                {shownTasks.map((t) => (
                   <button
                     key={t.id}
                     onClick={(e) => {
@@ -134,11 +156,7 @@ export function CalendarView(): JSX.Element {
                     <span className="truncate">{t.title}</span>
                   </button>
                 ))}
-                {dayTasks.length > 3 && (
-                  <span className="px-1 text-[11px] text-muted-foreground">
-                    +{dayTasks.length - 3}건
-                  </span>
-                )}
+                {hidden > 0 && <span className="px-1 text-[11px] text-muted-foreground">+{hidden}건</span>}
               </div>
             </div>
           )

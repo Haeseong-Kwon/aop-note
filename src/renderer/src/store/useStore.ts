@@ -92,6 +92,8 @@ interface AppState {
   openFile: { deskId: string; path: string } | null
   /** Bumped when a linked folder changes on disk, so project views reload. */
   projectVersion: number
+  /** Bumped when subscribed calendars are re-fetched or changed. */
+  calendarVersion: number
   view: ViewMode
   selectedTaskId: string | null
   expandedTaskId: string | null
@@ -124,6 +126,7 @@ interface AppState {
   previewFile: (deskId: string, path: string) => void
   closeFile: () => void
   bumpProjectVersion: () => void
+  bumpCalendarVersion: () => void
   /** Re-read the desk list (e.g. after a project folder was linked). */
   refreshWorkspaces: () => Promise<void>
   openNote: (note: NoteRef) => Promise<void>
@@ -210,6 +213,7 @@ export const useStore = create<AppState>((set, get) => ({
   selectedNoteId: null,
   openFile: null,
   projectVersion: 0,
+  calendarVersion: 0,
   view: 'list',
   selectedTaskId: null,
   expandedTaskId: null,
@@ -282,6 +286,7 @@ export const useStore = create<AppState>((set, get) => ({
   previewFile: (deskId, path) => set({ openFile: { deskId, path } }),
   closeFile: () => set({ openFile: null }),
   bumpProjectVersion: () => set((s) => ({ projectVersion: s.projectVersion + 1 })),
+  bumpCalendarVersion: () => set((s) => ({ calendarVersion: s.calendarVersion + 1 })),
   refreshWorkspaces: async () => set({ workspaces: await window.api.workspace.list() }),
 
   openNote: async (note) => {

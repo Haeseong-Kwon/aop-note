@@ -213,3 +213,14 @@ assert.deepEqual(
   'code spans / fences skipped; offsets still index the original text'
 )
 console.log('wiki links in code: all assertions passed')
+
+// --- calendar events → local days (multi-day events land on every day) --------
+import { eventDayKeys, formatEventTime } from './format'
+
+const ev = (start: string, end: string, all_day: boolean) => ({ start: new Date(start).toISOString(), end: new Date(end).toISOString(), all_day })
+assert.deepEqual(eventDayKeys(ev('2026-09-30T00:00:00', '2026-10-02T00:00:00', true)), ['2026-09-30', '2026-10-01'], 'end is exclusive')
+assert.deepEqual(eventDayKeys(ev('2026-09-29T23:00:00', '2026-09-30T01:00:00', false)), ['2026-09-29', '2026-09-30'], 'crosses midnight')
+assert.deepEqual(eventDayKeys(ev('2026-09-29T10:00:00', '2026-09-29T10:00:00', false)), ['2026-09-29'], 'zero-length')
+assert.equal(formatEventTime(ev('2026-09-29T09:05:00', '2026-09-29T10:30:00', false)), '09:05–10:30')
+assert.equal(formatEventTime(ev('2026-09-30T00:00:00', '2026-10-01T00:00:00', true)), '종일')
+console.log('calendar event days: all assertions passed')

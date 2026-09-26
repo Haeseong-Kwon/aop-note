@@ -7,6 +7,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { projectBrief } from './tools'
+import { addCalendar } from '../main/calendars'
 
 type Rpc = { jsonrpc: '2.0'; id?: number; result?: any; error?: { code: number; message: string } } // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -29,7 +30,7 @@ async function main(): Promise<void> {
   assert.equal(await handleMessage({ jsonrpc: '2.0', method: 'notifications/initialized' }), null, 'notifications get no reply')
 
   const names = (await call('tools/list')).result.tools.map((t: { name: string }) => t.name)
-  assert.deepEqual(names.sort(), ['append_to_note', 'create_note', 'get_project_context', 'link_project', 'list_desks', 'list_tasks', 'read_note', 'search_notes'])
+  assert.deepEqual(names.sort(), ['append_to_note', 'create_note', 'get_project_context', 'link_project', 'list_desks', 'list_events', 'list_tasks', 'read_note', 'search_notes'])
 
   // Write → search → read, with links and backlinks.
   let r = await tool('create_note', { title: '인증 흐름', desk: 'mcp 데스크', category: '아키텍처', markdown: 'JWT 대신 세션. [[세션 저장소]] 참고', due: '2099-01-02' })
@@ -99,6 +100,35 @@ async function projects(): Promise<void> {
   assert.ok((projectBrief(join(repo, 'src')) ?? '').includes('MCP 데스크'), 'hook brief resolves subfolders too')
   // A sibling folder that merely shares a prefix is not inside the project.
   assert.equal(projectBrief(`${repo}-other`), null)
+
+  // Subscribed calendar events reach Claude Code: a tool, and today's slice in the brief.
+  const feed = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    'DTSTART:20260929T010000Z',
+    'DTEND:20260929T020000Z',
+    'UID:review@example.com',
+    'SUMMARY:아키텍처 리뷰',
+    'LOCATION:회의실 A',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n')
+  await addCalendar(
+    { name: '업무', url: 'https://calendar.example.com/private.ics', color: '#123456' },
+    { fetcher: async () => feed, now: new Date('2026-09-25T00:00:00Z') }
+  )
+  r = await tool('list_events', { from: '2026-09-29', to: '2026-09-29' })
+  assert.equal(r.isError, false, r.text)
+  assert.match(r.text, /아키텍처 리뷰/)
+  assert.match(r.text, /회의실 A/)
+  r = await tool('list_events', { from: '2026-10-01', to: '2026-10-02' })
+  assert.doesNotMatch(r.text, /아키텍처 리뷰/)
+  r = await tool('list_events', { from: '어제' })
+  assert.equal(r.isError, true)
+  const briefToday = projectBrief(repo, new Date('2026-09-29T00:30:00Z')) ?? ''
+  assert.match(briefToday, /오늘 일정/)
+  assert.match(briefToday, /아키텍처 리뷰/)
 
   console.log('mcp projects: all assertions passed')
 }
