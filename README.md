@@ -50,6 +50,13 @@
 - **Obsidian 볼트 미러**: 설정에서 폴더를 고르면 `<폴더>/AOP Note/`에 데스크/카테고리/제목.md(프로퍼티 포함)로 자동 동기화. 링크·첨부가 Obsidian에서 그대로 동작. 단방향(읽기 전용) 미러.
 - **Claude Code 연결 (MCP)**: 앱에 내장된 MCP 서버. 설정의 `claude mcp add …` 명령을 한 번 실행하면 Claude Code가 어느 코드베이스에서든 메모를 검색·읽기·추가(`search_notes`, `read_note`, `list_tasks`, `list_desks`, `create_note`, `append_to_note`)하고 `[[링크]]`로 엮을 수 있음. 삭제 도구는 없음.
 
+### v0.8 — 프로젝트 폴더 · git · Claude Code 컨텍스트
+- **프로젝트 연결**: 데스크의 **프로젝트** 탭에서 개발 중인 로컬 폴더(레포)를 연결. git 레포면 `.gitignore`를 따르는 `git ls-files`로, 아니면 node_modules 등을 건너뛰며 `.md/.mdx/.txt` 문서를 색인(파일은 읽기만).
+- **문서도 브레인에**: 메모에서 `[[README]]`, `[[docs/auth]]`처럼 문서를 링크하고, 문서 안의 `[[링크]]`·상대 링크도 연결로 인식 → 백링크와 그래프(■ 문서, ● 메모)에 함께 표시. 코드 블록 안의 `[[예시]]`는 무시.
+- **git**: 브랜치·변경 수·최근 커밋 표시. 커밋 메시지에 `[[메모 제목]]`을 쓰면 그 메모의 백링크에 커밋이 연결됨. 폴더 변경은 자동 감지.
+- **Claude Code 컨텍스트**: MCP 도구 `get_project_context`(작업 폴더 → 연결된 데스크의 열린 작업·최근 메모·git·문서), `link_project`. 설정에서 켜면 SessionStart 훅이 레포에서 세션을 열 때마다 이 요약을 자동 주입(`~/.claude/settings.json`, 첫 수정 시 백업, 끄면 이 앱 항목만 제거).
+- **Claude Code로 열기**: 프로젝트 탭에서 터미널을 열고 해당 폴더에서 `claude` 실행.
+
 ## 기술 스택
 
 | 영역 | 사용 |

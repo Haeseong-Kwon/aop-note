@@ -1,5 +1,13 @@
 import { useState } from 'react'
-import { ListTodo, NotebookPen, CalendarDays, Target, FolderArchive, type LucideIcon } from 'lucide-react'
+import {
+  ListTodo,
+  NotebookPen,
+  CalendarDays,
+  Target,
+  FolderArchive,
+  FolderGit2,
+  type LucideIcon
+} from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -14,6 +22,7 @@ import { SmartView } from './SmartView'
 import { TrashView } from './TrashView'
 import { SettingsView } from './SettingsView'
 import { GraphView } from './GraphView'
+import { ProjectView } from './ProjectView'
 import type { MainView } from '@/store/useStore'
 
 const VIEWS: { value: MainView; label: string; icon: LucideIcon }[] = [
@@ -21,7 +30,8 @@ const VIEWS: { value: MainView; label: string; icon: LucideIcon }[] = [
   { value: 'notes', label: '메모', icon: NotebookPen },
   { value: 'calendar', label: '달력', icon: CalendarDays },
   { value: 'goals', label: '목표', icon: Target },
-  { value: 'documents', label: '문서', icon: FolderArchive }
+  { value: 'documents', label: '문서', icon: FolderArchive },
+  { value: 'project', label: '프로젝트', icon: FolderGit2 }
 ]
 
 export function MainArea(): JSX.Element {
@@ -103,6 +113,7 @@ export function MainArea(): JSX.Element {
         {mainView === 'calendar' && <CalendarView />}
         {mainView === 'goals' && <GoalsView />}
         {mainView === 'documents' && <DocumentsView />}
+        {mainView === 'project' && <ProjectView desk={desk} />}
       </div>
     </main>
   )

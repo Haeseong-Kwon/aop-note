@@ -7,11 +7,34 @@ interface MarkdownViewProps {
   className?: string
   /** When provided, GFM task checkboxes become interactive (line is 1-based). */
   onToggleTask?: (line: number, checked: boolean) => void
+  /**
+   * Take over link clicks (e.g. relative links between project docs). Without it,
+   * a plain <a> would navigate the whole app window away.
+   */
+  onLinkClick?: (href: string) => void
 }
 
-export function MarkdownView({ source, className, onToggleTask }: MarkdownViewProps): JSX.Element {
+export function MarkdownView({ source, className, onToggleTask, onLinkClick }: MarkdownViewProps): JSX.Element {
+  const linkComponents: Components = onLinkClick
+    ? {
+        a({ href, children }) {
+          return (
+            <a
+              href={href}
+              onClick={(e) => {
+                e.preventDefault()
+                if (href) onLinkClick(href)
+              }}
+            >
+              {children}
+            </a>
+          )
+        }
+      }
+    : {}
   const components: Components | undefined = onToggleTask
     ? {
+        ...linkComponents,
         input(props) {
           // Only GFM task-list checkboxes; make them clickable and map back to source.
           if (props.type === 'checkbox') {
@@ -30,7 +53,9 @@ export function MarkdownView({ source, className, onToggleTask }: MarkdownViewPr
           return <input {...props} />
         }
       }
-    : undefined
+    : onLinkClick
+      ? linkComponents
+      : undefined
 
   return (
     <div

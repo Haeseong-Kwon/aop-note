@@ -21,7 +21,7 @@ import type {
 import type { NavigatePayload } from '@shared/ipc'
 
 export type ViewMode = 'list' | 'kanban'
-export type MainView = 'tasks' | 'notes' | 'calendar' | 'goals' | 'documents'
+export type MainView = 'tasks' | 'notes' | 'calendar' | 'goals' | 'documents' | 'project'
 export type SmartView = 'today' | 'week'
 export type Theme = 'light' | 'dark' | 'system'
 export type UtilityView = 'trash' | 'settings' | 'graph'
@@ -88,6 +88,10 @@ interface AppState {
   utilityView: UtilityView | null
   /** Memo shown in the 메모 tab; null = its first note. */
   selectedNoteId: string | null
+  /** Project document shown in the preview dialog. */
+  openFile: { deskId: string; path: string } | null
+  /** Bumped when a linked folder changes on disk, so project views reload. */
+  projectVersion: number
   view: ViewMode
   selectedTaskId: string | null
   expandedTaskId: string | null
@@ -117,6 +121,11 @@ interface AppState {
   setMainView: (view: MainView) => void
   openUtility: (view: UtilityView) => void
   selectNote: (id: string | null) => void
+  previewFile: (deskId: string, path: string) => void
+  closeFile: () => void
+  bumpProjectVersion: () => void
+  /** Re-read the desk list (e.g. after a project folder was linked). */
+  refreshWorkspaces: () => Promise<void>
   openNote: (note: NoteRef) => Promise<void>
   /** Follow a [[title]] from a memo: open it, or create it next to the source (Obsidian-style). */
   openLink: (title: string, from: Task) => Promise<void>
@@ -199,6 +208,8 @@ export const useStore = create<AppState>((set, get) => ({
   mainView: 'tasks',
   utilityView: null,
   selectedNoteId: null,
+  openFile: null,
+  projectVersion: 0,
   view: 'list',
   selectedTaskId: null,
   expandedTaskId: null,
@@ -268,6 +279,10 @@ export const useStore = create<AppState>((set, get) => ({
   setMainView: (mainView) => set({ mainView, expandedTaskId: null, selectedTaskId: null }),
   openUtility: (utilityView) => set({ utilityView, expandedTaskId: null, selectedTaskId: null }),
   selectNote: (selectedNoteId) => set({ selectedNoteId }),
+  previewFile: (deskId, path) => set({ openFile: { deskId, path } }),
+  closeFile: () => set({ openFile: null }),
+  bumpProjectVersion: () => set((s) => ({ projectVersion: s.projectVersion + 1 })),
+  refreshWorkspaces: async () => set({ workspaces: await window.api.workspace.list() }),
 
   openNote: async (note) => {
     if (get().activeWorkspaceId !== note.workspace_id || get().smartView) {

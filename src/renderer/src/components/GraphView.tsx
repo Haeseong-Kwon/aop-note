@@ -42,10 +42,12 @@ export function GraphView(): JSX.Element {
   const [data, setData] = useState<GraphData | null>(null)
   const [linkedOnly, setLinkedOnly] = useState(true)
   const [query, setQuery] = useState('')
+  // Linked folders changing on disk (docs edited, commits) can add or remove nodes.
+  const projectVersion = useStore((s) => s.projectVersion)
 
   useEffect(() => {
     window.api.link.graph().then(setData, toastError)
-  }, [])
+  }, [projectVersion])
 
   const graph = useMemo(() => (data ? prepare(data, linkedOnly) : null), [data, linkedOnly])
 
@@ -73,8 +75,16 @@ export function GraphView(): JSX.Element {
         >
           {linkedOnly ? '연결된 메모만' : '내용 있는 메모 모두'}
         </button>
-        <p className="ml-auto text-xs text-muted-foreground">
-          클릭해서 열기 · 드래그로 이동 · 스크롤로 확대
+        <p className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+            메모
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 bg-muted-foreground" />
+            프로젝트 문서
+          </span>
+          <span>클릭해서 열기 · 드래그로 이동 · 스크롤로 확대</span>
         </p>
       </div>
 
@@ -93,6 +103,7 @@ export function GraphView(): JSX.Element {
 
 function GraphCanvas({ graph, query }: { graph: Prepared; query: string }): JSX.Element {
   const openNote = useStore((s) => s.openNote)
+  const previewFile = useStore((s) => s.previewFile)
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [hover, setHover] = useState<number | null>(null)
@@ -160,8 +171,10 @@ function GraphCanvas({ graph, query }: { graph: Prepared; query: string }): JSX.
         const r = radius(n)
         ctx.globalAlpha = lit(i) ? 1 : 0.15
         ctx.beginPath()
-        ctx.arc(layout.x[i], layout.y[i], r, 0, Math.PI * 2)
-        if (n.ghost) {
+        // Project documents are squares, notes circles — the two halves of the brain.
+        if (n.kind === 'file') ctx.rect(layout.x[i] - r, layout.y[i] - r, r * 2, r * 2)
+        else ctx.arc(layout.x[i], layout.y[i], r, 0, Math.PI * 2)
+        if (n.kind === 'ghost') {
           ctx.strokeStyle = color('--muted-foreground', 0.8)
           ctx.setLineDash([2 / scale, 2 / scale])
           ctx.stroke()
@@ -178,7 +191,7 @@ function GraphCanvas({ graph, query }: { graph: Prepared; query: string }): JSX.
         }
         // Labels only when zoomed in enough to read, or for the focused neighbourhood.
         if (scale > 0.9 || (focus !== null && lit(i))) {
-          ctx.fillStyle = color(n.ghost ? '--muted-foreground' : '--foreground', lit(i) ? 0.9 : 0.3)
+          ctx.fillStyle = color(n.kind === 'ghost' ? '--muted-foreground' : '--foreground', lit(i) ? 0.9 : 0.3)
           ctx.fillText(n.title, layout.x[i], layout.y[i] + r + fontSize + 2 / scale)
         }
       })
@@ -303,9 +316,10 @@ function GraphCanvas({ graph, query }: { graph: Prepared; query: string }): JSX.
     if (!d) return
     if (d.node !== null) layout.pinned[d.node] = false
     const n = d.node !== null ? graph.nodes[d.node] : null
-    if (!d.moved && n && !n.ghost && n.workspace_id && n.category_id) {
+    if (!d.moved && n?.kind === 'note' && n.workspace_id && n.category_id) {
       void openNote({ id: n.id, workspace_id: n.workspace_id, category_id: n.category_id })
     }
+    if (!d.moved && n?.kind === 'file' && n.workspace_id && n.path) previewFile(n.workspace_id, n.path)
     kickRef.current()
   }
 
@@ -331,15 +345,17 @@ function GraphCanvas({ graph, query }: { graph: Prepared; query: string }): JSX.
         onPointerUp={onPointerUp}
         onPointerLeave={() => !drag.current && setHover(null)}
         onWheel={onWheel}
-        className={cn('block touch-none', hovered && !hovered.ghost ? 'cursor-pointer' : 'cursor-grab')}
+        className={cn('block touch-none', hovered && hovered.kind !== 'ghost' ? 'cursor-pointer' : 'cursor-grab')}
       />
       {hovered && (
         <div className="glass-overlay pointer-events-none absolute left-4 top-4 max-w-xs rounded-lg px-3 py-2 text-xs">
           <p className="truncate text-sm font-medium">{hovered.title}</p>
           <p className="mt-0.5 text-muted-foreground">
-            {hovered.ghost
+            {hovered.kind === 'ghost'
               ? '아직 없는 메모 — 링크한 메모에서 ⌘+클릭하면 만들어집니다'
-              : `${hovered.workspace_name} · 연결 ${hovered.links}개`}
+              : hovered.kind === 'file'
+                ? `${hovered.workspace_name} 프로젝트 · ${hovered.path} · 연결 ${hovered.links}개`
+                : `${hovered.workspace_name} · 연결 ${hovered.links}개`}
           </p>
         </div>
       )}

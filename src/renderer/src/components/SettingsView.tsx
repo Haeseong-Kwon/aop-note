@@ -41,6 +41,21 @@ export function SettingsView(): JSX.Element {
     }
   }
 
+  const toggleHook = async (): Promise<void> => {
+    if (!mcp) return
+    try {
+      const hookInstalled = await window.api.mcp.setHook(!mcp.hookInstalled)
+      setMcp({ ...mcp, hookInstalled })
+      showToast({
+        message: hookInstalled
+          ? 'Claude Code 세션 시작 훅을 추가했습니다 (~/.claude/settings.json).'
+          : 'Claude Code 세션 시작 훅을 제거했습니다.'
+      })
+    } catch (e) {
+      toastError(e)
+    }
+  }
+
   const copyCommand = async (): Promise<void> => {
     if (!mcp) return
     await navigator.clipboard.writeText(mcp.command)
@@ -170,6 +185,17 @@ export function SettingsView(): JSX.Element {
                 </div>
               )}
             </div>
+            <SettingRow
+              label="세션 시작 시 프로젝트 요약 주입"
+              description="프로젝트 폴더가 연결된 레포에서 Claude Code 세션을 열면, 그 데스크의 열린 작업·최근 메모·git 상태를 자동으로 컨텍스트에 넣습니다. ~/.claude/settings.json에 SessionStart 훅을 추가합니다(처음 한 번 원본 백업)."
+            >
+              <Switch
+                label="세션 시작 시 프로젝트 요약 주입"
+                checked={mcp?.hookInstalled ?? false}
+                disabled={!mcp}
+                onChange={toggleHook}
+              />
+            </SettingRow>
           </Section>
 
           <Section title="데이터">

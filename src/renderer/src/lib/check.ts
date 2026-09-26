@@ -204,3 +204,12 @@ const before = [layout.x[3], layout.y[3]]
 tickLayout(layout)
 assert.deepEqual([layout.x[3], layout.y[3]], before)
 console.log('forceLayout: all assertions passed')
+
+// Links inside code are examples, not links (Obsidian ignores them too).
+const codeNote = '`[[예시]]` 는 코드, [[진짜]] 는 링크\n```\n[[블록 안]]\n```\n끝 [[또 진짜]]'
+assert.deepEqual(
+  extractLinks(codeNote).map((l) => codeNote.slice(l.index, l.index + l.length)),
+  ['[[진짜]]', '[[또 진짜]]'],
+  'code spans / fences skipped; offsets still index the original text'
+)
+console.log('wiki links in code: all assertions passed')

@@ -5,6 +5,10 @@ import { searchRepo } from '../main/repositories/search.repo'
 import { linkRepo, resolveIn } from '../main/repositories/link.repo'
 import { loadSettings } from '../main/settings'
 import { writeVault } from '../main/vault'
+import { getProjectIndex, validateFolder } from '../main/projectIndex'
+import { getGitInfo } from '../main/git'
+import { resolve, sep } from 'path'
+import { realpathSync } from 'fs'
 import { extractLinks } from '@shared/links'
 import type { Priority, TaskWithContext, Workspace } from '@shared/types'
 
@@ -73,7 +77,120 @@ function findNote(args: Record<string, unknown>): TaskWithContext {
   return note
 }
 
+// ---- projects: a desk linked to a local folder ----
+
+const BRIEF_TASKS = 15
+const BRIEF_NOTES = 5
+const BRIEF_COMMITS = 5
+const BRIEF_DOCS = 20
+
+/** The desk whose linked folder contains `dir` (deepest link wins), or null. */
+function deskForDir(dir: string): Workspace | null {
+  // Compare real paths: /tmp vs /private/tmp, symlinked checkouts.
+  const real = (p: string): string => {
+    try {
+      return realpathSync(p)
+    } catch {
+      return resolve(p)
+    }
+  }
+  const target = real(dir)
+  const inside = (linked: string): boolean => {
+    const folder = real(linked)
+    return target === folder || target.startsWith(folder.endsWith(sep) ? folder : folder + sep)
+  }
+  return (
+    workspaceRepo
+      .list()
+      .filter((w) => w.folder_path && inside(w.folder_path))
+      .sort((a, b) => (b.folder_path?.length ?? 0) - (a.folder_path?.length ?? 0))[0] ?? null
+  )
+}
+
+/**
+ * What an agent should know when it starts working in this folder: the desk's open
+ * tasks, recently touched notes, git state and docs. Null when no desk is linked,
+ * so the SessionStart hook stays silent in unrelated repos.
+ */
+export function projectBrief(dir: string): string | null {
+  const desk = deskForDir(dir)
+  if (!desk?.folder_path) return null
+  const tasks = taskRepo.listAllWithContext().filter((t) => t.workspace_id === desk.id)
+  const open = tasks.filter((t) => t.status !== 'done').slice(0, BRIEF_TASKS)
+  const recent = [...tasks]
+    .filter((t) => t.note.trim())
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+    .slice(0, BRIEF_NOTES)
+  const git = getGitInfo(desk.folder_path)
+  const docs = getProjectIndex(desk.folder_path)?.files ?? []
+
+  const lines = [
+    `# AOP Note 프로젝트: ${desk.name}`,
+    '',
+    `- 폴더: ${desk.folder_path}`,
+    git
+      ? `- git: ${git.branch ?? 'detached HEAD'} · 변경 ${git.changed}개${git.ahead ? ` · 푸시 안 한 커밋 ${git.ahead}` : ''}`
+      : '- git: 저장소 아님',
+    ...(git?.commits.slice(0, BRIEF_COMMITS).map((c) => `  - ${c.short} ${c.subject}`) ?? []),
+    '',
+    `## 열린 작업 (${open.length})`,
+    ...(open.length
+      ? open.map(
+          (t) =>
+            `- ${t.title}${t.due_date ? ` (기한 ${localDate(t.due_date)})` : ''}${t.priority ? ` [우선순위 ${t.priority}]` : ''} — id ${t.id}`
+        )
+      : ['- 없음']),
+    '',
+    '## 최근 수정한 메모',
+    ...(recent.length
+      ? recent.map((t) => `- ${t.title} — id ${t.id}: ${t.note.trim().split('\n')[0].slice(0, 120)}`)
+      : ['- 없음']),
+    '',
+    `## 프로젝트 문서 (${docs.length})`,
+    ...docs.slice(0, BRIEF_DOCS).map((d) => `- ${d.path}`),
+    ...(docs.length > BRIEF_DOCS ? [`- … 외 ${docs.length - BRIEF_DOCS}개`] : []),
+    '',
+    '메모 본문은 read_note로 읽고, 작업 중 내린 결정·배운 점은 append_to_note / create_note로 이 데스크에 남기세요. 관련 메모·문서는 [[제목]] / [[docs/파일]]로 연결하세요.'
+  ]
+  return lines.join('\n')
+}
+
 export const TOOLS: Tool[] = [
+  {
+    name: 'get_project_context',
+    description:
+      'Call this first when working in a code repository: given the current working directory, returns the linked desk\'s open tasks, recent notes, git state and docs.',
+    inputSchema: {
+      type: 'object',
+      properties: { cwd: { type: 'string', description: 'Absolute path of the current working directory' } },
+      required: ['cwd']
+    },
+    run: (args) => {
+      const cwd = str(args, 'cwd', 4096)
+      return (
+        projectBrief(cwd) ??
+        `No AOP Note desk is linked to ${cwd}. Desks: ${workspaceRepo
+          .list()
+          .map((w) => (w.folder_path ? `${w.name} (→ ${w.folder_path})` : w.name))
+          .join(', ')}. To link this repository, call link_project with a desk and the repository root path.`
+      )
+    }
+  },
+  {
+    name: 'link_project',
+    description: 'Link a local folder (usually the repository root) to a desk, so its docs join the knowledge graph and get_project_context works there.',
+    inputSchema: {
+      type: 'object',
+      properties: { desk: { type: 'string', description: 'Desk name or id' }, path: { type: 'string', description: 'Absolute folder path' } },
+      required: ['desk', 'path']
+    },
+    run: (args) => {
+      const desk = findDesk(str(args, 'desk', MAX_TITLE))
+      const folder = validateFolder(str(args, 'path', 4096))
+      workspaceRepo.setFolder(desk.id, folder)
+      return json({ desk: desk.name, folder })
+    }
+  },
   {
     name: 'list_desks',
     description: 'List desks (top-level areas/projects) and their categories. Call this before create_note.',

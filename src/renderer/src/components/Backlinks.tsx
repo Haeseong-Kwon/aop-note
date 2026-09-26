@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, Link2, FileText } from 'lucide-react'
+import { ChevronRight, Link2, FileText, FileCode2, GitCommitHorizontal } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { toastError } from '@/store/useToast'
 import { cn } from '@/lib/utils'
+import { formatRelative } from '@/lib/format'
 import type { Backlinks as BacklinksData, BacklinkHit } from '@shared/types'
 
 /** Obsidian's "Linked mentions" / "Unlinked mentions", under a memo. */
@@ -10,6 +11,8 @@ export function Backlinks({ taskId, className }: { taskId: string; className?: s
   // Any edit refreshes `tasks`, which is also when another memo may have linked here.
   const tasks = useStore((s) => s.tasks)
   const openNote = useStore((s) => s.openNote)
+  const previewFile = useStore((s) => s.previewFile)
+  const projectVersion = useStore((s) => s.projectVersion)
   const [data, setData] = useState<BacklinksData | null>(null)
   const [showMentions, setShowMentions] = useState(false)
 
@@ -19,7 +22,7 @@ export function Backlinks({ taskId, className }: { taskId: string; className?: s
     return () => {
       current = false
     }
-  }, [taskId, tasks])
+  }, [taskId, tasks, projectVersion])
 
   if (!data) return null
 
@@ -44,14 +47,43 @@ export function Backlinks({ taskId, className }: { taskId: string; className?: s
   return (
     <section className={cn('border-t border-border pt-4', className)} aria-label="백링크">
       <h3 className="flex items-center gap-1.5 px-2 text-xs font-medium text-muted-foreground">
-        <Link2 className="h-3.5 w-3.5" />이 메모를 링크한 곳 {data.linked.length}
+        <Link2 className="h-3.5 w-3.5" />이 메모를 링크한 곳{' '}
+        {data.linked.length + data.files.length + data.commits.length}
       </h3>
-      {data.linked.length === 0 ? (
+      {data.linked.length + data.files.length + data.commits.length === 0 ? (
         <p className="px-2 pt-1.5 text-xs text-muted-foreground/80">
           아직 없습니다. 다른 메모에서 <code className="rounded bg-muted px-1">[[</code>를 입력해 이 메모를 연결해 보세요.
         </p>
       ) : (
-        <ul className="mt-1">{data.linked.map(row)}</ul>
+        <ul className="mt-1">
+          {data.linked.map(row)}
+          {data.files.map((f) => (
+            <li key={`${f.workspace_id}:${f.path}`}>
+              <button
+                onClick={() => previewFile(f.workspace_id, f.path)}
+                className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent/60"
+              >
+                <span className="flex items-center gap-1.5 text-sm">
+                  <FileCode2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate font-medium">{f.title}</span>
+                  <span className="shrink-0 truncate font-mono text-[11px] text-muted-foreground">{f.path}</span>
+                </span>
+                <span className="mt-0.5 block truncate pl-5 text-xs text-muted-foreground">{f.snippet}</span>
+              </button>
+            </li>
+          ))}
+          {data.commits.map((c) => (
+            <li key={`${c.workspace_id}:${c.short}`} className="flex gap-1.5 px-2 py-1.5 text-sm">
+              <GitCommitHorizontal className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="min-w-0">
+                <span className="block truncate">{c.subject}</span>
+                <span className="block text-xs text-muted-foreground">
+                  <span className="font-mono">{c.short}</span> · {c.author} · {formatRelative(c.date)}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
 
       {data.mentions.length > 0 && (

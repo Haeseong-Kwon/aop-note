@@ -15,6 +15,8 @@ export interface Workspace {
   color: string
   /** Emoji shown in place of the colored dot. Empty string = use the colored dot. */
   icon: string
+  /** Local project folder (code repo / docs) linked to this desk, or null. */
+  folder_path: string | null
   sort_order: number
   created_at: string
   updated_at: string
@@ -245,6 +247,8 @@ export interface AppSettings {
 export interface McpInfo {
   /** One-line `claude mcp add …` command to paste into a terminal. */
   command: string
+  /** Our SessionStart hook is present in ~/.claude/settings.json. */
+  hookInstalled: boolean
 }
 
 export interface BackupInfo {
@@ -260,19 +264,50 @@ export interface BacklinkHit {
   snippet: string
 }
 
+/** A document in a desk's linked project folder that links somewhere. */
+export interface FileBacklink {
+  workspace_id: string
+  /** Project-relative path. */
+  path: string
+  title: string
+  snippet: string
+}
+
+/** A git commit whose subject [[links]] to a note. */
+export interface CommitMention {
+  workspace_id: string
+  short: string
+  subject: string
+  author: string
+  date: string
+}
+
 export interface Backlinks {
   /** Notes with a [[link]] to this one. */
   linked: BacklinkHit[]
   /** Notes that mention this title as plain text (candidates for a link). */
   mentions: BacklinkHit[]
+  /** Project documents linking here. */
+  files: FileBacklink[]
+  /** Commits in linked repos whose message links here. */
+  commits: CommitMention[]
+}
+
+/** Who points at a project document. */
+export interface FileBacklinks {
+  linked: BacklinkHit[]
+  files: FileBacklink[]
 }
 
 export interface GraphNode {
-  /** Task id, or "ghost:<title>" for a linked note that doesn't exist yet. */
+  /** Task id, "file:<desk id>:<path>" for a project document, or "ghost:<title>". */
   id: string
   title: string
   color: string
-  ghost: boolean
+  /** note = memo; file = document in a linked project folder; ghost = linked but not written yet. */
+  kind: 'note' | 'file' | 'ghost'
+  /** Project-relative path for a file node. */
+  path: string | null
   /** Where the note lives (null for a ghost). */
   workspace_id: string | null
   workspace_name: string | null
@@ -284,4 +319,41 @@ export interface GraphNode {
 export interface GraphData {
   nodes: GraphNode[]
   edges: { source: string; target: string }[]
+}
+
+export interface GitCommit {
+  hash: string
+  short: string
+  author: string
+  /** ISO 8601 author date. */
+  date: string
+  subject: string
+}
+
+export interface GitInfo {
+  /** null on a detached HEAD. */
+  branch: string | null
+  ahead: number
+  behind: number
+  /** Changed + untracked files in the work tree. */
+  changed: number
+  commits: GitCommit[]
+}
+
+/** What the 프로젝트 tab shows for a desk's linked folder. */
+export interface ProjectOverview {
+  folder: string
+  /** False when the folder was moved or deleted since it was linked. */
+  exists: boolean
+  git: GitInfo | null
+  files: { path: string; title: string; size: number; mtime: number }[]
+  totalFiles: number
+  truncated: boolean
+}
+
+/** A project document opened for reading. */
+export interface ProjectFile {
+  path: string
+  title: string
+  content: string
 }

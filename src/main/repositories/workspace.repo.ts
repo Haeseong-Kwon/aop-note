@@ -40,6 +40,7 @@ export const workspaceRepo = {
       name: input.name,
       color: input.color ?? DEFAULT_COLOR,
       icon: input.icon ?? '',
+      folder_path: null,
       sort_order: nextOrder,
       created_at: now,
       updated_at: now,
@@ -76,6 +77,15 @@ export const workspaceRepo = {
     ).run(updated)
 
     return updated
+  },
+
+  /** Link (or with null, unlink) a local project folder. Callers validate the path. */
+  setFolder(id: string, folderPath: string | null): Workspace {
+    if (!this.getById(id)) throw new Error(`Workspace not found: ${id}`)
+    getDb()
+      .prepare('UPDATE workspaces SET folder_path = ?, updated_at = ? WHERE id = ?')
+      .run(folderPath, nowIso(), id)
+    return this.getById(id) as Workspace
   },
 
   /** Bulk reorder after a drag — integer reindex in one transaction. */

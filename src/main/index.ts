@@ -10,9 +10,12 @@ import { autoBackup } from './backup'
 import { setupQuickCapture } from './quickCapture'
 import { loadSettings } from './settings'
 import { scheduleVaultSync } from './vault'
+import { startProjectWatching } from './projects'
+import { IPC } from '@shared/ipc'
 
 let stopNotifier: (() => void) | null = null
 let stopQuickCapture: (() => void) | null = null
+let stopProjectWatching: (() => void) | null = null
 
 // Custom scheme to serve attachment files to the renderer (PDF iframe, images)
 // without exposing file:// or relaxing sandboxing. Must be registered before ready.
@@ -99,6 +102,9 @@ app.whenReady().then(() => {
     return created
   }
   stopQuickCapture = setupQuickCapture(mainWindow, loadSettings().globalShortcut)
+  stopProjectWatching = startProjectWatching((deskId) => {
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send(IPC.events.projectChanged, deskId)
+  })
 
   app.on('activate', () => {
     mainWindow()
@@ -112,5 +118,6 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   stopNotifier?.()
   stopQuickCapture?.()
+  stopProjectWatching?.()
   closeDb()
 })

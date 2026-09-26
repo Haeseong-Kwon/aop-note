@@ -2,6 +2,11 @@ import assert from 'node:assert'
 import { handleMessage } from './protocol'
 import { workspaceRepo } from '../main/repositories/workspace.repo'
 import { categoryRepo } from '../main/repositories/category.repo'
+import { execFileSync } from 'child_process'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
+import { join } from 'path'
+import { projectBrief } from './tools'
 
 type Rpc = { jsonrpc: '2.0'; id?: number; result?: any; error?: { code: number; message: string } } // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -24,7 +29,7 @@ async function main(): Promise<void> {
   assert.equal(await handleMessage({ jsonrpc: '2.0', method: 'notifications/initialized' }), null, 'notifications get no reply')
 
   const names = (await call('tools/list')).result.tools.map((t: { name: string }) => t.name)
-  assert.deepEqual(names.sort(), ['append_to_note', 'create_note', 'list_desks', 'list_tasks', 'read_note', 'search_notes'])
+  assert.deepEqual(names.sort(), ['append_to_note', 'create_note', 'get_project_context', 'link_project', 'list_desks', 'list_tasks', 'read_note', 'search_notes'])
 
   // Write → search → read, with links and backlinks.
   let r = await tool('create_note', { title: '인증 흐름', desk: 'mcp 데스크', category: '아키텍처', markdown: 'JWT 대신 세션. [[세션 저장소]] 참고', due: '2099-01-02' })
@@ -64,7 +69,43 @@ async function main(): Promise<void> {
   console.log('mcp: all assertions passed')
 }
 
-main().catch((e) => {
-  console.error(e)
-  process.exit(1)
-})
+
+// --- projects: a repo linked to a desk becomes Claude Code's context -----------
+
+async function projects(): Promise<void> {
+  const repo = mkdtempSync(join(tmpdir(), 'aop-mcp-repo-'))
+  mkdirSync(join(repo, 'src', 'auth'), { recursive: true })
+  writeFileSync(join(repo, 'README.md'), '# 결제 서비스\n')
+  writeFileSync(join(repo, 'CLAUDE.md'), '규칙: [[인증 흐름]] 참고')
+  execFileSync('git', ['-C', repo, 'init', '-q', '-b', 'feat/login'])
+
+  // Unlinked folder: context explains how to link instead of failing.
+  let r = await tool('get_project_context', { cwd: join(repo, 'src', 'auth') })
+  assert.equal(r.isError, false)
+  assert.match(r.text, /link_project/)
+  assert.equal(projectBrief(repo), null, 'no brief for an unlinked folder (hook stays silent)')
+
+  r = await tool('link_project', { desk: 'MCP 데스크', path: repo })
+  assert.equal(r.isError, false, r.text)
+  r = await tool('link_project', { desk: 'MCP 데스크', path: '/definitely/not/here' })
+  assert.equal(r.isError, true)
+
+  // From a subfolder of the repo: desk, branch, open tasks, notes and docs.
+  r = await tool('get_project_context', { cwd: join(repo, 'src', 'auth') })
+  assert.match(r.text, /MCP 데스크/)
+  assert.match(r.text, /feat\/login/)
+  assert.match(r.text, /인증 흐름/, 'open task / recent note listed')
+  assert.match(r.text, /README\.md/)
+  assert.ok((projectBrief(join(repo, 'src')) ?? '').includes('MCP 데스크'), 'hook brief resolves subfolders too')
+  // A sibling folder that merely shares a prefix is not inside the project.
+  assert.equal(projectBrief(`${repo}-other`), null)
+
+  console.log('mcp projects: all assertions passed')
+}
+// projects() builds on the desk and notes main() creates.
+main()
+  .then(projects)
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })

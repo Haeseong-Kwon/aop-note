@@ -29,7 +29,10 @@ import type {
   AppSettings,
   Backlinks,
   GraphData,
-  McpInfo
+  McpInfo,
+  FileBacklinks,
+  ProjectOverview,
+  ProjectFile
 } from './types'
 
 /** Payload sent from main → renderer when a notification is clicked. */
@@ -92,14 +95,24 @@ export const IPC = {
   link: {
     backlinks: 'link:backlinks',
     graph: 'link:graph',
-    resolve: 'link:resolve'
+    resolve: 'link:resolve',
+    fileBacklinks: 'link:fileBacklinks'
+  },
+  project: {
+    choose: 'project:choose',
+    unlink: 'project:unlink',
+    overview: 'project:overview',
+    readFile: 'project:readFile',
+    reveal: 'project:reveal',
+    openInClaude: 'project:openInClaude'
   },
   trash: {
     list: 'trash:list',
     restore: 'trash:restore'
   },
   mcp: {
-    info: 'mcp:info'
+    info: 'mcp:info',
+    setHook: 'mcp:setHook'
   },
   vault: {
     choose: 'vault:choose',
@@ -119,7 +132,8 @@ export const IPC = {
   },
   events: {
     navigateToTask: 'event:navigateToTask',
-    quickCapture: 'event:quickCapture'
+    quickCapture: 'event:quickCapture',
+    projectChanged: 'event:projectChanged'
   }
 } as const
 
@@ -180,6 +194,18 @@ export interface Api {
     graph(): Promise<GraphData>
     /** The note a [[title]] in fromTaskId's memo points at, or null if none exists yet. */
     resolve(title: string, fromTaskId: string | null): Promise<TaskWithContext | null>
+    fileBacklinks(deskId: string, path: string): Promise<FileBacklinks>
+  }
+  project: {
+    /** Pick a folder to link to the desk. Null if cancelled. */
+    choose(deskId: string): Promise<Workspace | null>
+    unlink(deskId: string): Promise<Workspace>
+    overview(deskId: string): Promise<ProjectOverview | null>
+    /** Read an indexed document (other paths are refused). */
+    readFile(deskId: string, path: string): Promise<ProjectFile>
+    reveal(deskId: string, path?: string): Promise<void>
+    /** Open a terminal in the folder running `claude`. */
+    openInClaude(deskId: string): Promise<void>
   }
   trash: {
     list(): Promise<TrashItem[]>
@@ -188,6 +214,8 @@ export interface Api {
   }
   mcp: {
     info(): Promise<McpInfo>
+    /** Add/remove the SessionStart hook in ~/.claude/settings.json; resolves to the new state. */
+    setHook(enabled: boolean): Promise<boolean>
   }
   vault: {
     /** Pick a folder, start mirroring into <folder>/AOP Note/. Null if cancelled. */
@@ -222,4 +250,6 @@ export interface Api {
   onNavigateToTask(cb: (payload: NavigatePayload) => void): () => void
   /** Subscribe to the system-wide quick-capture shortcut / menu-bar item. */
   onQuickCapture(cb: () => void): () => void
+  /** A linked project folder's docs or git state changed on disk. */
+  onProjectChanged(cb: (deskId: string) => void): () => void
 }

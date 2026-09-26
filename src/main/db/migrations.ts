@@ -116,6 +116,11 @@ const migrations: Migration[] = [
       ALTER TABLE tasks ADD COLUMN reminded_at TEXT;
       CREATE INDEX IF NOT EXISTS idx_tasks_remind ON tasks(remind_at) WHERE reminded_at IS NULL;
     `)
+  },
+
+  // 0007 — a desk can be linked to a local project folder (repo)
+  (db) => {
+    db.exec(`ALTER TABLE workspaces ADD COLUMN folder_path TEXT;`)
   }
 ]
 

@@ -77,14 +77,24 @@ const api: Api = {
     backlinks: (taskId: string) => ipcRenderer.invoke(IPC.link.backlinks, taskId),
     graph: () => ipcRenderer.invoke(IPC.link.graph),
     resolve: (title: string, fromTaskId: string | null) =>
-      ipcRenderer.invoke(IPC.link.resolve, title, fromTaskId)
+      ipcRenderer.invoke(IPC.link.resolve, title, fromTaskId),
+    fileBacklinks: (deskId: string, path: string) => ipcRenderer.invoke(IPC.link.fileBacklinks, deskId, path)
+  },
+  project: {
+    choose: (deskId: string) => ipcRenderer.invoke(IPC.project.choose, deskId),
+    unlink: (deskId: string) => ipcRenderer.invoke(IPC.project.unlink, deskId),
+    overview: (deskId: string) => ipcRenderer.invoke(IPC.project.overview, deskId),
+    readFile: (deskId: string, path: string) => ipcRenderer.invoke(IPC.project.readFile, deskId, path),
+    reveal: (deskId: string, path?: string) => ipcRenderer.invoke(IPC.project.reveal, deskId, path),
+    openInClaude: (deskId: string) => ipcRenderer.invoke(IPC.project.openInClaude, deskId)
   },
   trash: {
     list: () => ipcRenderer.invoke(IPC.trash.list),
     restore: (kind: TrashKind, id: string) => ipcRenderer.invoke(IPC.trash.restore, kind, id)
   },
   mcp: {
-    info: () => ipcRenderer.invoke(IPC.mcp.info)
+    info: () => ipcRenderer.invoke(IPC.mcp.info),
+    setHook: (enabled: boolean) => ipcRenderer.invoke(IPC.mcp.setHook, enabled)
   },
   vault: {
     choose: () => ipcRenderer.invoke(IPC.vault.choose),
@@ -113,6 +123,11 @@ const api: Api = {
     const listener = (): void => cb()
     ipcRenderer.on(IPC.events.quickCapture, listener)
     return () => ipcRenderer.removeListener(IPC.events.quickCapture, listener)
+  },
+  onProjectChanged: (cb: (deskId: string) => void) => {
+    const listener = (_e: IpcRendererEvent, deskId: string): void => cb(deskId)
+    ipcRenderer.on(IPC.events.projectChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.events.projectChanged, listener)
   }
 }
 

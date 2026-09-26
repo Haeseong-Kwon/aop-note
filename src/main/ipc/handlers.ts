@@ -21,7 +21,16 @@ import { linkRepo } from '../repositories/link.repo'
 import { backupInfo, exportBackup, restoreBackup, openDataFolder } from '../backup'
 import { loadSettings, saveSettings } from '../settings'
 import { setShortcutEnabled } from '../quickCapture'
+import { isHookInstalled, setHookInstalled } from '../claudeHook'
 import { writeVault, scheduleVaultSync, vaultBase } from '../vault'
+import {
+  chooseFolder,
+  unlinkFolder,
+  projectOverview,
+  readProjectFile,
+  revealInFinder,
+  openInClaudeCode
+} from '../projects'
 import type {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
@@ -117,6 +126,15 @@ export function registerIpcHandlers(): void {
   handle(IPC.link.backlinks, (taskId: string) => linkRepo.backlinks(taskId))
   handle(IPC.link.graph, () => linkRepo.graph())
   handle(IPC.link.resolve, (title: string, fromTaskId: string | null) => linkRepo.resolve(title, fromTaskId))
+  handle(IPC.link.fileBacklinks, (deskId: string, path: string) => linkRepo.fileBacklinks(deskId, path))
+
+  // ---- Project folders (read-only) ----
+  handle(IPC.project.choose, (deskId: string) => chooseFolder(BrowserWindow.getFocusedWindow(), deskId))
+  handle(IPC.project.unlink, (deskId: string) => unlinkFolder(deskId))
+  handle(IPC.project.overview, (deskId: string) => projectOverview(deskId))
+  handle(IPC.project.readFile, (deskId: string, path: string) => readProjectFile(deskId, path))
+  handle(IPC.project.reveal, (deskId: string, path?: string) => revealInFinder(deskId, path))
+  handle(IPC.project.openInClaude, (deskId: string) => openInClaudeCode(deskId))
 
   // ---- Trash ----
   handle(IPC.trash.list, () => trashRepo.list())
@@ -138,21 +156,22 @@ export function registerIpcHandlers(): void {
     return next
   })
 
-  // ---- Claude Code (MCP) ----
-  handle(IPC.mcp.info, () => {
-    // The server runs on this app's own Electron binary in Node mode, so the bundled
-    // SQLite module matches and nothing else needs installing.
+  // ---- Claude Code (MCP server + SessionStart hook) ----
+  // Both run this app's own Electron binary in Node mode, so the bundled SQLite
+  // module matches and nothing else needs installing.
+  const q = (v: string): string => `'${v.replace(/'/g, `'\\''`)}'` // POSIX single quotes
+  const launch = (extra = ''): string => {
     const script = join(app.getAppPath(), 'out', 'mcp', 'server.js')
-    const q = (s: string): string => `"${s.replace(/"/g, '\\"')}"`
-    return {
-      command: [
-        'claude mcp add aop-note --scope user',
-        '-e ELECTRON_RUN_AS_NODE=1',
-        `-e AOP_NOTE_DATA=${q(app.getPath('userData'))}`,
-        `-- ${q(process.execPath)} ${q(script)}`
-      ].join(' ')
-    }
-  })
+    return `${q(process.execPath)} ${q(script)}${extra}`
+  }
+  const dataEnv = (): string => `AOP_NOTE_DATA=${q(app.getPath('userData'))}`
+  handle(IPC.mcp.info, () => ({
+    command: `claude mcp add aop-note --scope user -e ELECTRON_RUN_AS_NODE=1 -e ${dataEnv()} -- ${launch()}`,
+    hookInstalled: isHookInstalled()
+  }))
+  handle(IPC.mcp.setHook, (enabled: boolean) =>
+    setHookInstalled(Boolean(enabled), `ELECTRON_RUN_AS_NODE=1 ${dataEnv()} ${launch(' --brief')}`)
+  )
 
   // ---- Vault mirror ----
   handle(IPC.vault.choose, async () => {

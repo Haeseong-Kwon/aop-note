@@ -7,6 +7,7 @@ import { QuickCapture } from './components/QuickCapture'
 import { CommandPalette } from './components/CommandPalette'
 import { HelpOverlay } from './components/HelpOverlay'
 import { Toast } from './components/Toast'
+import { FilePreview } from './components/FilePreview'
 
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
@@ -37,6 +38,9 @@ function App(): JSX.Element {
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [])
+
+  // A linked project folder changed on disk (docs edited, commit made).
+  useEffect(() => window.api.onProjectChanged(() => useStore.getState().bumpProjectVersion()), [])
 
   // System-wide quick capture (global shortcut / menu-bar icon).
   useEffect(() => window.api.onQuickCapture(() => openQuickCapture()), [openQuickCapture])
@@ -105,6 +109,7 @@ function App(): JSX.Element {
       <CommandPalette />
       <HelpOverlay />
       <Toast />
+      <FilePreview />
     </div>
   )
 }

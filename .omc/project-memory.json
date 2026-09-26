@@ -221,6 +221,12 @@
       "type": "file"
     },
     {
+      "path": "README.md",
+      "accessCount": 3,
+      "lastAccessed": 1790459294514,
+      "type": "file"
+    },
+    {
       "path": "src/renderer/src/components/NotesView.tsx",
       "accessCount": 2,
       "lastAccessed": 1784406801500,
@@ -230,12 +236,6 @@
       "path": "tailwind.config.js",
       "accessCount": 2,
       "lastAccessed": 1784410306310,
-      "type": "file"
-    },
-    {
-      "path": "README.md",
-      "accessCount": 2,
-      "lastAccessed": 1790370029444,
       "type": "file"
     },
     {
@@ -302,6 +302,12 @@
       "path": "src/renderer/src/components/GraphView.tsx",
       "accessCount": 1,
       "lastAccessed": 1790369254046,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/link.repo.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790458785145,
       "type": "file"
     }
   ],

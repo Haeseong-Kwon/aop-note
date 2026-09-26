@@ -13,9 +13,14 @@ export interface WikiLink {
 // No brackets, pipes or newlines inside the target; alias may not span lines either.
 const LINK_RE = /\[\[([^[\]|\n]+)(?:\|([^[\]\n]+))?\]\]/g
 
+// Fenced blocks and inline code hold examples, not links. Blanked to spaces (same
+// length) so match offsets still index into the original text.
+const CODE_RE = /```[\s\S]*?```|`[^`\n]*`/g
+const maskCode = (text: string): string => text.replace(CODE_RE, (m) => m.replace(/[^\n]/g, ' '))
+
 export function extractLinks(text: string): WikiLink[] {
   const links: WikiLink[] = []
-  for (const m of text.matchAll(LINK_RE)) {
+  for (const m of maskCode(text).matchAll(LINK_RE)) {
     const target = m[1].trim()
     if (!target) continue
     links.push({ target, alias: m[2]?.trim() || null, index: m.index ?? 0, length: m[0].length })
