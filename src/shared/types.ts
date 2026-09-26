@@ -357,3 +357,21 @@ export interface ProjectFile {
   title: string
   content: string
 }
+
+/** One row of the 프로젝트 list: a desk with a linked folder. */
+export interface ProjectSummary {
+  desk_id: string
+  name: string
+  color: string
+  icon: string
+  folder: string
+  exists: boolean
+  docs: number
+  git: {
+    branch: string | null
+    changed: number
+    ahead: number
+    last_commit: string | null
+    last_commit_date: string | null
+  } | null
+}

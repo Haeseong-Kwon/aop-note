@@ -3,10 +3,17 @@ import type { GitInfo } from '@shared/types'
 
 const FIELD = '\x1f'
 
+/**
+ * We only read. Without this, `git status` refreshes and rewrites .git/index, which the
+ * folder watcher reports as a change → refresh → git status → … an endless loop.
+ */
+export const READ_ONLY_GIT_ENV = { ...process.env, GIT_OPTIONAL_LOCKS: '0' }
+
 /** git with arguments (never a shell); null if git is missing or the command fails. */
 function git(root: string, args: string[]): string | null {
   try {
     return execFileSync('git', ['-C', root, ...args], {
+      env: READ_ONLY_GIT_ENV,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
       timeout: 5_000,

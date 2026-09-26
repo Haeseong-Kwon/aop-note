@@ -81,6 +81,7 @@ const api: Api = {
     fileBacklinks: (deskId: string, path: string) => ipcRenderer.invoke(IPC.link.fileBacklinks, deskId, path)
   },
   project: {
+    list: () => ipcRenderer.invoke(IPC.project.list),
     choose: (deskId: string) => ipcRenderer.invoke(IPC.project.choose, deskId),
     unlink: (deskId: string) => ipcRenderer.invoke(IPC.project.unlink, deskId),
     overview: (deskId: string) => ipcRenderer.invoke(IPC.project.overview, deskId),

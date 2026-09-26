@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Waypoints, Search } from 'lucide-react'
+import { Waypoints, Search, FolderGit2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { toastError } from '@/store/useToast'
 import { createLayout, tickLayout, type Layout } from '@/lib/forceLayout'
@@ -19,9 +19,47 @@ interface Prepared {
   neighbours: Set<number>[]
 }
 
-/** Keep the notes to show and re-index edges onto them. */
-function prepare(data: GraphData, linkedOnly: boolean): Prepared {
-  const nodes = linkedOnly ? data.nodes.filter((n) => n.links > 0) : data.nodes
+/** One entry of the project list beside the graph. */
+interface ProjectEntry {
+  id: string
+  name: string
+  color: string
+  notes: number
+  files: number
+}
+
+function projectEntries(data: GraphData): ProjectEntry[] {
+  const byDesk = new Map<string, ProjectEntry>()
+  for (const n of data.nodes) {
+    if (!n.workspace_id || n.kind === 'ghost') continue
+    const entry = byDesk.get(n.workspace_id) ?? {
+      id: n.workspace_id,
+      name: n.workspace_name ?? '',
+      color: n.color,
+      notes: 0,
+      files: 0
+    }
+    if (n.kind === 'file') entry.files++
+    else entry.notes++
+    byDesk.set(n.workspace_id, entry)
+  }
+  return [...byDesk.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Keep the nodes to show (one project, or all) and re-index edges onto them. */
+function prepare(data: GraphData, linkedOnly: boolean, scope: string | null): Prepared {
+  let scoped = data.nodes
+  if (scope) {
+    const own = new Set(data.nodes.filter((n) => n.workspace_id === scope).map((n) => n.id))
+    // Unwritten notes this project links to belong to its picture too.
+    const ghosts = new Set(
+      data.edges.flatMap((e) =>
+        own.has(e.source) && e.target.startsWith('ghost:') ? [e.target] : own.has(e.target) && e.source.startsWith('ghost:') ? [e.source] : []
+      )
+    )
+    scoped = data.nodes.filter((n) => own.has(n.id) || ghosts.has(n.id))
+  }
+  const nodes = linkedOnly ? scoped.filter((n) => n.links > 0) : scoped
   const index = new Map(nodes.map((n, i) => [n.id, i]))
   const edges: [number, number][] = []
   const neighbours = nodes.map(() => new Set<number>())
@@ -42,6 +80,8 @@ export function GraphView(): JSX.Element {
   const [data, setData] = useState<GraphData | null>(null)
   const [linkedOnly, setLinkedOnly] = useState(true)
   const [query, setQuery] = useState('')
+  const [scope, setScope] = useState<string | null>(null)
+  const workspaces = useStore((s) => s.workspaces)
   // Linked folders changing on disk (docs edited, commits) can add or remove nodes.
   const projectVersion = useStore((s) => s.projectVersion)
 
@@ -49,7 +89,9 @@ export function GraphView(): JSX.Element {
     window.api.link.graph().then(setData, toastError)
   }, [projectVersion])
 
-  const graph = useMemo(() => (data ? prepare(data, linkedOnly) : null), [data, linkedOnly])
+  const graph = useMemo(() => (data ? prepare(data, linkedOnly, scope) : null), [data, linkedOnly, scope])
+  const entries = useMemo(() => (data ? projectEntries(data) : []), [data])
+  const hasFolder = (id: string): boolean => Boolean(workspaces.find((w) => w.id === id)?.folder_path)
 
   return (
     <div className="flex h-full flex-col">
@@ -88,16 +130,76 @@ export function GraphView(): JSX.Element {
         </p>
       </div>
 
-      {graph && graph.nodes.length === 0 ? (
-        <div className="m-auto max-w-sm px-6 text-center text-sm text-muted-foreground">
-          <Waypoints className="mx-auto mb-3 h-8 w-8 opacity-40" />
-          아직 연결된 메모가 없습니다. 메모에서 <code className="rounded bg-muted px-1">[[</code>를 입력해
-          다른 메모를 링크하면 여기에 지식 그래프가 그려집니다.
+      <div className="flex min-h-0 flex-1">
+        <nav aria-label="프로젝트" className="w-56 shrink-0 overflow-y-auto border-r border-border p-2">
+          <p className="px-2 pb-1 pt-1 text-xs font-medium text-muted-foreground">프로젝트</p>
+          <ScopeItem
+            label="전체"
+            detail={data ? `${data.nodes.filter((n) => n.kind !== 'ghost').length}개` : ''}
+            active={scope === null}
+            onClick={() => setScope(null)}
+          />
+          {entries.map((e) => (
+            <ScopeItem
+              key={e.id}
+              label={e.name}
+              color={e.color}
+              linked={hasFolder(e.id)}
+              detail={`메모 ${e.notes}${e.files ? ` · 문서 ${e.files}` : ''}`}
+              active={scope === e.id}
+              onClick={() => setScope(e.id)}
+            />
+          ))}
+        </nav>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {graph && graph.nodes.length === 0 ? (
+            <div className="m-auto max-w-sm px-6 text-center text-sm text-muted-foreground">
+              <Waypoints className="mx-auto mb-3 h-8 w-8 opacity-40" />
+              아직 연결된 메모가 없습니다. 메모에서 <code className="rounded bg-muted px-1">[[</code>를 입력해
+              다른 메모를 링크하면 여기에 지식 그래프가 그려집니다.
+            </div>
+          ) : (
+            graph && <GraphCanvas graph={graph} query={query} />
+          )}
         </div>
-      ) : (
-        graph && <GraphCanvas graph={graph} query={query} />
-      )}
+      </div>
     </div>
+  )
+}
+
+interface ScopeItemProps {
+  label: string
+  detail: string
+  active: boolean
+  color?: string
+  /** The desk has a linked project folder. */
+  linked?: boolean
+  onClick: () => void
+}
+
+function ScopeItem({ label, detail, active, color, linked, onClick }: ScopeItemProps): JSX.Element {
+  return (
+    <button
+      onClick={onClick}
+      aria-current={active ? 'true' : undefined}
+      className={cn(
+        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors',
+        active ? 'bg-accent text-foreground' : 'text-foreground/80 hover:bg-accent/60'
+      )}
+    >
+      {color ? (
+        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+      ) : (
+        <Waypoints className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1 truncate text-sm font-medium">
+          <span className="truncate">{label}</span>
+          {linked && <FolderGit2 className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="폴더 연결됨" />}
+        </span>
+        <span className="block truncate text-[11px] text-muted-foreground">{detail}</span>
+      </span>
+    </button>
   )
 }
 

@@ -67,4 +67,14 @@ assert.match(info.commits[0].subject, /\[\[인증 흐름\]\]/)
 assert.match(info.commits[0].short, /^[0-9a-f]{7,}$/)
 assert.equal(gitInfo(plain), null, 'not a repo')
 
+// Reading git state must not write .git/index: the folder watcher would see the write,
+// trigger a refresh, which reads git again — an endless refresh loop (flickering UI).
+const { statSync, utimesSync } = require('fs') as typeof import('fs')
+const later = new Date(Date.now() + 5000)
+utimesSync(join(repo, 'docs', 'a.md'), later, later) // stale stat cache: git would like to refresh the index
+const before = statSync(join(repo, '.git', 'index')).mtimeMs
+gitInfo(repo)
+scanProject(repo)
+assert.equal(statSync(join(repo, '.git', 'index')).mtimeMs, before, 'read-only git calls leave the index alone')
+
 console.log('project: all assertions passed')

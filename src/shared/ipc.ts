@@ -32,7 +32,8 @@ import type {
   McpInfo,
   FileBacklinks,
   ProjectOverview,
-  ProjectFile
+  ProjectFile,
+  ProjectSummary
 } from './types'
 
 /** Payload sent from main → renderer when a notification is clicked. */
@@ -99,6 +100,7 @@ export const IPC = {
     fileBacklinks: 'link:fileBacklinks'
   },
   project: {
+    list: 'project:list',
     choose: 'project:choose',
     unlink: 'project:unlink',
     overview: 'project:overview',
@@ -197,6 +199,8 @@ export interface Api {
     fileBacklinks(deskId: string, path: string): Promise<FileBacklinks>
   }
   project: {
+    /** Desks with a linked folder, with git / docs summary. */
+    list(): Promise<ProjectSummary[]>
     /** Pick a folder to link to the desk. Null if cancelled. */
     choose(deskId: string): Promise<Workspace | null>
     unlink(deskId: string): Promise<Workspace>

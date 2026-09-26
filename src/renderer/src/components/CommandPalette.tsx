@@ -11,6 +11,7 @@ import {
   Trash2,
   Settings,
   Waypoints,
+  FolderGit2,
   type LucideIcon
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
@@ -107,6 +108,7 @@ export function CommandPalette(): JSX.Element {
         { key: 'a-today', group: '바로 가기', icon: Sun, title: '오늘', run: () => selectSmartView('today') },
         { key: 'a-week', group: '바로 가기', icon: CalendarCheck, title: '이번 주', run: () => selectSmartView('week') },
         { key: 'a-help', group: '바로 가기', icon: Keyboard, title: '키보드 단축키', hint: '?', run: toggleHelp },
+        { key: 'a-projects', group: '바로 가기', icon: FolderGit2, title: '프로젝트 목록', run: () => openUtility('projects') },
         { key: 'a-graph', group: '바로 가기', icon: Waypoints, title: '그래프', run: () => openUtility('graph') },
         { key: 'a-trash', group: '바로 가기', icon: Trash2, title: '휴지통', run: () => openUtility('trash') },
         { key: 'a-settings', group: '바로 가기', icon: Settings, title: '설정 · 백업', run: () => openUtility('settings') },

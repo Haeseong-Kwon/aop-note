@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { homedir } from 'os'
 import { isAbsolute, join, posix, resolve } from 'path'
 import { extractLinks } from '@shared/links'
+import { READ_ONLY_GIT_ENV } from './git'
 
 /**
  * Read-only index of the documents in a linked project folder, so a desk's notes,
@@ -47,6 +48,7 @@ const CACHE_MS = 15_000
 function listWithGit(root: string): string[] | null {
   try {
     const out = execFileSync('git', ['-C', root, 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
+      env: READ_ONLY_GIT_ENV,
       encoding: 'utf8',
       maxBuffer: 256 * 1024 * 1024,
       stdio: ['ignore', 'pipe', 'ignore'],

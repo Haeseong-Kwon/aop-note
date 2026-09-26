@@ -5,7 +5,7 @@ import { dialog, shell, type BrowserWindow } from 'electron'
 import { workspaceRepo } from './repositories/workspace.repo'
 import { getProjectIndex, invalidateProject, validateFolder } from './projectIndex'
 import { getGitInfo, invalidateGit } from './git'
-import type { ProjectFile, ProjectOverview, Workspace } from '@shared/types'
+import type { ProjectFile, ProjectOverview, ProjectSummary, Workspace } from '@shared/types'
 
 const MAX_READ_BYTES = 2 * 1024 * 1024
 const WATCH_DEBOUNCE_MS = 800
@@ -55,6 +55,36 @@ export function projectOverview(deskId: string): ProjectOverview | null {
   }
 }
 
+/** Every desk with a linked folder, for the 프로젝트 list. */
+export function listProjects(): ProjectSummary[] {
+  return workspaceRepo.list().flatMap((desk) => {
+    if (!desk.folder_path) return []
+    const index = getProjectIndex(desk.folder_path)
+    const git = index ? getGitInfo(desk.folder_path) : null
+    const last = git?.commits[0]
+    return [
+      {
+        desk_id: desk.id,
+        name: desk.name,
+        color: desk.color,
+        icon: desk.icon,
+        folder: desk.folder_path,
+        exists: index !== null,
+        docs: index?.files.length ?? 0,
+        git: git
+          ? {
+              branch: git.branch,
+              changed: git.changed,
+              ahead: git.ahead,
+              last_commit: last?.subject ?? null,
+              last_commit_date: last?.date ?? null
+            }
+          : null
+      }
+    ]
+  })
+}
+
 /** Only documents in the index can be read — the renderer can't ask for arbitrary paths. */
 export function readProjectFile(deskId: string, path: string): ProjectFile {
   const { folder } = deskFolder(deskId)
@@ -97,6 +127,8 @@ const watchers = new Map<string, FSWatcher>()
 let notify: (deskId: string) => void = () => undefined
 
 const DOC_CHANGE = /\.(md|mdx|markdown|txt)$/i
+// Branch switches and commits move HEAD / refs; index and object writes are noise.
+const GIT_STATE_CHANGE = /^\.git[\\/](HEAD|packed-refs|refs[\\/])/
 
 export function refreshWatchers(): void {
   const desks = workspaceRepo.list().filter((d) => d.folder_path)
@@ -115,8 +147,8 @@ export function refreshWatchers(): void {
     try {
       const w = watch(folder, { recursive: true }, (_event, name) => {
         const file = String(name ?? '')
-        // Docs changed, or git state (HEAD, index, refs) moved.
-        if (!DOC_CHANGE.test(file) && !file.startsWith('.git')) return
+        // Docs changed, or git HEAD / refs moved.
+        if (!DOC_CHANGE.test(file) && !GIT_STATE_CHANGE.test(file)) return
         if (file.includes('node_modules')) return
         if (timer) clearTimeout(timer)
         timer = setTimeout(() => {

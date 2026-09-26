@@ -24,7 +24,7 @@ export type ViewMode = 'list' | 'kanban'
 export type MainView = 'tasks' | 'notes' | 'calendar' | 'goals' | 'documents' | 'project'
 export type SmartView = 'today' | 'week'
 export type Theme = 'light' | 'dark' | 'system'
-export type UtilityView = 'trash' | 'settings' | 'graph'
+export type UtilityView = 'trash' | 'settings' | 'graph' | 'projects'
 
 /** Enough to open a note from anywhere (graph, backlinks, links). */
 export interface NoteRef {

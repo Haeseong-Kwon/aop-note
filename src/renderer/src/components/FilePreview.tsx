@@ -30,8 +30,8 @@ export function FilePreview(): JSX.Element | null {
   useEffect(() => {
     if (!open) return
     let current = true
-    setFile(null)
-    setBack(null)
+    // Only a different document clears the view; a refresh of the same one swaps in place.
+    setFile((prev) => (prev?.path === open.path ? prev : null))
     window.api.project.readFile(open.deskId, open.path).then((f) => current && setFile(f), (e) => {
       toastError(e)
       close()

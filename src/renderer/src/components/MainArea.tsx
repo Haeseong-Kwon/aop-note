@@ -23,6 +23,7 @@ import { TrashView } from './TrashView'
 import { SettingsView } from './SettingsView'
 import { GraphView } from './GraphView'
 import { ProjectView } from './ProjectView'
+import { ProjectsView } from './ProjectsView'
 import type { MainView } from '@/store/useStore'
 
 const VIEWS: { value: MainView; label: string; icon: LucideIcon }[] = [
@@ -49,6 +50,7 @@ export function MainArea(): JSX.Element {
         {utilityView === 'trash' && <TrashView />}
         {utilityView === 'settings' && <SettingsView />}
         {utilityView === 'graph' && <GraphView />}
+        {utilityView === 'projects' && <ProjectsView />}
       </main>
     )
   }

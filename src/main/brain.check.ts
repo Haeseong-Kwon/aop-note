@@ -7,6 +7,7 @@ import { workspaceRepo } from './repositories/workspace.repo'
 import { categoryRepo } from './repositories/category.repo'
 import { taskRepo } from './repositories/task.repo'
 import { linkRepo } from './repositories/link.repo'
+import { listProjects } from './projects'
 
 // A desk linked to a git repo: repo docs, notes and commits form one graph.
 const repo = mkdtempSync(join(tmpdir(), 'aop-brain-'))
@@ -66,3 +67,16 @@ const readmeNote = taskRepo.create({ category_id: cat.id, title: 'README', note:
 assert.equal(linkRepo.resolve('README', decision.id)?.id, readmeNote.id)
 
 console.log('brain: all assertions passed')
+
+// --- project list (sidebar 프로젝트 menu) ---
+
+const listed = listProjects()
+const mine = listed.find((p) => p.desk_id === desk.id)
+assert.ok(mine, 'linked desk is listed')
+assert.equal(mine.folder, repo)
+assert.equal(mine.exists, true)
+assert.equal(mine.docs, 3)
+assert.equal(mine.git?.branch, 'main')
+assert.match(mine.git?.last_commit ?? '', /토큰 갱신/)
+assert.ok(!listed.some((p) => p.desk_id === cat.workspace_id && p.desk_id !== desk.id), 'only desks with a folder')
+console.log('project list: all assertions passed')

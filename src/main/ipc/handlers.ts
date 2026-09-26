@@ -25,6 +25,7 @@ import { isHookInstalled, setHookInstalled } from '../claudeHook'
 import { writeVault, scheduleVaultSync, vaultBase } from '../vault'
 import {
   chooseFolder,
+  listProjects,
   unlinkFolder,
   projectOverview,
   readProjectFile,
@@ -129,6 +130,7 @@ export function registerIpcHandlers(): void {
   handle(IPC.link.fileBacklinks, (deskId: string, path: string) => linkRepo.fileBacklinks(deskId, path))
 
   // ---- Project folders (read-only) ----
+  handle(IPC.project.list, () => listProjects())
   handle(IPC.project.choose, (deskId: string) => chooseFolder(BrowserWindow.getFocusedWindow(), deskId))
   handle(IPC.project.unlink, (deskId: string) => unlinkFolder(deskId))
   handle(IPC.project.overview, (deskId: string) => projectOverview(deskId))

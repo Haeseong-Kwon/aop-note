@@ -17,6 +17,7 @@ import {
   Keyboard,
   Settings,
   Waypoints,
+  FolderGit2,
   type LucideIcon
 } from 'lucide-react'
 import {
@@ -259,6 +260,12 @@ export function Sidebar(): JSX.Element {
           label="그래프"
           active={utilityView === 'graph'}
           onClick={() => openUtility('graph')}
+        />
+        <NavItem
+          icon={FolderGit2}
+          label="프로젝트"
+          active={utilityView === 'projects'}
+          onClick={() => openUtility('projects')}
         />
       </nav>
 
