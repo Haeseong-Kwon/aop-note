@@ -47,6 +47,10 @@ export interface Task {
   recurrence: Recurrence | null
   /** When to send a reminder notification (ISO), or null. */
   remind_at: string | null
+  /** Lossless editor blocks for the memo (see shared/noteDoc.ts); null = Markdown only. */
+  note_doc: string | null
+  /** Page settings JSON: icon, cover, layout (see shared/pageMeta.ts). */
+  page_meta: string | null
   sort_order: number
   created_at: string
   updated_at: string
@@ -180,6 +184,8 @@ export interface CreateTaskInput {
   due_date?: string | null
   recurrence?: Recurrence | null
   remind_at?: string | null
+  note_doc?: string | null
+  page_meta?: string | null
 }
 
 export interface UpdateTaskInput {
@@ -194,6 +200,8 @@ export interface UpdateTaskInput {
   goal_id?: string | null
   recurrence?: Recurrence | null
   remind_at?: string | null
+  note_doc?: string | null
+  page_meta?: string | null
 }
 
 export interface CreateGoalInput {
@@ -241,6 +249,9 @@ export interface AppSettings {
   globalShortcut: boolean
   /** Folder the Obsidian-style Markdown mirror is written into ('' = off). */
   vaultPath: string
+  /** How the in-app AI reaches Claude. */
+  aiProvider: 'claude-code' | 'api'
+  aiModel: string
 }
 
 /** How to register the bundled MCP server with Claude Code. */
@@ -399,4 +410,99 @@ export interface CalendarEvent {
   start: string
   end: string
   all_day: boolean
+}
+
+/** Metadata for a web bookmark block. */
+export interface LinkPreview {
+  url: string
+  title: string
+  description: string
+  /** Absolute http(s) image URL, or ''. */
+  image: string
+  site: string
+}
+
+export type PropertyType = 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'checkbox' | 'url'
+
+export interface SelectOption {
+  name: string
+  color: string
+}
+
+/** A user-defined column on a desk's tasks (Notion database property). */
+export interface Property {
+  id: string
+  workspace_id: string
+  name: string
+  type: PropertyType
+  /** select / multi_select choices, in order of first use. */
+  options: SelectOption[]
+  sort_order: number
+}
+
+/** A stored value: string (text/select/date YYYY-MM-DD/url), number, boolean, or string[] (multi-select). */
+export type PropertyValue = string | number | boolean | string[]
+
+/** task id → property id → value */
+export type PropertyValues = Record<string, Record<string, PropertyValue>>
+
+/** Everything a database view needs for one desk. */
+export interface DatabaseData {
+  tasks: TaskWithContext[]
+  properties: Property[]
+  values: PropertyValues
+}
+
+/** A synced block's shared content (NoteDoc JSON) — edited in one memo, shown in all. */
+export interface SyncedBlock {
+  id: string
+  doc: string
+  updated_at: string
+}
+
+export interface SyncedBlockSummary {
+  id: string
+  /** First line of its Markdown. */
+  preview: string
+  /** Memos currently embedding it. */
+  used_in: number
+  updated_at: string
+}
+
+/** In-app AI actions (Notion-AI style). */
+export type AiAction =
+  | 'summarize'
+  | 'improve'
+  | 'shorter'
+  | 'longer'
+  | 'continue'
+  | 'translate_en'
+  | 'translate_ko'
+  | 'action_items'
+  | 'custom'
+  | 'ask'
+
+export type AiProvider = 'claude-code' | 'api'
+
+export interface AiStatus {
+  provider: AiProvider
+  model: string
+  /** An API key is stored (the key itself never leaves main). */
+  hasKey: boolean
+  /** Path of the `claude` CLI found on this Mac, or null. */
+  cliPath: string | null
+}
+
+export interface AiRequest {
+  /** Client-chosen id; deltas arrive as onAiDelta(id, text). */
+  id: string
+  action: AiAction
+  text?: string
+  instruction?: string
+}
+
+export interface AiResult {
+  text: string
+  /** For "ask": notes the answer was based on. */
+  sources?: { id: string; title: string; workspace_id: string; category_id: string }[]
 }

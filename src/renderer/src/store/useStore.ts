@@ -21,10 +21,10 @@ import type {
 import type { NavigatePayload } from '@shared/ipc'
 
 export type ViewMode = 'list' | 'kanban'
-export type MainView = 'tasks' | 'notes' | 'calendar' | 'goals' | 'documents' | 'project'
+export type MainView = 'tasks' | 'notes' | 'database' | 'calendar' | 'goals' | 'documents' | 'project'
 export type SmartView = 'today' | 'week'
 export type Theme = 'light' | 'dark' | 'system'
-export type UtilityView = 'trash' | 'settings' | 'graph' | 'projects'
+export type UtilityView = 'trash' | 'settings' | 'graph' | 'projects' | 'ask'
 
 /** Enough to open a note from anywhere (graph, backlinks, links). */
 export interface NoteRef {
@@ -132,6 +132,8 @@ interface AppState {
   openNote: (note: NoteRef) => Promise<void>
   /** Follow a [[title]] from a memo: open it, or create it next to the source (Obsidian-style). */
   openLink: (title: string, from: Task) => Promise<void>
+  /** Notion's Duplicate: copy content + formatting + page settings, then open the copy. */
+  duplicateNote: (task: Task) => Promise<void>
   restoreFromTrash: (kind: TrashKind, id: string) => Promise<void>
   setView: (view: ViewMode) => void
   navigateToTask: (payload: NavigatePayload) => Promise<void>
@@ -300,6 +302,18 @@ export const useStore = create<AppState>((set, get) => ({
       activeCategoryId: note.category_id,
       selectedNoteId: note.id
     })
+  },
+
+  duplicateNote: async (task) => {
+    try {
+      const copy = await window.api.task.duplicate(task.id)
+      await get().refresh()
+      const workspaceId = get().activeWorkspaceId
+      if (workspaceId) await get().openNote({ id: copy.id, workspace_id: workspaceId, category_id: copy.category_id })
+      useToast.getState().show({ message: `'${copy.title}'을(를) 만들었습니다.` })
+    } catch (e) {
+      toastError(e)
+    }
   },
 
   openLink: async (title, from) => {

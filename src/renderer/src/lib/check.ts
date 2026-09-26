@@ -224,3 +224,109 @@ assert.deepEqual(eventDayKeys(ev('2026-09-29T10:00:00', '2026-09-29T10:00:00', f
 assert.equal(formatEventTime(ev('2026-09-29T09:05:00', '2026-09-29T10:30:00', false)), '09:05–10:30')
 assert.equal(formatEventTime(ev('2026-09-30T00:00:00', '2026-10-01T00:00:00', true)), '종일')
 console.log('calendar event days: all assertions passed')
+
+// --- lossless memo storage: blocks JSON beside the Markdown -------------------
+import { serializeNoteDoc, resolveInitial, mapDocText, uncheckDoc, parseNoteDoc } from '@shared/noteDoc'
+import { sanitizePageMeta } from '@shared/pageMeta'
+
+const blocks = [
+  { type: 'paragraph', props: { textColor: 'red' }, content: [{ type: 'text', text: '빨간 [[옛 제목]]', styles: {} }], children: [] },
+  {
+    type: 'toggleListItem',
+    props: {},
+    content: [{ type: 'link', href: 'https://x', content: [{ type: 'text', text: '[[옛 제목]] 링크', styles: {} }] }],
+    children: [{ type: 'checkListItem', props: { checked: true }, content: [{ type: 'text', text: '완료', styles: {} }], children: [] }]
+  },
+  { type: 'table', props: {}, content: { type: 'tableContent', rows: [{ cells: [{ type: 'tableCell', content: [{ type: 'text', text: '[[옛 제목]]', styles: {} }] }] }] }, children: [] }
+]
+const md = '빨간 [[옛 제목]]\n\n* [[옛 제목]] 링크'
+const docJson = serializeNoteDoc(md, blocks)
+
+assert.deepEqual(resolveInitial(md, docJson).blocks, blocks, 'unchanged note → the lossless blocks')
+assert.equal(resolveInitial(md, docJson).append, '')
+const appended = resolveInitial(`${md}\n\n## Claude가 덧붙임`, docJson)
+assert.deepEqual(appended.blocks, blocks, 'appended outside the editor (MCP) → keep blocks…')
+assert.equal(appended.append, '## Claude가 덧붙임', '…and parse only the addition')
+assert.equal(resolveInitial('완전히 다른 내용', docJson).blocks, null, 'rewritten elsewhere → Markdown wins')
+assert.equal(resolveInitial(md, null).blocks, null)
+assert.equal(resolveInitial(md, '{broken').blocks, null)
+assert.equal(resolveInitial('', serializeNoteDoc('', [])).blocks?.length, 0)
+
+const renamed = mapDocText(parseNoteDoc(docJson)!, (t) => t.split('[[옛 제목]]').join('[[새 제목]]'))
+const flat = JSON.stringify(renamed.blocks)
+assert.ok(!flat.includes('옛 제목') && flat.split('새 제목').length === 4, 'text in paragraphs, links, nested children and tables')
+assert.equal(JSON.stringify(blocks).includes('새 제목'), false, 'input not mutated')
+const unchecked = JSON.stringify(uncheckDoc(parseNoteDoc(docJson)!).blocks)
+assert.ok(unchecked.includes('"checked":false') && !unchecked.includes('"checked":true'))
+
+// --- page meta (cover / icon / layout) is validated wherever it's written -----
+assert.deepEqual(sanitizePageMeta({ icon: '🚀', cover: 'gradient:3', coverPos: 140, fullWidth: true, font: 'serif', evil: 1 }), {
+  icon: '🚀',
+  cover: 'gradient:3',
+  coverPos: 100,
+  fullWidth: true,
+  font: 'serif'
+})
+assert.deepEqual(sanitizePageMeta({ cover: 'image:https://images.example.com/a.jpg' }), { cover: 'image:https://images.example.com/a.jpg' })
+assert.deepEqual(sanitizePageMeta({ cover: 'image:aop-file:///c1.png' }), { cover: 'image:aop-file:///c1.png' })
+assert.deepEqual(sanitizePageMeta({ cover: 'image:javascript:alert(1)' }), {}, 'only https / attachment images')
+assert.deepEqual(sanitizePageMeta({ cover: 'image:https://x.com/a.jpg") ; background:url(evil' }), {}, 'no CSS breakout')
+assert.deepEqual(sanitizePageMeta({ font: 'comic' }), {})
+assert.deepEqual(sanitizePageMeta('nope'), {})
+console.log('note doc + page meta: all assertions passed')
+
+// --- database views: filter / sort / group over tasks + custom properties -----
+import { applyView, defaultViewConfig, parseViewConfig } from './database'
+import type { DatabaseData, TaskWithContext } from '@shared/types'
+
+const row = (id: string, over: Partial<TaskWithContext>): TaskWithContext =>
+  ({ id, title: id, status: 'todo', priority: 0, due_date: null, category_id: 'c1', category_name: '백로그', updated_at: '2026-09-01', ...over }) as TaskWithContext
+const dbData: DatabaseData = {
+  tasks: [
+    row('로그인', { priority: 3, due_date: new Date('2026-10-01T00:00:00').toISOString() }),
+    row('결제', { status: 'doing', priority: 1 }),
+    row('문서화', { status: 'done', category_id: 'c2', category_name: '문서' }),
+    row('성능', { priority: 2, due_date: new Date('2026-09-28T00:00:00').toISOString() })
+  ],
+  properties: [
+    { id: 'pts', workspace_id: 'w', name: '포인트', type: 'number', options: [], sort_order: 0 },
+    { id: 'area', workspace_id: 'w', name: '영역', type: 'select', options: [{ name: 'FE', color: 'blue' }, { name: 'BE', color: 'green' }], sort_order: 1 },
+    { id: 'tags', workspace_id: 'w', name: '태그', type: 'multi_select', options: [], sort_order: 2 }
+  ],
+  values: { 로그인: { pts: 5, area: 'FE', tags: ['긴급'] }, 결제: { pts: 8, area: 'BE' }, 성능: { pts: 3, area: 'FE', tags: ['긴급', '성능'] } }
+}
+const titles = (cfg: Parameters<typeof applyView>[1]): string[] => applyView(dbData, cfg).rows.map((r) => r.title)
+const base = defaultViewConfig('w', null)
+
+assert.deepEqual(titles(base), ['로그인', '결제', '문서화', '성능'], 'default: everything, manual order')
+assert.deepEqual(titles({ ...base, categoryId: 'c2' }), ['문서화'])
+assert.deepEqual(titles({ ...base, filters: [{ field: 'status', op: 'is_not', value: 'done' }] }), ['로그인', '결제', '성능'])
+assert.deepEqual(titles({ ...base, filters: [{ field: 'prop:area', op: 'is', value: 'FE' }] }), ['로그인', '성능'])
+assert.deepEqual(titles({ ...base, filters: [{ field: 'prop:tags', op: 'contains', value: '긴급' }] }), ['로그인', '성능'], 'multi-select contains')
+assert.deepEqual(titles({ ...base, filters: [{ field: 'prop:pts', op: 'empty' }] }), ['문서화'])
+assert.deepEqual(titles({ ...base, filters: [{ field: 'title', op: 'contains', value: '로그' }] }), ['로그인'])
+assert.deepEqual(titles({ ...base, filters: [{ field: 'due', op: 'before', value: '2026-09-30' }] }), ['성능'])
+assert.deepEqual(titles({ ...base, sort: { field: 'prop:pts', dir: 'desc' } }), ['결제', '로그인', '성능', '문서화'], 'empty values sort last')
+assert.deepEqual(titles({ ...base, sort: { field: 'priority', dir: 'desc' } }), ['로그인', '성능', '결제', '문서화'])
+assert.deepEqual(titles({ ...base, sort: { field: 'due', dir: 'asc' } }), ['성능', '로그인', '결제', '문서화'])
+
+const byStatus = applyView(dbData, { ...base, groupBy: 'status' }).groups?.map((g) => [g.label, g.rows.map((r) => r.title)])
+assert.deepEqual(byStatus, [
+  ['할 일', ['로그인', '성능']],
+  ['진행 중', ['결제']],
+  ['완료', ['문서화']]
+])
+const byArea = applyView(dbData, { ...base, groupBy: 'prop:area' }).groups?.map((g) => [g.label, g.rows.length])
+assert.deepEqual(byArea, [
+  ['FE', 2],
+  ['BE', 1],
+  ['비어 있음', 1]
+], 'select groups follow option order; empties last')
+
+// Stored configs are untrusted JSON (they live in the memo's block props).
+assert.deepEqual(parseViewConfig('{"workspaceId":"w","view":"hack","filters":[{"field":"x","op":"drop"}],"hidden":"x"}'), {
+  ...defaultViewConfig('w', null),
+  filters: []
+})
+assert.equal(parseViewConfig('not json'), null)
+console.log('database views: all assertions passed')

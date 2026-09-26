@@ -2,6 +2,27 @@ import { getDb } from '../db'
 import { newId, nowIso } from './util'
 import { nextOccurrence, resetChecklist } from './recurrence'
 import { normalizeTitle, renameLinks } from '@shared/links'
+import { MAX_NOTE_DOC_CHARS, mapDocText, parseNoteDoc, serializeNoteDoc, uncheckDoc } from '@shared/noteDoc'
+import { sanitizePageMeta } from '@shared/pageMeta'
+
+/** The renderer sends these as strings; store only well-formed values. */
+function checkNoteDoc(json: string | null | undefined): string | null {
+  if (json === undefined || json === null) return null
+  if (json.length > MAX_NOTE_DOC_CHARS || !parseNoteDoc(json)) throw new Error('note_doc 형식이 올바르지 않습니다.')
+  return json
+}
+
+function checkPageMeta(json: string | null | undefined): string | null {
+  if (json === undefined || json === null) return null
+  let raw: unknown
+  try {
+    raw = JSON.parse(json)
+  } catch {
+    throw new Error('page_meta 형식이 올바르지 않습니다.')
+  }
+  const meta = sanitizePageMeta(raw)
+  return Object.keys(meta).length ? JSON.stringify(meta) : null
+}
 import type {
   Task,
   TaskWithContext,
@@ -138,6 +159,8 @@ export const taskRepo = {
       due_date: input.due_date ?? null,
       recurrence: input.recurrence ?? null,
       remind_at: input.remind_at ?? null,
+      note_doc: checkNoteDoc(input.note_doc),
+      page_meta: checkPageMeta(input.page_meta),
       sort_order: nextOrder,
       created_at: now,
       updated_at: now,
@@ -147,9 +170,9 @@ export const taskRepo = {
 
     db.prepare(
       `INSERT INTO tasks
-         (id, category_id, goal_id, title, note, status, priority, due_date, recurrence, remind_at, sort_order, created_at, updated_at, completed_at)
+         (id, category_id, goal_id, title, note, status, priority, due_date, recurrence, remind_at, note_doc, page_meta, sort_order, created_at, updated_at, completed_at)
        VALUES
-         (@id, @category_id, @goal_id, @title, @note, @status, @priority, @due_date, @recurrence, @remind_at, @sort_order, @created_at, @updated_at, @completed_at)`
+         (@id, @category_id, @goal_id, @title, @note, @status, @priority, @due_date, @recurrence, @remind_at, @note_doc, @page_meta, @sort_order, @created_at, @updated_at, @completed_at)`
     ).run(row)
 
     return row
@@ -181,6 +204,8 @@ export const taskRepo = {
       goal_id: input.goal_id === undefined ? existing.goal_id : input.goal_id,
       recurrence: input.recurrence === undefined ? existing.recurrence : input.recurrence,
       remind_at: input.remind_at === undefined ? existing.remind_at : input.remind_at,
+      note_doc: input.note_doc === undefined ? existing.note_doc : checkNoteDoc(input.note_doc),
+      page_meta: input.page_meta === undefined ? existing.page_meta : checkPageMeta(input.page_meta),
       completed_at: completedAt,
       updated_at: nowIso()
     }
@@ -189,7 +214,8 @@ export const taskRepo = {
       db.prepare(
         `UPDATE tasks SET
            title = @title, note = @note, status = @status, priority = @priority,
-           due_date = @due_date, recurrence = @recurrence, remind_at = @remind_at, sort_order = @sort_order,
+           due_date = @due_date, recurrence = @recurrence, remind_at = @remind_at,
+           note_doc = @note_doc, page_meta = @page_meta, sort_order = @sort_order,
            category_id = @category_id, goal_id = @goal_id, completed_at = @completed_at,
            updated_at = @updated_at
          WHERE id = @id`
@@ -215,15 +241,36 @@ export const taskRepo = {
     // Runs after the title UPDATE, so view this task under its old name.
     const tasks = this.listAllWithContext().map((t) => (t.id === taskId ? { ...t, title: oldTitle } : t))
     const holders = tasks.filter((t) => normalizeTitle(t.title) === key)
-    const save = getDb().prepare('UPDATE tasks SET note = ?, updated_at = ? WHERE id = ?')
+    const save = getDb().prepare('UPDATE tasks SET note = ?, note_doc = ?, updated_at = ? WHERE id = ?')
     for (const t of tasks) {
       if (!t.note.includes('[[')) continue
       const local = holders.filter((h) => h.workspace_id === t.workspace_id)
       const pool = local.length > 0 ? local : holders
       if (pool.length !== 1 || pool[0].id !== taskId) continue
       const note = renameLinks(t.note, oldTitle, newTitle)
-      if (note !== t.note) save.run(note, nowIso(), t.id)
+      if (note === t.note) continue
+      // Same rewrite inside the editor blocks, so the memo keeps opening losslessly.
+      const doc = parseNoteDoc(t.note_doc)
+      const nextDoc = doc
+        ? mapDocText({ ...doc, md: renameLinks(doc.md, oldTitle, newTitle) }, (text) => renameLinks(text, oldTitle, newTitle))
+        : null
+      save.run(note, nextDoc ? serializeNoteDoc(nextDoc.md, nextDoc.blocks) : null, nowIso(), t.id)
     }
+  },
+
+  /** Notion's "Duplicate": same content, formatting and page settings; a fresh one-off task. */
+  duplicate(id: string): Task {
+    const source = this.getById(id)
+    if (!source) throw new Error(`Task not found: ${id}`)
+    return this.create({
+      category_id: source.category_id,
+      goal_id: source.goal_id,
+      title: `${source.title} (사본)`,
+      note: source.note,
+      note_doc: source.note_doc,
+      page_meta: source.page_meta,
+      priority: source.priority
+    })
   },
 
   /** When a repeating task is completed, create its next occurrence (once). */
@@ -252,6 +299,11 @@ export const taskRepo = {
       goal_id: task.goal_id,
       title: task.title,
       note: resetChecklist(task.note),
+      note_doc: ((): string | null => {
+        const doc = parseNoteDoc(task.note_doc)
+        return doc ? serializeNoteDoc(resetChecklist(doc.md), uncheckDoc(doc).blocks) : null
+      })(),
+      page_meta: task.page_meta,
       priority: task.priority,
       due_date: due,
       recurrence: task.recurrence,

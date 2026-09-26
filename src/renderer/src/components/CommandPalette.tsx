@@ -12,7 +12,8 @@ import {
   Settings,
   Waypoints,
   FolderGit2,
-  type LucideIcon
+  type LucideIcon,
+  Sparkles
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
@@ -109,6 +110,7 @@ export function CommandPalette(): JSX.Element {
         { key: 'a-week', group: '바로 가기', icon: CalendarCheck, title: '이번 주', run: () => selectSmartView('week') },
         { key: 'a-help', group: '바로 가기', icon: Keyboard, title: '키보드 단축키', hint: '?', run: toggleHelp },
         { key: 'a-projects', group: '바로 가기', icon: FolderGit2, title: '프로젝트 목록', run: () => openUtility('projects') },
+        { key: 'a-ask', group: '바로 가기', icon: Sparkles, title: 'AI에게 묻기 (내 메모 기반)', run: () => openUtility('ask') },
         { key: 'a-graph', group: '바로 가기', icon: Waypoints, title: '그래프', run: () => openUtility('graph') },
         { key: 'a-trash', group: '바로 가기', icon: Trash2, title: '휴지통', run: () => openUtility('trash') },
         { key: 'a-settings', group: '바로 가기', icon: Settings, title: '설정 · 백업', run: () => openUtility('settings') },

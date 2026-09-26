@@ -139,6 +139,50 @@ const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_calendar_events_start ON calendar_events(start);
       CREATE INDEX IF NOT EXISTS idx_calendar_events_calendar ON calendar_events(calendar_id);
     `)
+  },
+
+  // 0009 — Notion-style memos: lossless editor blocks + page settings (icon, cover, layout)
+  (db) => {
+    db.exec(`
+      ALTER TABLE tasks ADD COLUMN note_doc TEXT;
+      ALTER TABLE tasks ADD COLUMN page_meta TEXT;
+    `)
+  },
+
+  // 0010 — Notion-style databases: user-defined properties on a desk's tasks
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS properties (
+        id            TEXT PRIMARY KEY,
+        workspace_id  TEXT NOT NULL REFERENCES workspaces(id),
+        name          TEXT NOT NULL,
+        type          TEXT NOT NULL CHECK(type IN ('text','number','select','multi_select','date','checkbox','url')),
+        options       TEXT NOT NULL DEFAULT '[]',
+        sort_order    INTEGER NOT NULL DEFAULT 0,
+        created_at    TEXT NOT NULL,
+        deleted_at    TEXT
+      );
+      CREATE TABLE IF NOT EXISTS task_values (
+        task_id      TEXT NOT NULL REFERENCES tasks(id),
+        property_id  TEXT NOT NULL REFERENCES properties(id),
+        value        TEXT NOT NULL,
+        PRIMARY KEY (task_id, property_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_properties_workspace ON properties(workspace_id);
+      CREATE INDEX IF NOT EXISTS idx_task_values_property ON task_values(property_id);
+    `)
+  },
+
+  // 0011 — synced blocks: one piece of content embedded in many memos
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS synced_blocks (
+        id          TEXT PRIMARY KEY,
+        doc         TEXT NOT NULL,
+        created_at  TEXT NOT NULL,
+        updated_at  TEXT NOT NULL
+      );
+    `)
   }
 ]
 

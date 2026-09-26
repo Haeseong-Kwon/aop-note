@@ -35,7 +35,17 @@ import type {
   ProjectFile,
   ProjectSummary,
   CalendarInfo,
-  CalendarEvent
+  CalendarEvent,
+  LinkPreview,
+  DatabaseData,
+  Property,
+  PropertyType,
+  SelectOption,
+  SyncedBlock,
+  SyncedBlockSummary,
+  AiRequest,
+  AiResult,
+  AiStatus
 } from './types'
 
 /** Payload sent from main → renderer when a notification is clicked. */
@@ -68,7 +78,8 @@ export const IPC = {
     update: 'task:update',
     setStatus: 'task:setStatus',
     reorder: 'task:reorder',
-    remove: 'task:remove'
+    remove: 'task:remove',
+    duplicate: 'task:duplicate'
   },
   goal: {
     listByWorkspace: 'goal:listByWorkspace',
@@ -99,7 +110,8 @@ export const IPC = {
     backlinks: 'link:backlinks',
     graph: 'link:graph',
     resolve: 'link:resolve',
-    fileBacklinks: 'link:fileBacklinks'
+    fileBacklinks: 'link:fileBacklinks',
+    preview: 'link:preview'
   },
   project: {
     list: 'project:list',
@@ -113,6 +125,25 @@ export const IPC = {
   trash: {
     list: 'trash:list',
     restore: 'trash:restore'
+  },
+  ai: {
+    status: 'ai:status',
+    run: 'ai:run',
+    cancel: 'ai:cancel',
+    setKey: 'ai:setKey'
+  },
+  synced: {
+    create: 'synced:create',
+    get: 'synced:get',
+    save: 'synced:save',
+    list: 'synced:list'
+  },
+  database: {
+    get: 'database:get',
+    createProperty: 'database:createProperty',
+    updateProperty: 'database:updateProperty',
+    removeProperty: 'database:removeProperty',
+    setValue: 'database:setValue'
   },
   calendar: {
     list: 'calendar:list',
@@ -145,7 +176,9 @@ export const IPC = {
     navigateToTask: 'event:navigateToTask',
     quickCapture: 'event:quickCapture',
     projectChanged: 'event:projectChanged',
-    calendarsSynced: 'event:calendarsSynced'
+    calendarsSynced: 'event:calendarsSynced',
+    syncedChanged: 'event:syncedChanged',
+    aiDelta: 'event:aiDelta'
   }
 } as const
 
@@ -175,6 +208,8 @@ export interface Api {
     setStatus(id: string, status: TaskStatus, sortOrder?: number): Promise<Task>
     reorder(updates: UpdateTaskInput[]): Promise<void>
     remove(id: string): Promise<void>
+    /** Copy content, formatting and page settings into a new one-off task. */
+    duplicate(id: string): Promise<Task>
   }
   goal: {
     listByWorkspace(workspaceId: string): Promise<GoalWithProgress[]>
@@ -207,6 +242,8 @@ export interface Api {
     /** The note a [[title]] in fromTaskId's memo points at, or null if none exists yet. */
     resolve(title: string, fromTaskId: string | null): Promise<TaskWithContext | null>
     fileBacklinks(deskId: string, path: string): Promise<FileBacklinks>
+    /** Title / description / image of a web page, for a bookmark block. */
+    preview(url: string): Promise<LinkPreview>
   }
   project: {
     /** Desks with a linked folder, with git / docs summary. */
@@ -225,6 +262,30 @@ export interface Api {
     list(): Promise<TrashItem[]>
     /** Restore one delete (and any deleted parent it needs to be visible). */
     restore(kind: TrashKind, id: string): Promise<void>
+  }
+  ai: {
+    status(): Promise<AiStatus>
+    /** Streams text through onAiDelta(request.id, …); resolves with the full result. */
+    run(request: AiRequest): Promise<AiResult>
+    cancel(id: string): Promise<void>
+    /** Store (or with null, forget) the Anthropic API key in the OS keychain. */
+    setKey(key: string | null): Promise<AiStatus>
+  }
+  synced: {
+    create(): Promise<SyncedBlock>
+    get(id: string): Promise<SyncedBlock | null>
+    /** Save shared content; every open copy is told via onSyncedChanged. */
+    save(id: string, md: string, blocks: unknown[], source: string): Promise<SyncedBlock>
+    list(): Promise<SyncedBlockSummary[]>
+  }
+  database: {
+    /** A desk's tasks with their custom property values. */
+    get(workspaceId: string): Promise<DatabaseData>
+    createProperty(input: { workspace_id: string; name: string; type: PropertyType }): Promise<Property>
+    updateProperty(input: { id: string; name?: string; options?: SelectOption[] }): Promise<Property>
+    removeProperty(id: string): Promise<void>
+    /** null clears the cell. */
+    setValue(taskId: string, propertyId: string, value: unknown): Promise<void>
   }
   calendar: {
     list(): Promise<CalendarInfo[]>
@@ -277,4 +338,8 @@ export interface Api {
   onProjectChanged(cb: (deskId: string) => void): () => void
   /** Subscribed calendars were re-fetched in the background. */
   onCalendarsSynced(cb: () => void): () => void
+  /** A synced block's content changed (id, and the save's source so it can ignore its own echo). */
+  onSyncedChanged(cb: (id: string, source: string) => void): () => void
+  /** A chunk of streamed AI output for request `id`. */
+  onAiDelta(cb: (id: string, text: string) => void): () => void
 }

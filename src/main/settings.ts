@@ -7,7 +7,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   launchAtLogin: false,
   dueNotifications: true,
   globalShortcut: true,
-  vaultPath: ''
+  vaultPath: '',
+  aiProvider: 'claude-code',
+  aiModel: 'claude-opus-5'
 }
 
 export const settingsPath = (): string => join(app.getPath('userData'), 'settings.json')
@@ -20,6 +22,8 @@ function sanitize(input: unknown): Partial<AppSettings> {
     const value = (input as Record<string, unknown>)[key]
     if (typeof value === typeof DEFAULT_SETTINGS[key]) out[key] = value as never
   }
+  if (out.aiProvider !== undefined && out.aiProvider !== 'claude-code' && out.aiProvider !== 'api') delete out.aiProvider
+  if (out.aiModel !== undefined && !['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'].includes(out.aiModel)) delete out.aiModel
   return out
 }
 

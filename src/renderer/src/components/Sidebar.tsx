@@ -18,7 +18,8 @@ import {
   Settings,
   Waypoints,
   FolderGit2,
-  type LucideIcon
+  type LucideIcon,
+  Sparkles
 } from 'lucide-react'
 import {
   DndContext,
@@ -266,6 +267,12 @@ export function Sidebar(): JSX.Element {
           label="프로젝트"
           active={utilityView === 'projects'}
           onClick={() => openUtility('projects')}
+        />
+        <NavItem
+          icon={Sparkles}
+          label="AI에게 묻기"
+          active={utilityView === 'ask'}
+          onClick={() => openUtility('ask')}
         />
       </nav>
 

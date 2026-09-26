@@ -14,7 +14,10 @@ import type {
   ExportFormat,
   TaskStatus,
   TrashKind,
-  AppSettings
+  AppSettings,
+  PropertyType,
+  SelectOption,
+  AiRequest
 } from '@shared/types'
 
 // The only bridge between renderer and main. No Node globals leak to the page.
@@ -45,7 +48,8 @@ const api: Api = {
     setStatus: (id: string, status: TaskStatus, sortOrder?: number) =>
       ipcRenderer.invoke(IPC.task.setStatus, id, status, sortOrder),
     reorder: (updates: UpdateTaskInput[]) => ipcRenderer.invoke(IPC.task.reorder, updates),
-    remove: (id: string) => ipcRenderer.invoke(IPC.task.remove, id)
+    remove: (id: string) => ipcRenderer.invoke(IPC.task.remove, id),
+    duplicate: (id: string) => ipcRenderer.invoke(IPC.task.duplicate, id)
   },
   goal: {
     listByWorkspace: (workspaceId: string) =>
@@ -78,7 +82,8 @@ const api: Api = {
     graph: () => ipcRenderer.invoke(IPC.link.graph),
     resolve: (title: string, fromTaskId: string | null) =>
       ipcRenderer.invoke(IPC.link.resolve, title, fromTaskId),
-    fileBacklinks: (deskId: string, path: string) => ipcRenderer.invoke(IPC.link.fileBacklinks, deskId, path)
+    fileBacklinks: (deskId: string, path: string) => ipcRenderer.invoke(IPC.link.fileBacklinks, deskId, path),
+    preview: (url: string) => ipcRenderer.invoke(IPC.link.preview, url)
   },
   project: {
     list: () => ipcRenderer.invoke(IPC.project.list),
@@ -92,6 +97,29 @@ const api: Api = {
   trash: {
     list: () => ipcRenderer.invoke(IPC.trash.list),
     restore: (kind: TrashKind, id: string) => ipcRenderer.invoke(IPC.trash.restore, kind, id)
+  },
+  ai: {
+    status: () => ipcRenderer.invoke(IPC.ai.status),
+    run: (request: AiRequest) => ipcRenderer.invoke(IPC.ai.run, request),
+    cancel: (id: string) => ipcRenderer.invoke(IPC.ai.cancel, id),
+    setKey: (key: string | null) => ipcRenderer.invoke(IPC.ai.setKey, key)
+  },
+  synced: {
+    create: () => ipcRenderer.invoke(IPC.synced.create),
+    get: (id: string) => ipcRenderer.invoke(IPC.synced.get, id),
+    save: (id: string, md: string, blocks: unknown[], source: string) =>
+      ipcRenderer.invoke(IPC.synced.save, id, md, blocks, source),
+    list: () => ipcRenderer.invoke(IPC.synced.list)
+  },
+  database: {
+    get: (workspaceId: string) => ipcRenderer.invoke(IPC.database.get, workspaceId),
+    createProperty: (input: { workspace_id: string; name: string; type: PropertyType }) =>
+      ipcRenderer.invoke(IPC.database.createProperty, input),
+    updateProperty: (input: { id: string; name?: string; options?: SelectOption[] }) =>
+      ipcRenderer.invoke(IPC.database.updateProperty, input),
+    removeProperty: (id: string) => ipcRenderer.invoke(IPC.database.removeProperty, id),
+    setValue: (taskId: string, propertyId: string, value: unknown) =>
+      ipcRenderer.invoke(IPC.database.setValue, taskId, propertyId, value)
   },
   calendar: {
     list: () => ipcRenderer.invoke(IPC.calendar.list),
@@ -137,6 +165,16 @@ const api: Api = {
     const listener = (_e: IpcRendererEvent, deskId: string): void => cb(deskId)
     ipcRenderer.on(IPC.events.projectChanged, listener)
     return () => ipcRenderer.removeListener(IPC.events.projectChanged, listener)
+  },
+  onAiDelta: (cb: (id: string, text: string) => void) => {
+    const listener = (_e: IpcRendererEvent, id: string, text: string): void => cb(id, text)
+    ipcRenderer.on(IPC.events.aiDelta, listener)
+    return () => ipcRenderer.removeListener(IPC.events.aiDelta, listener)
+  },
+  onSyncedChanged: (cb: (id: string, source: string) => void) => {
+    const listener = (_e: IpcRendererEvent, id: string, source: string): void => cb(id, source)
+    ipcRenderer.on(IPC.events.syncedChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.events.syncedChanged, listener)
   },
   onCalendarsSynced: (cb: () => void) => {
     const listener = (): void => cb()

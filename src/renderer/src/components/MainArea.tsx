@@ -6,6 +6,7 @@ import {
   Target,
   FolderArchive,
   FolderGit2,
+  Table2,
   type LucideIcon
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
@@ -24,11 +25,14 @@ import { SettingsView } from './SettingsView'
 import { GraphView } from './GraphView'
 import { ProjectView } from './ProjectView'
 import { ProjectsView } from './ProjectsView'
+import { AskView } from './AskView'
+import { DeskDatabase } from './DeskDatabase'
 import type { MainView } from '@/store/useStore'
 
 const VIEWS: { value: MainView; label: string; icon: LucideIcon }[] = [
   { value: 'tasks', label: '작업', icon: ListTodo },
   { value: 'notes', label: '메모', icon: NotebookPen },
+  { value: 'database', label: '데이터베이스', icon: Table2 },
   { value: 'calendar', label: '달력', icon: CalendarDays },
   { value: 'goals', label: '목표', icon: Target },
   { value: 'documents', label: '문서', icon: FolderArchive },
@@ -51,6 +55,7 @@ export function MainArea(): JSX.Element {
         {utilityView === 'settings' && <SettingsView />}
         {utilityView === 'graph' && <GraphView />}
         {utilityView === 'projects' && <ProjectsView />}
+        {utilityView === 'ask' && <AskView />}
       </main>
     )
   }
@@ -112,6 +117,7 @@ export function MainArea(): JSX.Element {
       <div className="glass-panel flex-1 overflow-hidden">
         {mainView === 'tasks' && <TaskPanel />}
         {mainView === 'notes' && <NotesView key={desk.id} />}
+        {mainView === 'database' && <DeskDatabase key={desk.id} deskId={desk.id} />}
         {mainView === 'calendar' && <CalendarView />}
         {mainView === 'goals' && <GoalsView />}
         {mainView === 'documents' && <DocumentsView />}

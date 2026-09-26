@@ -12,7 +12,7 @@ import type { Attachment, ExportFormat, Task } from '@shared/types'
 /** Inline memo shown under an expanded task row, with a fullscreen escape hatch. */
 export function MemoEditor({ task }: { task: Task }): JSX.Element {
   const setMainView = useStore((s) => s.setMainView)
-  const { dark, initialMarkdown, onMarkdownChange, persistNow } = useMemoPersist(task)
+  const { dark, initialMarkdown, initialDoc, onMarkdownChange, persistNow, revision } = useMemoPersist(task)
   const [fullscreen, setFullscreen] = useState(false)
   const [viewing, setViewing] = useState<Attachment | null>(null)
 
@@ -54,9 +54,10 @@ export function MemoEditor({ task }: { task: Task }): JSX.Element {
 
       {!fullscreen && (
         <BlockNoteEditor
-          key={task.id}
+          key={`${task.id}-${revision}`}
           taskId={task.id}
           initialMarkdown={initialMarkdown}
+          initialDoc={initialDoc}
           onMarkdownChange={onMarkdownChange}
           dark={dark}
           variant="inline"
@@ -88,9 +89,10 @@ export function MemoEditor({ task }: { task: Task }): JSX.Element {
           </header>
           {fullscreen && (
             <BlockNoteEditor
-              key={`${task.id}-fs`}
+              key={`${task.id}-fs-${revision}`}
               taskId={task.id}
               initialMarkdown={initialMarkdown}
+              initialDoc={initialDoc}
               onMarkdownChange={onMarkdownChange}
               dark={dark}
               variant="page"

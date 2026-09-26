@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1790330273657,
+  "lastScanned": 1790463957711,
   "projectRoot": "/Users/haeseong/Desktop/Products/aop-note",
   "techStack": {
     "languages": [
@@ -48,16 +48,19 @@
     "devCommand": "npm run dev",
     "scripts": {
       "dev": "electron-vite dev",
-      "build": "electron-vite build",
+      "build": "electron-vite build && npm run build:mcp",
       "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
       "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
       "typecheck": "npm run typecheck:node && npm run typecheck:web",
       "start": "electron-vite preview",
-      "package": "electron-vite build && electron-builder",
-      "package:mac": "electron-vite build && electron-builder --mac",
+      "package": "npm run build && electron-builder",
+      "package:mac": "npm run build && electron-builder --mac",
       "install:mac": "bash scripts/install-mac.sh",
       "postinstall": "electron-builder install-app-deps",
-      "test": "esbuild src/renderer/src/lib/check.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/memo-check.mjs --log-level=error && node node_modules/.cache/memo-check.mjs"
+      "test": "npm run test:renderer && npm run test:main",
+      "test:renderer": "esbuild src/renderer/src/lib/check.ts --bundle --platform=node --format=esm --alias:@shared=./src/shared --outfile=node_modules/.cache/memo-check.mjs --log-level=error && node node_modules/.cache/memo-check.mjs",
+      "test:main": "esbuild src/main/check.ts --bundle --platform=node --format=cjs --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=node_modules/.cache/main-check.cjs --log-level=error && ELECTRON_RUN_AS_NODE=1 electron node_modules/.cache/main-check.cjs",
+      "build:mcp": "esbuild src/mcp/server.ts --bundle --platform=node --format=cjs --target=node20 --alias:electron=./src/mcp/electron-shim.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=out/mcp/server.js --log-level=warning"
     }
   },
   "conventions": {
@@ -71,7 +74,8 @@
     "workspaces": [],
     "mainDirectories": [
       "scripts",
-      "src"
+      "src",
+      "test"
     ],
     "gitBranches": {
       "defaultBranch": "main",
@@ -84,26 +88,45 @@
       "path": "build",
       "purpose": "Build output",
       "fileCount": 2,
-      "lastAccessed": 1790330273649,
+      "lastAccessed": 1790463957704,
       "keyFiles": [
         "icon.icns",
         "icon.png"
+      ]
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 4,
+      "lastAccessed": 1790463957706,
+      "keyFiles": [
+        "aop-note-0.1.0-arm64.dmg",
+        "aop-note-0.1.0-arm64.dmg.blockmap",
+        "builder-debug.yml",
+        "latest-mac.yml"
       ]
     },
     "image": {
       "path": "image",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1790330273649,
+      "lastAccessed": 1790463957706,
       "keyFiles": [
         "logo image.png"
       ]
+    },
+    "out": {
+      "path": "out",
+      "purpose": "Build output",
+      "fileCount": 0,
+      "lastAccessed": 1790463957707,
+      "keyFiles": []
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 2,
-      "lastAccessed": 1790330273652,
+      "lastAccessed": 1790463957707,
       "keyFiles": [
         "install-mac.sh",
         "make-icon.py"
@@ -113,8 +136,17 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1790330273652,
+      "lastAccessed": 1790463957707,
       "keyFiles": []
+    },
+    "test": {
+      "path": "test",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1790463957707,
+      "keyFiles": [
+        "electron-stub.ts"
+      ]
     }
   },
   "hotPaths": [
@@ -138,8 +170,8 @@
     },
     {
       "path": "src/renderer/src/components/NotePage.tsx",
-      "accessCount": 8,
-      "lastAccessed": 1784407894286,
+      "accessCount": 9,
+      "lastAccessed": 1790462290927,
       "type": "file"
     },
     {
@@ -308,6 +340,18 @@
       "path": "src/main/repositories/link.repo.ts",
       "accessCount": 1,
       "lastAccessed": 1790458785145,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/AskView.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790464042417,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/AiSettings.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790464042861,
       "type": "file"
     }
   ],

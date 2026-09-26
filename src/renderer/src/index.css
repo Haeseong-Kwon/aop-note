@@ -210,11 +210,181 @@
 .bn-memo--inline .bn-editor {
   padding-inline: 1.5rem;
 }
-.bn-memo--page .bn-container,
 .bn-memo--page .bn-editor {
-  /* Click anywhere in the empty page below the text to keep typing; leave room so
-     the backlinks heading peeks above the fold. */
-  min-height: calc(100% - 7rem);
+  /* The page scrolls as a whole (cover → title → blocks → backlinks); keep some empty
+     page under the text so clicking below it keeps typing. */
+  min-height: 40vh;
+}
+.bn-memo--full .bn-editor {
+  max-width: none;
+  padding-inline: 6rem;
+}
+
+/* Page fonts (Notion's Default / Serif / Mono). */
+.font-note-serif,
+.font-note-serif .bn-container {
+  font-family: 'AppleMyungjo', 'Nanum Myeongjo', 'Noto Serif KR', Georgia, serif;
+  --bn-font-family: 'AppleMyungjo', 'Nanum Myeongjo', 'Noto Serif KR', Georgia, serif;
+}
+.font-note-mono,
+.font-note-mono .bn-container {
+  font-family: 'SF Mono', Menlo, 'D2Coding', monospace;
+  --bn-font-family: 'SF Mono', Menlo, 'D2Coding', monospace;
+}
+
+/* Callout: icon + text on a soft tinted box; BlockNote's block colour menu sets the tint. */
+.bn-memo .bn-callout {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 0.5rem;
+  background: hsl(var(--foreground) / 0.05);
+}
+.bn-memo [data-background-color] .bn-callout {
+  background: transparent; /* the block colour already paints the box */
+}
+.bn-memo .bn-callout-emoji {
+  font-size: 1.25rem;
+  line-height: 1.6rem;
+  border-radius: 0.25rem;
+}
+.bn-memo .bn-callout-emoji:hover {
+  background: hsl(var(--foreground) / 0.08);
+}
+.bn-memo .bn-callout-body {
+  flex: 1;
+  min-width: 0;
+}
+.bn-memo .bn-callout-picker {
+  position: absolute;
+  z-index: 30;
+  top: 2rem;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(8, 2rem);
+  gap: 2px;
+  padding: 0.4rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--glass-border);
+  background: hsl(var(--popover));
+  box-shadow: var(--glass-shadow);
+}
+.bn-memo .bn-callout-picker button {
+  height: 2rem;
+  border-radius: 0.35rem;
+  font-size: 1.1rem;
+}
+.bn-memo .bn-callout-picker button:hover,
+.bn-memo .bn-callout-picker button[aria-selected='true'] {
+  background: hsl(var(--accent));
+}
+
+/* Web bookmark card. */
+.bn-memo .bn-bookmark {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border) / var(--border-alpha));
+  border-radius: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.bn-memo .bn-bookmark:hover {
+  background: hsl(var(--foreground) / 0.03);
+}
+.bn-memo .bn-bookmark-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 0.9rem;
+}
+.bn-memo .bn-bookmark-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.bn-memo .bn-bookmark-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+.bn-memo .bn-bookmark-site {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.72rem;
+  color: hsl(var(--muted-foreground));
+}
+.bn-memo .bn-bookmark-image {
+  width: 30%;
+  max-width: 14rem;
+  min-height: 6rem;
+  object-fit: cover;
+}
+.bn-memo .bn-bookmark-input {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: hsl(var(--foreground) / 0.05);
+}
+.bn-memo .bn-bookmark-input input {
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  font-size: 0.875rem;
+  outline: none;
+}
+.bn-memo .bn-bookmark-input button {
+  border-radius: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+.bn-memo .bn-bookmark-input button:disabled {
+  opacity: 0.5;
+}
+
+/* Table of contents. */
+.bn-memo .bn-toc {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  border-left: 2px solid hsl(var(--border) / var(--border-alpha));
+  padding: 0.25rem 0 0.25rem 0.75rem;
+}
+.bn-memo .bn-toc button {
+  padding-block: 0.2rem;
+  text-align: left;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--border));
+  text-underline-offset: 3px;
+}
+.bn-memo .bn-toc button:hover {
+  color: hsl(var(--foreground));
+}
+.bn-memo .bn-toc-empty {
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
 }
 .bn-memo--page .bn-editor {
   max-width: 48rem;
@@ -299,4 +469,79 @@ textarea:focus-visible,
 }
 .bn-memo .bn-wikilink:hover {
   background: hsl(var(--primary) / 0.08);
+}
+
+/* Database cells: the date picker icon only on hover, like Notion's empty cells. */
+.bn-database input[type='date']::-webkit-calendar-picker-indicator {
+  opacity: 0;
+}
+.bn-database input[type='date']:hover::-webkit-calendar-picker-indicator,
+.bn-database input[type='date']:focus::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+}
+
+/* Synced block: Notion's outlined box; the outline brightens while editing it. */
+.bn-memo .bn-synced {
+  position: relative;
+  width: 100%;
+  margin-block: 0.25rem;
+  padding: 1.1rem 0.25rem 0.35rem;
+  border: 1.5px solid hsl(12 80% 60% / 0.28);
+  border-radius: 0.5rem;
+}
+.bn-memo .bn-synced:focus-within {
+  border-color: hsl(12 80% 60% / 0.7);
+}
+.bn-memo .bn-synced .bn-editor {
+  padding-inline: 0.75rem !important;
+  padding-block: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+}
+.bn-memo .bn-synced-label {
+  position: absolute;
+  top: -0.6rem;
+  left: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0 0.35rem;
+  font-size: 0.68rem;
+  color: hsl(12 70% 50%);
+  background: hsl(var(--background));
+}
+.bn-memo .bn-synced-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem;
+}
+.bn-memo .bn-synced-new {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: flex-start;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
+}
+.bn-memo .bn-synced-hint {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: hsl(var(--muted-foreground));
+}
+.bn-memo .bn-synced-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.8rem;
+  text-align: left;
+}
+.bn-memo .bn-synced-item:hover {
+  background: hsl(var(--accent));
 }

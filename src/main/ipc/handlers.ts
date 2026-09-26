@@ -18,6 +18,10 @@ import {
 import { exportMemo } from '../memo'
 import { trashRepo } from '../repositories/trash.repo'
 import { linkRepo } from '../repositories/link.repo'
+import { fetchLinkPreview } from '../linkPreview'
+import { propertyRepo } from '../repositories/property.repo'
+import { syncedRepo } from '../repositories/synced.repo'
+import { aiStatus, cancelAi, runAi, setApiKey } from '../ai'
 import { backupInfo, exportBackup, restoreBackup, openDataFolder } from '../backup'
 import { loadSettings, saveSettings } from '../settings'
 import { setShortcutEnabled } from '../quickCapture'
@@ -53,7 +57,10 @@ import type {
   ExportFormat,
   TaskStatus,
   TrashKind,
-  AppSettings
+  AppSettings,
+  PropertyType,
+  SelectOption,
+  AiRequest
 } from '@shared/types'
 
 // Channels that change notes; each one nudges the (debounced) vault mirror.
@@ -102,6 +109,7 @@ export function registerIpcHandlers(): void {
   )
   handle(IPC.task.reorder, (updates: UpdateTaskInput[]) => taskRepo.reorder(updates))
   handle(IPC.task.remove, (id: string) => taskRepo.remove(id))
+  handle(IPC.task.duplicate, (id: string) => taskRepo.duplicate(id))
 
   // ---- Goal ----
   handle(IPC.goal.listByWorkspace, (workspaceId: string) => goalRepo.listByWorkspace(workspaceId))
@@ -136,6 +144,7 @@ export function registerIpcHandlers(): void {
   handle(IPC.link.graph, () => linkRepo.graph())
   handle(IPC.link.resolve, (title: string, fromTaskId: string | null) => linkRepo.resolve(title, fromTaskId))
   handle(IPC.link.fileBacklinks, (deskId: string, path: string) => linkRepo.fileBacklinks(deskId, path))
+  handle(IPC.link.preview, (url: string) => fetchLinkPreview(String(url ?? '')))
 
   // ---- Project folders (read-only) ----
   handle(IPC.project.list, () => listProjects())
@@ -165,6 +174,53 @@ export function registerIpcHandlers(): void {
     }
     return next
   })
+
+  // ---- AI ----
+  handle(IPC.ai.status, () => aiStatus())
+  handle(IPC.ai.cancel, (id: string) => cancelAi(id))
+  handle(IPC.ai.setKey, (key: string | null) => {
+    setApiKey(key)
+    return aiStatus()
+  })
+  // Not via handle(): deltas go back to the window that asked.
+  ipcMain.handle(IPC.ai.run, async (event, request: AiRequest) => {
+    if (!request || typeof request.id !== 'string' || typeof request.action !== 'string') throw new Error('잘못된 AI 요청입니다.')
+    try {
+      return await runAi(request, (text) => {
+        if (!event.sender.isDestroyed()) event.sender.send(IPC.events.aiDelta, request.id, text)
+      })
+    } catch (error) {
+      console.error('[ipc] ai:run failed:', error instanceof Error ? error.message : error)
+      throw error
+    }
+  })
+
+  // ---- Synced blocks ----
+  handle(IPC.synced.create, () => syncedRepo.create())
+  handle(IPC.synced.get, (id: string) => syncedRepo.get(id) ?? null)
+  handle(IPC.synced.save, (id: string, md: string, blocks: unknown[], source: string) => {
+    const saved = syncedRepo.save(id, md, blocks)
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send(IPC.events.syncedChanged, id, String(source ?? ''))
+    return saved
+  })
+  handle(IPC.synced.list, () => syncedRepo.list())
+
+  // ---- Databases (custom properties on a desk's tasks) ----
+  handle(IPC.database.get, (workspaceId: string) => ({
+    tasks: taskRepo.listAllWithContext().filter((t) => t.workspace_id === workspaceId),
+    properties: propertyRepo.listByWorkspace(workspaceId),
+    values: propertyRepo.valuesForWorkspace(workspaceId)
+  }))
+  handle(IPC.database.createProperty, (input: { workspace_id: string; name: string; type: PropertyType }) =>
+    propertyRepo.create(input)
+  )
+  handle(IPC.database.updateProperty, (input: { id: string; name?: string; options?: SelectOption[] }) =>
+    propertyRepo.update(input)
+  )
+  handle(IPC.database.removeProperty, (id: string) => propertyRepo.remove(id))
+  handle(IPC.database.setValue, (taskId: string, propertyId: string, value: unknown) =>
+    propertyRepo.setValue(taskId, propertyId, value)
+  )
 
   // ---- Calendar subscriptions (read-only iCal feeds) ----
   handle(IPC.calendar.list, () => listCalendars())
