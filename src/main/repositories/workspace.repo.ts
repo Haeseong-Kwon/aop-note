@@ -28,6 +28,8 @@ export const workspaceRepo = {
   create(input: CreateWorkspaceInput): Workspace {
     const db = getDb()
     const now = nowIso()
+    const parentId = input.parent_id ?? null
+    if (parentId && !this.getById(parentId)) throw new Error('상위 데스크를 찾을 수 없습니다.')
     const nextOrder =
       (
         db
@@ -41,6 +43,7 @@ export const workspaceRepo = {
       color: input.color ?? DEFAULT_COLOR,
       icon: input.icon ?? '',
       folder_path: null,
+      parent_id: parentId,
       sort_order: nextOrder,
       created_at: now,
       updated_at: now,
@@ -48,8 +51,8 @@ export const workspaceRepo = {
     }
 
     db.prepare(
-      `INSERT INTO workspaces (id, name, color, icon, sort_order, created_at, updated_at)
-       VALUES (@id, @name, @color, @icon, @sort_order, @created_at, @updated_at)`
+      `INSERT INTO workspaces (id, name, color, icon, parent_id, sort_order, created_at, updated_at)
+       VALUES (@id, @name, @color, @icon, @parent_id, @sort_order, @created_at, @updated_at)`
     ).run(row)
 
     return row
@@ -97,11 +100,13 @@ export const workspaceRepo = {
     tx(updates)
   },
 
-  /** Soft-delete the workspace and cascade soft-delete to its categories & tasks. */
+  /** Soft-delete the workspace and cascade to its categories & tasks. Sub-desks move up one level. */
   remove(id: string): void {
     const db = getDb()
     const now = nowIso()
+    const parentId = this.getById(id)?.parent_id ?? null
     const tx = db.transaction(() => {
+      db.prepare('UPDATE workspaces SET parent_id = ?, updated_at = ? WHERE parent_id = ?').run(parentId, now, id)
       db.prepare('UPDATE workspaces SET deleted_at = ?, updated_at = ? WHERE id = ?').run(now, now, id)
       db.prepare('UPDATE categories SET deleted_at = ?, updated_at = ? WHERE workspace_id = ? AND deleted_at IS NULL').run(
         now,

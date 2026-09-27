@@ -10,7 +10,7 @@ import { autoBackup } from './backup'
 import { setupQuickCapture } from './quickCapture'
 import { loadSettings } from './settings'
 import { scheduleVaultSync } from './vault'
-import { startProjectWatching } from './projects'
+import { projectFilePath, startProjectWatching } from './projects'
 import { syncAllCalendars } from './calendars'
 import { IPC } from '@shared/ipc'
 
@@ -25,6 +25,10 @@ const CALENDAR_SYNC_MS = 30 * 60_000
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'aop-file',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
+  },
+  {
+    scheme: 'aop-project',
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
   }
 ])
@@ -82,6 +86,16 @@ app.whenReady().then(() => {
     const storedName = basename(decodeURIComponent(u.hostname + u.pathname))
     const abs = pathForStored(storedName)
     if (!storedName || !existsSync(abs)) return new Response('Not found', { status: 404 })
+    return net.fetch(pathToFileURL(abs).toString())
+  })
+
+  // Serve linked-folder documents via aop-project:///<deskId>/<path> — only files in that desk's index.
+  protocol.handle('aop-project', (request) => {
+    // Like aop-file: Chromium may move the first segment (the desk id) into the host.
+    const u = new URL(request.url)
+    const [deskId, path] = (u.hostname + u.pathname).split('/').filter(Boolean).map(decodeURIComponent)
+    const abs = deskId && path ? projectFilePath(deskId, path) : null
+    if (!abs || !existsSync(abs)) return new Response('Not found', { status: 404 })
     return net.fetch(pathToFileURL(abs).toString())
   })
 

@@ -11,6 +11,9 @@ import type {
   Attachment,
   AttachmentWithContext,
   AttachmentAddInput,
+  CreateDocFolderInput,
+  DocFolder,
+  DocumentUploadInput,
   AttachmentRender,
   ExportFormat,
   ExportResult,
@@ -101,7 +104,16 @@ export const IPC = {
     findByUrl: 'attachment:findByUrl',
     render: 'attachment:render',
     openExternal: 'attachment:openExternal',
-    remove: 'attachment:remove'
+    remove: 'attachment:remove',
+    upload: 'attachment:upload',
+    move: 'attachment:move'
+  },
+  docFolder: {
+    list: 'docFolder:list',
+    create: 'docFolder:create',
+    rename: 'docFolder:rename',
+    move: 'docFolder:move',
+    remove: 'docFolder:remove'
   },
   theme: {
     set: 'theme:set'
@@ -119,6 +131,8 @@ export const IPC = {
     unlink: 'project:unlink',
     overview: 'project:overview',
     readFile: 'project:readFile',
+    renderFile: 'project:renderFile',
+    openFile: 'project:openFile',
     reveal: 'project:reveal',
     openInClaude: 'project:openInClaude'
   },
@@ -236,6 +250,18 @@ export interface Api {
     render(id: string): Promise<AttachmentRender>
     openExternal(id: string): Promise<void>
     remove(id: string): Promise<void>
+    /** Upload into a desk's 문서함 without a memo. */
+    upload(input: DocumentUploadInput): Promise<Attachment>
+    /** File a document into a 문서함 folder (null = top level). */
+    move(id: string, folderId: string | null): Promise<void>
+  }
+  docFolder: {
+    list(workspaceId: string): Promise<DocFolder[]>
+    create(input: CreateDocFolderInput): Promise<DocFolder>
+    rename(id: string, name: string): Promise<void>
+    move(id: string, parentId: string | null): Promise<void>
+    /** Deletes the folder only; its contents move up one level. */
+    remove(id: string): Promise<void>
   }
   link: {
     backlinks(taskId: string): Promise<Backlinks>
@@ -255,6 +281,10 @@ export interface Api {
     overview(deskId: string): Promise<ProjectOverview | null>
     /** Read an indexed document (other paths are refused). */
     readFile(deskId: string, path: string): Promise<ProjectFile>
+    /** PDF / Word / Excel … preview of an indexed document. */
+    renderFile(deskId: string, path: string): Promise<AttachmentRender>
+    /** Open an indexed document in its default app. */
+    openFile(deskId: string, path: string): Promise<void>
     reveal(deskId: string, path?: string): Promise<void>
     /** Open a terminal in the folder running `claude`. */
     openInClaude(deskId: string): Promise<void>

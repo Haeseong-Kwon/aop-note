@@ -5,6 +5,7 @@ import { shell } from 'electron'
 import mammoth from 'mammoth'
 import * as XLSX from 'xlsx'
 import { attachmentRepo } from './repositories/attachment.repo'
+import { docFolderRepo } from './repositories/docFolder.repo'
 import { pathForStored } from './attachmentPaths'
 import { nowIso } from './repositories/util'
 import type { Attachment, AttachmentRender } from '@shared/types'
@@ -34,12 +35,15 @@ export { attachmentsDir, pathForStored } from './attachmentPaths'
 
 const extOf = (name: string): string => extname(name).replace(/^\./, '').toLowerCase()
 
-function record(taskId: string, fileName: string, storedName: string, size: number): Attachment {
+type Owner = Pick<Attachment, 'task_id' | 'workspace_id' | 'folder_id'>
+const ofTask = (taskId: string): Owner => ({ task_id: taskId, workspace_id: null, folder_id: null })
+
+function record(owner: Owner, fileName: string, storedName: string, size: number): Attachment {
   const ext = extOf(storedName)
   const now = nowIso()
   return attachmentRepo.insert({
     id: randomUUID(),
-    task_id: taskId,
+    ...owner,
     file_name: fileName,
     ext,
     mime: MIME[ext] ?? '',
@@ -55,9 +59,21 @@ const newStoredName = (ext: string): string => (ext ? `${randomUUID()}.${ext}` :
 
 /** Copy a picked/dropped file into the attachments dir and record it. */
 export function addAttachment(taskId: string, sourcePath: string, fileName: string): Attachment {
-  const storedName = newStoredName(extOf(fileName) || extOf(sourcePath))
+  return copyIn(ofTask(taskId), sourcePath, fileName)
+}
+
+/** Upload straight into a desk's 문서함 (optionally into a folder) — no memo needed. */
+export function addDocument(workspaceId: string, folderId: string | null, sourcePath: string, fileName: string): Attachment {
+  docFolderRepo.requireIn(workspaceId, folderId)
+  return copyIn({ task_id: null, workspace_id: workspaceId, folder_id: folderId }, sourcePath, fileName)
+}
+
+function copyIn(owner: Owner, sourcePath: string, fileName: string): Attachment {
+  const name = basename(fileName || sourcePath).trim()
+  if (!name) throw new Error('파일 이름이 비어 있습니다.')
+  const storedName = newStoredName(extOf(name) || extOf(sourcePath))
   copyFileSync(sourcePath, pathForStored(storedName))
-  return record(taskId, fileName, storedName, statSync(sourcePath).size)
+  return record(owner, name, storedName, statSync(sourcePath).size)
 }
 
 const fileUrl = (storedName: string): string => `aop-file:///${encodeURIComponent(storedName)}`
@@ -83,7 +99,7 @@ export function addAttachmentBytes(
 
   const storedName = newStoredName(extOf(name))
   writeFileSync(pathForStored(storedName), buf)
-  record(taskId, name, storedName, buf.byteLength)
+  record(ofTask(taskId), name, storedName, buf.byteLength)
   return fileUrl(storedName)
 }
 
@@ -103,52 +119,30 @@ export function findAttachmentByUrl(url: string): Attachment | undefined {
   }
 }
 
-/** Produce viewable content for the in-app document viewer. */
-export function renderAttachment(id: string): AttachmentRender {
-  const row = attachmentRepo.getById(id)
-  if (!row) return { kind: 'unsupported', reason: '첨부를 찾을 수 없습니다.' }
-  const abs = pathForStored(row.stored_name)
+/** Viewable content for a file on disk; `url` is how the renderer loads it (PDF / images). */
+export async function renderPath(abs: string, ext: string, url: string): Promise<AttachmentRender> {
   if (!existsSync(abs)) return { kind: 'unsupported', reason: '파일이 존재하지 않습니다.' }
-
-  const ext = row.ext
-
   try {
-    if (ext === 'pdf') return { kind: 'pdf', url: fileUrl(row.stored_name) }
-    if (IMAGE_EXTS.has(ext)) return { kind: 'image', url: fileUrl(row.stored_name) }
+    if (ext === 'pdf') return { kind: 'pdf', url }
+    if (IMAGE_EXTS.has(ext)) return { kind: 'image', url }
     if (SHEET_EXTS.has(ext)) {
       const wb = XLSX.readFile(abs)
-      const sheets = wb.SheetNames.map((name) => ({
-        name,
-        html: XLSX.utils.sheet_to_html(wb.Sheets[name])
-      }))
+      const sheets = wb.SheetNames.map((name) => ({ name, html: XLSX.utils.sheet_to_html(wb.Sheets[name]) }))
       return { kind: 'sheets', sheets }
     }
-    if (TEXT_EXTS.has(ext)) {
-      return { kind: 'text', text: readFileSync(abs, 'utf8') }
-    }
-    // .docx is handled in renderAttachmentAsync; anything else is unsupported here.
+    if (TEXT_EXTS.has(ext)) return { kind: 'text', text: readFileSync(abs, 'utf8') }
+    if (ext === 'docx') return { kind: 'html', html: (await mammoth.convertToHtml({ path: abs })).value }
     return { kind: 'unsupported', reason: `미리보기를 지원하지 않는 형식입니다 (.${ext || '?'})` }
   } catch {
     return { kind: 'unsupported', reason: '문서를 여는 중 오류가 발생했습니다.' }
   }
 }
 
-/** Async path for docx (mammoth is promise-based). Falls back through renderAttachment otherwise. */
+/** Produce viewable content for the in-app document viewer. */
 export async function renderAttachmentAsync(id: string): Promise<AttachmentRender> {
   const row = attachmentRepo.getById(id)
   if (!row) return { kind: 'unsupported', reason: '첨부를 찾을 수 없습니다.' }
-  const abs = pathForStored(row.stored_name)
-  if (!existsSync(abs)) return { kind: 'unsupported', reason: '파일이 존재하지 않습니다.' }
-
-  if (row.ext === 'docx') {
-    try {
-      const result = await mammoth.convertToHtml({ path: abs })
-      return { kind: 'html', html: result.value }
-    } catch {
-      return { kind: 'unsupported', reason: 'Word 문서를 변환하지 못했습니다.' }
-    }
-  }
-  return renderAttachment(id)
+  return renderPath(pathForStored(row.stored_name), row.ext, fileUrl(row.stored_name))
 }
 
 /** Open the original file in the OS default application. */

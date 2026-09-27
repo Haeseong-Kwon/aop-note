@@ -33,12 +33,12 @@ const localDate = (iso: string): string => {
 }
 
 /** Vault-relative path (no extension) for every note; same-named notes in a folder get " (2)". */
-function planPaths(tasks: TaskWithContext[], parentName: Map<string, string>): Map<string, string> {
+function planPaths(tasks: TaskWithContext[], parentNames: Map<string, string[]>): Map<string, string> {
   const used = new Set<string>()
   const paths = new Map<string, string>()
   for (const t of tasks) {
-    const parent = parentName.get(t.category_id)
-    const folder = [t.workspace_name, ...(parent ? [parent] : []), t.category_name].map(fileNameFor).join('/')
+    const parents = parentNames.get(t.category_id) ?? []
+    const folder = [t.workspace_name, ...parents, t.category_name].map(fileNameFor).join('/')
     const name = fileNameFor(t.title)
     let path = `${folder}/${name}`
     for (let n = 2; used.has(path.toLowerCase()); n++) path = `${folder}/${name} (${n})`
@@ -68,11 +68,11 @@ function convertBody(t: TaskWithContext, tasks: TaskWithContext[], paths: Map<st
   })
 }
 
-function frontmatter(t: TaskWithContext, parent: string | undefined): string {
+function frontmatter(t: TaskWithContext, parents: string[] = []): string {
   const lines = [
     `aop_id: ${t.id}`,
     `desk: ${JSON.stringify(t.workspace_name)}`,
-    `category: ${JSON.stringify(parent ? `${parent}/${t.category_name}` : t.category_name)}`,
+    `category: ${JSON.stringify([...parents, t.category_name].join('/'))}`,
     `status: ${t.status}`,
     ...(t.priority > 0 ? [`priority: ${t.priority}`] : []),
     ...(t.due_date ? [`due: ${localDate(t.due_date)}`] : []),
@@ -127,9 +127,7 @@ export function writeVault(root: string): { written: number; removed: number } {
   mkdirSync(base, { recursive: true })
 
   const tasks = taskRepo.listAllWithContext()
-  const categoryParent = new Map<string, string>(
-    taskRepo.listCategoryParents().map((r) => [r.id, r.parent_name])
-  )
+  const categoryParent = new Map(taskRepo.listCategoryPaths().map((r) => [r.id, r.parents]))
   const paths = planPaths(tasks, categoryParent)
   const files = new Set<string>()
   const managed: string[] = []

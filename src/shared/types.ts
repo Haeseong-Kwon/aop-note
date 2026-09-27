@@ -17,6 +17,8 @@ export interface Workspace {
   icon: string
   /** Local project folder (code repo / docs) linked to this desk, or null. */
   folder_path: string | null
+  /** Parent desk (sub-desk in the sidebar tree); null = top level. */
+  parent_id: string | null
   sort_order: number
   created_at: string
   updated_at: string
@@ -38,6 +40,8 @@ export interface Category {
 export interface Task {
   id: string
   category_id: string
+  /** Parent memo (sub-memo), always in the same category; null = top level. */
+  parent_id: string | null
   goal_id: string | null
   title: string
   note: string
@@ -91,7 +95,12 @@ export interface TaskWithContext extends Task {
 
 export interface Attachment {
   id: string
-  task_id: string
+  /** The memo it's attached to; null = uploaded straight to the desk's 문서함. */
+  task_id: string | null
+  /** Set for desk-level uploads (memo attachments take the desk from their memo). */
+  workspace_id: string | null
+  /** 문서함 folder it's filed in; null = top level. */
+  folder_id: string | null
   file_name: string // original name as uploaded
   ext: string // lowercase, no dot (e.g. "pdf")
   mime: string
@@ -102,12 +111,35 @@ export interface Attachment {
   deleted_at: string | null
 }
 
-/** Attachment joined with its task + category, for the desk-wide document library. */
+/** Attachment joined with its task + category (null for desk-level uploads), for the 문서함. */
 export interface AttachmentWithContext extends Attachment {
-  task_title: string
-  category_id: string
-  category_name: string
-  category_color: string
+  task_title: string | null
+  category_id: string | null
+  category_name: string | null
+  category_color: string | null
+}
+
+/** A folder in a desk's 문서함 (independent of task categories). */
+export interface DocFolder {
+  id: string
+  workspace_id: string
+  name: string
+  parent_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateDocFolderInput {
+  workspace_id: string
+  name: string
+  parent_id?: string | null
+}
+
+export interface DocumentUploadInput {
+  workspace_id: string
+  folder_id: string | null
+  source_path: string
+  file_name: string
 }
 
 export type ExportFormat = 'md' | 'html' | 'pdf'
@@ -147,6 +179,7 @@ export interface SearchHit {
 
 export interface CreateWorkspaceInput {
   name: string
+  parent_id?: string | null
   color?: string
   icon?: string
 }
@@ -176,6 +209,8 @@ export interface UpdateCategoryInput {
 
 export interface CreateTaskInput {
   category_id: string
+  /** Create as a sub-memo; category_id is then taken from the parent. */
+  parent_id?: string | null
   goal_id?: string | null
   title: string
   note?: string
@@ -366,7 +401,9 @@ export interface ProjectOverview {
 export interface ProjectFile {
   path: string
   title: string
+  /** Markdown / text; empty for binary documents (PDF, Word, 한글 …) — render those instead. */
   content: string
+  binary: boolean
 }
 
 /** One row of the 프로젝트 list: a desk with a linked folder. */

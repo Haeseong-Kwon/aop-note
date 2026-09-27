@@ -269,6 +269,11 @@ assert.deepEqual(sanitizePageMeta({ icon: '🚀', cover: 'gradient:3', coverPos:
 })
 assert.deepEqual(sanitizePageMeta({ cover: 'image:https://images.example.com/a.jpg' }), { cover: 'image:https://images.example.com/a.jpg' })
 assert.deepEqual(sanitizePageMeta({ cover: 'image:aop-file:///c1.png' }), { cover: 'image:aop-file:///c1.png' })
+// Built-in gallery: bundled artwork / photos by id, CSS patterns by index.
+assert.deepEqual(sanitizePageMeta({ cover: 'preset:met-great-wave' }), { cover: 'preset:met-great-wave' })
+assert.deepEqual(sanitizePageMeta({ cover: 'pattern:4' }), { cover: 'pattern:4' })
+assert.deepEqual(sanitizePageMeta({ cover: 'preset:../../etc' }), {}, 'preset ids are plain slugs')
+assert.deepEqual(sanitizePageMeta({ cover: 'preset:a")b' }), {})
 assert.deepEqual(sanitizePageMeta({ cover: 'image:javascript:alert(1)' }), {}, 'only https / attachment images')
 assert.deepEqual(sanitizePageMeta({ cover: 'image:https://x.com/a.jpg") ; background:url(evil' }), {}, 'no CSS breakout')
 assert.deepEqual(sanitizePageMeta({ font: 'comic' }), {})
@@ -330,3 +335,35 @@ assert.deepEqual(parseViewConfig('{"workspaceId":"w","view":"hack","filters":[{"
 })
 assert.equal(parseViewConfig('not json'), null)
 console.log('database views: all assertions passed')
+
+// --- tree: folders / sub-memos ------------------------------------------------
+import { flattenTree, ancestorsOf } from '@shared/tree'
+{
+  const n = (id: string, parent_id: string | null = null): { id: string; parent_id: string | null } => ({ id, parent_id })
+  const items = [n('b', 'a'), n('a'), n('c', 'b'), n('orphan', 'gone'), n('d')]
+  const rows = (collapsed?: Set<string>): string[] =>
+    flattenTree(items, collapsed).map((r) => `${'.'.repeat(r.depth)}${r.item.id}${r.hasChildren ? '+' : ''}`)
+  assert.deepEqual(rows(), ['a+', '.b+', '..c', 'orphan', 'd'], 'depth-first; missing parent → root')
+  assert.deepEqual(rows(new Set(['a'])), ['a+', 'orphan', 'd'], 'collapsed hides descendants')
+  assert.deepEqual(flattenTree([n('x', 'y'), n('y', 'x')]), [], 'cycles never loop')
+  assert.deepEqual(ancestorsOf(items, 'c').map((i) => i.id), ['a', 'b'], 'root first')
+  assert.deepEqual(ancestorsOf(items, 'a'), [])
+  console.log('tree: all assertions passed')
+}
+
+// --- cover gallery: every preset / pattern renders to CSS ------------------------
+import { COVER_GRADIENTS, COVER_PATTERNS, COVER_PRESETS, coverStyle, randomCover } from './covers'
+{
+  for (const p of COVER_PRESETS) {
+    assert.match(String(coverStyle(`preset:${p.id}`).backgroundImage), /^url\("\.\/covers\/[a-z0-9-]+\.jpg"\)$/)
+    assert.deepEqual(sanitizePageMeta({ cover: `preset:${p.id}` }), { cover: `preset:${p.id}` })
+  }
+  COVER_PATTERNS.forEach((_, i) => assert.ok(coverStyle(`pattern:${i}`).backgroundImage, `pattern ${i}`))
+  assert.equal(coverStyle('preset:unknown').backgroundImage, undefined, 'unknown preset → plain band, no broken url')
+  for (let i = 0; i < 20; i++) assert.ok(sanitizePageMeta({ cover: randomCover() }).cover, 'random picks are valid covers')
+  console.log('covers: all assertions passed')
+}
+{
+  // background-image takes images only: a bare colour layer would void the whole value in the browser.
+  for (const g of COVER_GRADIENTS) assert.ok(!/,\s*#[0-9a-f]{3,8}\s*$/i.test(g), `gradient must not end in a bare colour: ${g}`)
+}

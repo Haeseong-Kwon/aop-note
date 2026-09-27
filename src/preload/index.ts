@@ -3,6 +3,8 @@ import { IPC } from '@shared/ipc'
 import type { Api, NavigatePayload } from '@shared/ipc'
 import type {
   CreateWorkspaceInput,
+  CreateDocFolderInput,
+  DocumentUploadInput,
   UpdateWorkspaceInput,
   CreateCategoryInput,
   UpdateCategoryInput,
@@ -75,7 +77,16 @@ const api: Api = {
     findByUrl: (url: string) => ipcRenderer.invoke(IPC.attachment.findByUrl, url),
     render: (id: string) => ipcRenderer.invoke(IPC.attachment.render, id),
     openExternal: (id: string) => ipcRenderer.invoke(IPC.attachment.openExternal, id),
-    remove: (id: string) => ipcRenderer.invoke(IPC.attachment.remove, id)
+    remove: (id: string) => ipcRenderer.invoke(IPC.attachment.remove, id),
+    upload: (input: DocumentUploadInput) => ipcRenderer.invoke(IPC.attachment.upload, input),
+    move: (id: string, folderId: string | null) => ipcRenderer.invoke(IPC.attachment.move, id, folderId)
+  },
+  docFolder: {
+    list: (workspaceId: string) => ipcRenderer.invoke(IPC.docFolder.list, workspaceId),
+    create: (input: CreateDocFolderInput) => ipcRenderer.invoke(IPC.docFolder.create, input),
+    rename: (id: string, name: string) => ipcRenderer.invoke(IPC.docFolder.rename, id, name),
+    move: (id: string, parentId: string | null) => ipcRenderer.invoke(IPC.docFolder.move, id, parentId),
+    remove: (id: string) => ipcRenderer.invoke(IPC.docFolder.remove, id)
   },
   link: {
     backlinks: (taskId: string) => ipcRenderer.invoke(IPC.link.backlinks, taskId),
@@ -91,6 +102,8 @@ const api: Api = {
     unlink: (deskId: string) => ipcRenderer.invoke(IPC.project.unlink, deskId),
     overview: (deskId: string) => ipcRenderer.invoke(IPC.project.overview, deskId),
     readFile: (deskId: string, path: string) => ipcRenderer.invoke(IPC.project.readFile, deskId, path),
+    renderFile: (deskId: string, path: string) => ipcRenderer.invoke(IPC.project.renderFile, deskId, path),
+    openFile: (deskId: string, path: string) => ipcRenderer.invoke(IPC.project.openFile, deskId, path),
     reveal: (deskId: string, path?: string) => ipcRenderer.invoke(IPC.project.reveal, deskId, path),
     openInClaude: (deskId: string) => ipcRenderer.invoke(IPC.project.openInClaude, deskId)
   },

@@ -1,6 +1,8 @@
 // Main-process checks. Runs under Electron's Node (ELECTRON_RUN_AS_NODE) so
 // better-sqlite3's Electron build loads; `electron` itself is stubbed (test/electron-stub.ts).
 import './repositories/trash.check'
+import './repositories/hierarchy.check'
+import './repositories/docs.check'
 import './backup.check'
 import './repositories/recurrence.check'
 import './repositories/reminder.check'

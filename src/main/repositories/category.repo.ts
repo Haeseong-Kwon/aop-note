@@ -8,6 +8,11 @@ import type {
 
 const DEFAULT_COLOR = '#94a3b8'
 
+/** `sub` = the category bound to the first `?` plus every folder nested under it, at any depth. */
+const SUBTREE = `WITH RECURSIVE sub(id) AS (
+  SELECT ? UNION SELECT c.id FROM categories c JOIN sub ON c.parent_id = sub.id
+)`
+
 export const categoryRepo = {
   listByWorkspace(workspaceId: string): Category[] {
     return getDb()
@@ -62,6 +67,9 @@ export const categoryRepo = {
     const db = getDb()
     const existing = this.getById(input.id)
     if (!existing) throw new Error(`Category not found: ${input.id}`)
+    if (input.parent_id && db.prepare(`${SUBTREE} SELECT 1 FROM sub WHERE id = ?`).get(input.id, input.parent_id)) {
+      throw new Error('폴더를 자기 자신이나 그 하위 폴더 안으로 옮길 수 없습니다.')
+    }
 
     const updated: Category = {
       ...existing,
@@ -91,28 +99,19 @@ export const categoryRepo = {
     tx(updates)
   },
 
-  /** Soft-delete a category, its child categories, and all their tasks. */
+  /** Soft-delete a category, every folder nested under it, and all their tasks — one shared stamp. */
   remove(id: string): void {
     const db = getDb()
     const now = nowIso()
-    const tx = db.transaction(() => {
-      // Collect this category + direct children (1-level nesting only).
-      const childIds = (
-        db.prepare('SELECT id FROM categories WHERE parent_id = ? AND deleted_at IS NULL').all(id) as {
-          id: string
-        }[]
-      ).map((r) => r.id)
-      const allIds = [id, ...childIds]
-      const placeholders = allIds.map(() => '?').join(',')
-
+    db.transaction(() => {
       db.prepare(
-        `UPDATE categories SET deleted_at = ?, updated_at = ? WHERE id IN (${placeholders})`
-      ).run(now, now, ...allIds)
+        `${SUBTREE} UPDATE tasks SET deleted_at = ?, updated_at = ?
+         WHERE deleted_at IS NULL AND category_id IN sub`
+      ).run(id, now, now)
       db.prepare(
-        `UPDATE tasks SET deleted_at = ?, updated_at = ?
-         WHERE deleted_at IS NULL AND category_id IN (${placeholders})`
-      ).run(now, now, ...allIds)
-    })
-    tx()
+        `${SUBTREE} UPDATE categories SET deleted_at = ?, updated_at = ?
+         WHERE deleted_at IS NULL AND id IN sub`
+      ).run(id, now, now)
+    })()
   }
 }

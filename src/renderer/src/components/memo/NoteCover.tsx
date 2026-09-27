@@ -1,9 +1,18 @@
 import { forwardRef, useRef, useState } from 'react'
-import { ImagePlus, Move, Trash2, Upload } from 'lucide-react'
+import { ImagePlus, Move, Shuffle, Trash2, Upload } from 'lucide-react'
 import { Popover } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { toastError } from '@/store/useToast'
-import { COVER_COLORS, COVER_GRADIENTS, coverStyle } from '@/lib/covers'
+import {
+  COVER_COLORS,
+  COVER_GRADIENTS,
+  COVER_GROUP_LABEL,
+  COVER_PATTERNS,
+  COVER_PRESETS,
+  coverStyle,
+  randomCover,
+  type CoverGroup
+} from '@/lib/covers'
 import { cn } from '@/lib/utils'
 import type { PageMeta } from '@shared/pageMeta'
 
@@ -29,8 +38,8 @@ export function CoverPicker({ taskId, anchorEl, onPick, onClose }: { taskId: str
   }
 
   return (
-    <Popover anchorEl={anchorEl} onClose={onClose} width={340} align="right">
-      <div className="mb-2 flex gap-1 border-b border-border pb-2 text-xs" role="tablist">
+    <Popover anchorEl={anchorEl} onClose={onClose} width={400} align="right">
+      <div className="mb-2 flex items-center gap-1 border-b border-border pb-2 text-xs" role="tablist">
         {(
           [
             ['gallery', '갤러리'],
@@ -48,35 +57,38 @@ export function CoverPicker({ taskId, anchorEl, onPick, onClose }: { taskId: str
             {label}
           </button>
         ))}
+        <button
+          onClick={() => onPick({ cover: randomCover(), coverPos: 50 })}
+          className="ml-auto flex items-center gap-1 rounded px-2 py-1 text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+        >
+          <Shuffle className="h-3.5 w-3.5" />
+          랜덤
+        </button>
       </div>
 
       {tab === 'gallery' && (
-        <>
-          <p className="mb-1.5 text-[11px] text-muted-foreground">그라데이션</p>
-          <div className="grid grid-cols-5 gap-1.5">
+        <div className="-mr-2 max-h-[420px] overflow-y-auto pr-2">
+          <GallerySection title="컬러 & 그라데이션">
             {COVER_GRADIENTS.map((_, i) => (
-              <button
-                key={i}
-                aria-label={`그라데이션 ${i + 1}`}
-                onClick={() => onPick({ cover: `gradient:${i}` })}
-                className="h-10 rounded-md transition-transform hover:scale-105"
-                style={coverStyle(`gradient:${i}`)}
-              />
+              <Swatch key={`g${i}`} label={`그라데이션 ${i + 1}`} cover={`gradient:${i}`} onPick={onPick} />
             ))}
-          </div>
-          <p className="mb-1.5 mt-3 text-[11px] text-muted-foreground">단색</p>
-          <div className="grid grid-cols-5 gap-1.5">
             {COVER_COLORS.map((c) => (
-              <button
-                key={c}
-                aria-label={`색 ${c}`}
-                onClick={() => onPick({ cover: `color:${c}` })}
-                className="h-10 rounded-md border border-border transition-transform hover:scale-105"
-                style={{ backgroundColor: c }}
-              />
+              <Swatch key={c} label={`색 ${c}`} cover={`color:${c}`} onPick={onPick} bordered />
             ))}
-          </div>
-        </>
+          </GallerySection>
+          <GallerySection title="패턴">
+            {COVER_PATTERNS.map((p, i) => (
+              <Swatch key={p.name} label={p.name} cover={`pattern:${i}`} onPick={onPick} bordered />
+            ))}
+          </GallerySection>
+          {(Object.keys(COVER_GROUP_LABEL) as CoverGroup[]).map((group) => (
+            <GallerySection key={group} title={COVER_GROUP_LABEL[group]} wide>
+              {COVER_PRESETS.filter((p) => p.group === group).map((p) => (
+                <Swatch key={p.id} label={`${p.title} — ${p.credit}`} cover={`preset:${p.id}`} onPick={onPick} tall />
+              ))}
+            </GallerySection>
+          ))}
+        </div>
       )}
 
       {tab === 'upload' && (
@@ -135,7 +147,7 @@ export function NoteCover({ taskId, meta, onChange }: { taskId: string; meta: Pa
   const drag = useRef<{ y: number; start: number } | null>(null)
   if (!meta.cover) return null
 
-  const isImage = meta.cover.startsWith('image:')
+  const isImage = meta.cover.startsWith('image:') || meta.cover.startsWith('preset:')
   const pos = moving ?? meta.coverPos ?? 50
 
   return (
@@ -193,6 +205,39 @@ export function NoteCover({ taskId, meta, onChange }: { taskId: string; meta: Pa
       </div>
       {picking && <CoverPicker taskId={taskId} anchorEl={changeRef.current} onPick={onChange} onClose={() => setPicking(false)} />}
     </div>
+  )
+}
+
+function GallerySection({ title, wide, children }: { title: string; wide?: boolean; children: React.ReactNode }): JSX.Element {
+  return (
+    <section className="mb-3 last:mb-0">
+      <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">{title}</p>
+      <div className={cn('grid gap-1.5', wide ? 'grid-cols-3' : 'grid-cols-5')}>{children}</div>
+    </section>
+  )
+}
+
+function Swatch({
+  label,
+  cover,
+  onPick,
+  bordered,
+  tall
+}: {
+  label: string
+  cover: string
+  onPick: Patch
+  bordered?: boolean
+  tall?: boolean
+}): JSX.Element {
+  return (
+    <button
+      aria-label={label}
+      title={label}
+      onClick={() => onPick({ cover, coverPos: 50 })}
+      className={cn('rounded-md transition-transform hover:scale-105', tall ? 'h-16' : 'h-10', bordered && 'border border-border')}
+      style={coverStyle(cover)}
+    />
   )
 }
 

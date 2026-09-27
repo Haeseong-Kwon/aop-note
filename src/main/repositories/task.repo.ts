@@ -41,6 +41,11 @@ const LIST_ORDER = `
     created_at ASC
 `
 
+/** `sub` = the task bound to the first `?` plus all its sub-memos, at any depth. */
+const SUBTREE = `WITH RECURSIVE sub(id) AS (
+  SELECT ? UNION SELECT t.id FROM tasks t JOIN sub ON t.parent_id = sub.id
+)`
+
 // Cross-workspace select enriched with category + workspace context.
 const CONTEXT_SELECT = `
   SELECT t.*,
@@ -94,15 +99,23 @@ export const taskRepo = {
     return getDb().prepare(`${CONTEXT_SELECT} ${CONTEXT_ORDER}`).all() as TaskWithContext[]
   },
 
-  /** Child category id → its parent's name (for nesting folders in the vault mirror). */
-  listCategoryParents(): { id: string; parent_name: string }[] {
-    return getDb()
-      .prepare(
-        `SELECT c.id, p.name AS parent_name FROM categories c
-         JOIN categories p ON p.id = c.parent_id
-         WHERE c.deleted_at IS NULL`
-      )
-      .all() as { id: string; parent_name: string }[]
+  /** Nested category id → its ancestors' names, root first (for nesting folders in the vault mirror). */
+  listCategoryPaths(): { id: string; parents: string[] }[] {
+    const rows = getDb()
+      .prepare('SELECT id, name, parent_id FROM categories WHERE deleted_at IS NULL')
+      .all() as { id: string; name: string; parent_id: string | null }[]
+    const byId = new Map(rows.map((r) => [r.id, r]))
+    return rows
+      .filter((r) => r.parent_id)
+      .map((r) => {
+        const parents: string[] = []
+        const seen = new Set([r.id])
+        for (let p = byId.get(r.parent_id ?? ''); p && !seen.has(p.id); p = byId.get(p.parent_id ?? '')) {
+          seen.add(p.id)
+          parents.unshift(p.name)
+        }
+        return { id: r.id, parents }
+      })
   },
 
   listDueBetween(startIso: string, endIso: string): TaskWithContext[] {
@@ -138,6 +151,10 @@ export const taskRepo = {
     const db = getDb()
     const now = nowIso()
     const status: TaskStatus = input.status ?? 'todo'
+    const parent = input.parent_id ? this.getById(input.parent_id) : null
+    if (input.parent_id && !parent) throw new Error('상위 메모를 찾을 수 없습니다.')
+    // A sub-memo always lives in its parent's folder.
+    const categoryId = parent?.category_id ?? input.category_id
     const nextOrder =
       (
         db
@@ -145,12 +162,13 @@ export const taskRepo = {
             `SELECT COALESCE(MAX(sort_order), -1) AS m FROM tasks
              WHERE category_id = ? AND status = ? AND deleted_at IS NULL`
           )
-          .get(input.category_id, status) as { m: number }
+          .get(categoryId, status) as { m: number }
       ).m + 1
 
     const row: Task = {
       id: newId(),
-      category_id: input.category_id,
+      category_id: categoryId,
+      parent_id: parent?.id ?? null,
       goal_id: input.goal_id ?? null,
       title: input.title,
       note: input.note ?? '',
@@ -170,9 +188,9 @@ export const taskRepo = {
 
     db.prepare(
       `INSERT INTO tasks
-         (id, category_id, goal_id, title, note, status, priority, due_date, recurrence, remind_at, note_doc, page_meta, sort_order, created_at, updated_at, completed_at)
+         (id, category_id, parent_id, goal_id, title, note, status, priority, due_date, recurrence, remind_at, note_doc, page_meta, sort_order, created_at, updated_at, completed_at)
        VALUES
-         (@id, @category_id, @goal_id, @title, @note, @status, @priority, @due_date, @recurrence, @remind_at, @note_doc, @page_meta, @sort_order, @created_at, @updated_at, @completed_at)`
+         (@id, @category_id, @parent_id, @goal_id, @title, @note, @status, @priority, @due_date, @recurrence, @remind_at, @note_doc, @page_meta, @sort_order, @created_at, @updated_at, @completed_at)`
     ).run(row)
 
     return row
@@ -192,8 +210,11 @@ export const taskRepo = {
           ? null
           : existing.completed_at
 
+    const moved = input.category_id !== undefined && input.category_id !== existing.category_id
     const updated: Task = {
       ...existing,
+      // Moved out of its parent's folder → becomes a top-level memo there.
+      parent_id: moved ? null : existing.parent_id,
       title: input.title ?? existing.title,
       note: input.note ?? existing.note,
       status: nextStatus,
@@ -216,10 +237,19 @@ export const taskRepo = {
            title = @title, note = @note, status = @status, priority = @priority,
            due_date = @due_date, recurrence = @recurrence, remind_at = @remind_at,
            note_doc = @note_doc, page_meta = @page_meta, sort_order = @sort_order,
-           category_id = @category_id, goal_id = @goal_id, completed_at = @completed_at,
+           category_id = @category_id, parent_id = @parent_id, goal_id = @goal_id, completed_at = @completed_at,
            updated_at = @updated_at
          WHERE id = @id`
       ).run(updated)
+      // Sub-memos follow their parent into the new folder.
+      if (moved) {
+        db.prepare(`${SUBTREE} UPDATE tasks SET category_id = ?, updated_at = ? WHERE id IN sub AND id != ?`).run(
+          updated.id,
+          updated.category_id,
+          updated.updated_at,
+          updated.id
+        )
+      }
       // A moved reminder is a new one: let it fire again.
       if (updated.remind_at !== existing.remind_at) {
         db.prepare('UPDATE tasks SET reminded_at = NULL WHERE id = ?').run(updated.id)
@@ -264,6 +294,7 @@ export const taskRepo = {
     if (!source) throw new Error(`Task not found: ${id}`)
     return this.create({
       category_id: source.category_id,
+      parent_id: source.parent_id,
       goal_id: source.goal_id,
       title: `${source.title} (사본)`,
       note: source.note,
@@ -296,6 +327,7 @@ export const taskRepo = {
     if (exists) return
     this.create({
       category_id: task.category_id,
+      parent_id: task.parent_id,
       goal_id: task.goal_id,
       title: task.title,
       note: resetChecklist(task.note),
@@ -331,8 +363,11 @@ export const taskRepo = {
     tx(updates)
   },
 
+  /** Soft-delete a memo and all its sub-memos with one shared stamp (one trash entry). */
   remove(id: string): void {
     const now = nowIso()
-    getDb().prepare('UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE id = ?').run(now, now, id)
+    getDb()
+      .prepare(`${SUBTREE} UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND id IN sub`)
+      .run(id, now, now)
   }
 }

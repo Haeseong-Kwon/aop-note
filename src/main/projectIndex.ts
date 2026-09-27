@@ -37,7 +37,13 @@ export interface ProjectIndex {
   scannedAt: number
 }
 
-const DOC_EXT = /\.(md|mdx|markdown|txt)$/i
+/** Text docs are read for titles and links; office / PDF / 한글 docs are graph nodes by file name. */
+export const TEXT_DOC_EXT = /\.(md|mdx|markdown|txt)$/i
+export const DOC_EXT =
+  /\.(md|mdx|markdown|txt|pdf|docx?|hwpx?|pptx?|key|pages|xlsx?|xlsm|csv|numbers|rtf|odt|ods|odp)$/i
+const EXT = /\.[^./]+$/
+/** macOS stores 한글 file names decomposed (NFD); compare everything composed. */
+const nfc = (s: string): string => s.normalize('NFC')
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'out', 'build', 'coverage', 'vendor', 'target', '__pycache__'])
 const MAX_LISTED = 50_000
 const MAX_DOCS = 2_000
@@ -81,10 +87,10 @@ function listByWalk(root: string): string[] {
 
 const MD_LINK = /\[[^\]]*\]\(([^)\s]+)\)/g
 
-function parseDoc(root: string, path: string, docPaths: Set<string>): DocFile {
+function parseDoc(root: string, path: string, docPaths: Map<string, string>): DocFile {
   const abs = join(root, path)
   const stat = statSync(abs)
-  const text = stat.size <= MAX_DOC_BYTES ? readFileSync(abs, 'utf8') : ''
+  const text = TEXT_DOC_EXT.test(path) && stat.size <= MAX_DOC_BYTES ? readFileSync(abs, 'utf8') : ''
   const heading = text.match(/^#\s+(.+)$/m)?.[1].trim()
   const fileLinks = new Set<string>()
   for (const m of text.matchAll(MD_LINK)) {
@@ -96,12 +102,12 @@ function parseDoc(root: string, path: string, docPaths: Set<string>): DocFile {
     } catch {
       /* keep as written */
     }
-    const resolved = posix.normalize(posix.join(posix.dirname(path), decoded))
-    if (docPaths.has(resolved)) fileLinks.add(resolved)
+    const resolved = docPaths.get(nfc(posix.normalize(posix.join(posix.dirname(path), decoded))))
+    if (resolved) fileLinks.add(resolved)
   }
   return {
     path,
-    title: heading || posix.basename(path).replace(DOC_EXT, ''),
+    title: heading || nfc(posix.basename(path).replace(EXT, '')),
     links: extractLinks(text).map((l) => l.target),
     fileLinks: [...fileLinks],
     size: stat.size,
@@ -114,7 +120,7 @@ export function scanProject(root: string): ProjectIndex {
   const listed = viaGit ?? listByWalk(root)
   const docs = listed.filter((p) => DOC_EXT.test(p)).sort()
   const kept = docs.slice(0, MAX_DOCS)
-  const docPaths = new Set(kept)
+  const docPaths = new Map(kept.map((p) => [nfc(p), p]))
   return {
     root,
     git: viaGit !== null,
@@ -130,16 +136,16 @@ export function scanProject(root: string): ProjectIndex {
  * (extension optional), else a unique file name. Ambiguous names resolve to nothing.
  */
 export function resolveFile(index: ProjectIndex, target: string): string | null {
-  const t = target.trim().replace(/\\/g, '/').replace(/^\.?\//, '').toLowerCase()
+  const t = nfc(target.trim().replace(/\\/g, '/').replace(/^\.?\//, '')).toLowerCase()
   if (!t) return null
   const exact = index.files.find((f) => {
-    const p = f.path.toLowerCase()
-    return p === t || p.replace(DOC_EXT, '') === t
+    const p = nfc(f.path).toLowerCase()
+    return p === t || p.replace(EXT, '') === t
   })
   if (exact) return exact.path
   const byName = index.files.filter((f) => {
-    const name = posix.basename(f.path).toLowerCase()
-    return name === t || name.replace(DOC_EXT, '') === t
+    const name = nfc(posix.basename(f.path)).toLowerCase()
+    return name === t || name.replace(EXT, '') === t
   })
   return byName.length === 1 ? byName[0].path : null
 }

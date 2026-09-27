@@ -7,8 +7,10 @@ import { taskRepo } from '../repositories/task.repo'
 import { goalRepo } from '../repositories/goal.repo'
 import { searchRepo } from '../repositories/search.repo'
 import { attachmentRepo } from '../repositories/attachment.repo'
+import { docFolderRepo } from '../repositories/docFolder.repo'
 import {
   addAttachment,
+  addDocument,
   addAttachmentBytes,
   findAttachmentByUrl,
   renderAttachmentAsync,
@@ -41,11 +43,15 @@ import {
   unlinkFolder,
   projectOverview,
   readProjectFile,
+  renderProjectFile,
+  openProjectFileExternal,
   revealInFinder,
   openInClaudeCode
 } from '../projects'
 import type {
   CreateWorkspaceInput,
+  CreateDocFolderInput,
+  DocumentUploadInput,
   UpdateWorkspaceInput,
   CreateCategoryInput,
   UpdateCategoryInput,
@@ -138,6 +144,17 @@ export function registerIpcHandlers(): void {
   handle(IPC.attachment.render, (id: string) => renderAttachmentAsync(id))
   handle(IPC.attachment.openExternal, (id: string) => openAttachmentExternal(id))
   handle(IPC.attachment.remove, (id: string) => removeAttachment(id))
+  handle(IPC.attachment.upload, (input: DocumentUploadInput) =>
+    addDocument(input.workspace_id, input.folder_id ?? null, input.source_path, input.file_name)
+  )
+  handle(IPC.attachment.move, (id: string, folderId: string | null) => attachmentRepo.move(id, folderId ?? null))
+
+  // ---- 문서함 folders ----
+  handle(IPC.docFolder.list, (workspaceId: string) => docFolderRepo.list(workspaceId))
+  handle(IPC.docFolder.create, (input: CreateDocFolderInput) => docFolderRepo.create(input))
+  handle(IPC.docFolder.rename, (id: string, name: string) => docFolderRepo.rename(id, name))
+  handle(IPC.docFolder.move, (id: string, parentId: string | null) => docFolderRepo.move(id, parentId ?? null))
+  handle(IPC.docFolder.remove, (id: string) => docFolderRepo.remove(id))
 
   // ---- Links ----
   handle(IPC.link.backlinks, (taskId: string) => linkRepo.backlinks(taskId))
@@ -152,6 +169,11 @@ export function registerIpcHandlers(): void {
   handle(IPC.project.unlink, (deskId: string) => unlinkFolder(deskId))
   handle(IPC.project.overview, (deskId: string) => projectOverview(deskId))
   handle(IPC.project.readFile, (deskId: string, path: string) => readProjectFile(deskId, path))
+  handle(IPC.project.renderFile, (deskId: string, path: string) => renderProjectFile(deskId, path))
+  handle(IPC.project.openFile, async (deskId: string, path: string) => {
+    const error = await openProjectFileExternal(deskId, path)
+    if (error) throw new Error(`파일을 열지 못했습니다: ${error}`)
+  })
   handle(IPC.project.reveal, (deskId: string, path?: string) => revealInFinder(deskId, path))
   handle(IPC.project.openInClaude, (deskId: string) => openInClaudeCode(deskId))
 

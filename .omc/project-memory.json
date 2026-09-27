@@ -217,6 +217,12 @@
       "type": "file"
     },
     {
+      "path": "src/main/index.ts",
+      "accessCount": 4,
+      "lastAccessed": 1790539638434,
+      "type": "file"
+    },
+    {
       "path": "src/renderer/src/lib/smartTypography.ts",
       "accessCount": 3,
       "lastAccessed": 1784405372734,
@@ -232,12 +238,6 @@
       "path": "src/renderer/src/components/ui/dialog.tsx",
       "accessCount": 3,
       "lastAccessed": 1784410545180,
-      "type": "file"
-    },
-    {
-      "path": "src/main/index.ts",
-      "accessCount": 3,
-      "lastAccessed": 1784495546810,
       "type": "file"
     },
     {
@@ -268,6 +268,12 @@
       "path": "tailwind.config.js",
       "accessCount": 2,
       "lastAccessed": 1784410306310,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/docs/DocGrid.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1790538531039,
       "type": "file"
     },
     {
@@ -352,6 +358,48 @@
       "path": "src/renderer/src/components/AiSettings.tsx",
       "accessCount": 1,
       "lastAccessed": 1790464042861,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/hierarchy.check.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790537927597,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/tree.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790537999659,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/docs.check.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790538341326,
+      "type": "file"
+    },
+    {
+      "path": "src/main/repositories/docFolder.repo.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790538368104,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/docs/dnd.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790538460802,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/docs/DocFolderTree.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790538461149,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/DocumentsView.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790538520265,
       "type": "file"
     }
   ],

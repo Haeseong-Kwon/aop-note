@@ -16,6 +16,7 @@ import {
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Priority, Recurrence, Task, TaskStatus } from '@shared/types'
+import { flattenTree } from '@shared/tree'
 
 const STATUSES: TaskStatus[] = ['todo', 'doing', 'done']
 const PRIORITIES: Priority[] = [0, 1, 2, 3]
@@ -91,9 +92,9 @@ export function TaskInlineEditor({ task }: { task: Task }): JSX.Element {
             onChange={(e) => updateTask({ id: task.id, category_id: e.target.value })}
             className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
           >
-            {categories.map((c) => (
+            {flattenTree(categories).map(({ item: c, depth }) => (
               <option key={c.id} value={c.id}>
-                {c.parent_id ? '— ' : ''}
+                {'\u00a0\u00a0'.repeat(depth)}
                 {c.name}
               </option>
             ))}

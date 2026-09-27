@@ -3,15 +3,19 @@ import DOMPurify from 'dompurify'
 import { ExternalLink, Loader2, X, ZoomIn, ZoomOut, Maximize, FileText } from 'lucide-react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { toastError } from '@/store/useToast'
 import type { AttachmentRender } from '@shared/types'
 
 interface DocumentViewerProps {
-  attachmentId: string
+  /** A 문서함 / memo attachment … */
+  attachmentId?: string
+  /** … or a document in a desk's linked folder. */
+  projectFile?: { deskId: string; path: string }
   fileName: string
   onClose: () => void
 }
 
-export function DocumentViewer({ attachmentId, fileName, onClose }: DocumentViewerProps): JSX.Element {
+export function DocumentViewer({ attachmentId, projectFile, fileName, onClose }: DocumentViewerProps): JSX.Element {
   const [render, setRender] = useState<AttachmentRender | null>(null)
   const [sheetIndex, setSheetIndex] = useState(0)
   const [zoom, setZoom] = useState(1)
@@ -21,13 +25,23 @@ export function DocumentViewer({ attachmentId, fileName, onClose }: DocumentView
     setRender(null)
     setSheetIndex(0)
     setZoom(1)
-    window.api.attachment.render(attachmentId).then((r) => {
-      if (alive) setRender(r)
-    })
+    const load = projectFile
+      ? window.api.project.renderFile(projectFile.deskId, projectFile.path)
+      : window.api.attachment.render(attachmentId ?? '')
+    load.then(
+      (r) => alive && setRender(r),
+      (e: unknown) => alive && setRender({ kind: 'unsupported', reason: e instanceof Error ? e.message : String(e) })
+    )
     return () => {
       alive = false
     }
-  }, [attachmentId])
+  }, [attachmentId, projectFile?.deskId, projectFile?.path])
+
+  const openExternal = (): void =>
+    void (projectFile
+      ? window.api.project.openFile(projectFile.deskId, projectFile.path)
+      : window.api.attachment.openExternal(attachmentId ?? '')
+    ).catch(toastError)
 
   const isImage = render?.kind === 'image'
 
@@ -61,7 +75,7 @@ export function DocumentViewer({ attachmentId, fileName, onClose }: DocumentView
             </div>
           )}
 
-          <ToolButton title="외부 앱으로 열기" onClick={() => window.api.attachment.openExternal(attachmentId)}>
+          <ToolButton title="외부 앱으로 열기" onClick={openExternal}>
             <ExternalLink className="h-4 w-4" />
           </ToolButton>
           <ToolButton title="닫기" onClick={onClose}>

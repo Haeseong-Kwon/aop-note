@@ -5,6 +5,7 @@ import { toastError } from '@/store/useToast'
 import { cn } from '@/lib/utils'
 import type { Field, FilterOp, ViewConfig, ViewKind } from '@/lib/database'
 import type { Category, DatabaseData, PropertyType } from '@shared/types'
+import { flattenTree } from '@shared/tree'
 
 export const VIEW_TABS: { value: ViewKind; label: string; icon: typeof Table2 }[] = [
   { value: 'table', label: '표', icon: Table2 },
@@ -145,9 +146,9 @@ export function Toolbar({ cfg, data, categories, onConfig, onChanged, onNew }: T
         className={cn(selectClass, 'ml-1 max-w-[9rem]')}
       >
         <option value="">데스크 전체</option>
-        {categories.map((c) => (
+        {flattenTree(categories).map(({ item: c, depth }) => (
           <option key={c.id} value={c.id}>
-            {c.parent_id ? '— ' : ''}
+            {'\u00a0\u00a0'.repeat(depth)}
             {c.name}
           </option>
         ))}

@@ -1,11 +1,12 @@
 import { execFile } from 'child_process'
 import { watch, readFileSync, type FSWatcher } from 'fs'
-import { join } from 'path'
+import { extname, join } from 'path'
 import { dialog, shell, type BrowserWindow } from 'electron'
 import { workspaceRepo } from './repositories/workspace.repo'
-import { getProjectIndex, invalidateProject, validateFolder } from './projectIndex'
+import { DOC_EXT, TEXT_DOC_EXT, getProjectIndex, invalidateProject, validateFolder } from './projectIndex'
 import { getGitInfo, invalidateGit } from './git'
-import type { ProjectFile, ProjectOverview, ProjectSummary, Workspace } from '@shared/types'
+import { renderPath } from './attachments'
+import type { AttachmentRender, ProjectFile, ProjectOverview, ProjectSummary, Workspace } from '@shared/types'
 
 const MAX_READ_BYTES = 2 * 1024 * 1024
 const WATCH_DEBOUNCE_MS = 800
@@ -90,8 +91,31 @@ export function readProjectFile(deskId: string, path: string): ProjectFile {
   const { folder } = deskFolder(deskId)
   const file = getProjectIndex(folder)?.files.find((f) => f.path === path)
   if (!file) throw new Error(`프로젝트 문서가 아닙니다: ${path}`)
-  const content = file.size > MAX_READ_BYTES ? '_파일이 너무 커서 미리보기를 생략했습니다._' : readFileSync(join(folder, file.path), 'utf8')
-  return { path: file.path, title: file.title, content }
+  const binary = !TEXT_DOC_EXT.test(file.path)
+  const content =
+    binary ? '' : file.size > MAX_READ_BYTES ? '_파일이 너무 커서 미리보기를 생략했습니다._' : readFileSync(join(folder, file.path), 'utf8')
+  return { path: file.path, title: file.title, content, binary }
+}
+
+/** Absolute path of an indexed project document, or null — the guard behind aop-project:// URLs. */
+export function projectFilePath(deskId: string, path: string): string | null {
+  const folder = workspaceRepo.getById(deskId)?.folder_path
+  const file = folder ? getProjectIndex(folder)?.files.find((f) => f.path === path) : undefined
+  return folder && file ? join(folder, file.path) : null
+}
+
+/** PDF / Word / Excel … preview of a project document, same viewer as 문서함. */
+export function renderProjectFile(deskId: string, path: string): Promise<AttachmentRender> {
+  const abs = projectFilePath(deskId, path)
+  if (!abs) throw new Error(`프로젝트 문서가 아닙니다: ${path}`)
+  const url = `aop-project:///${encodeURIComponent(deskId)}/${encodeURIComponent(path)}`
+  return renderPath(abs, extname(path).slice(1).toLowerCase(), url)
+}
+
+export function openProjectFileExternal(deskId: string, path: string): Promise<string> {
+  const abs = projectFilePath(deskId, path)
+  if (!abs) throw new Error(`프로젝트 문서가 아닙니다: ${path}`)
+  return shell.openPath(abs)
 }
 
 export function revealInFinder(deskId: string, path?: string): void {
@@ -126,7 +150,6 @@ end tell`
 const watchers = new Map<string, FSWatcher>()
 let notify: (deskId: string) => void = () => undefined
 
-const DOC_CHANGE = /\.(md|mdx|markdown|txt)$/i
 // Branch switches and commits move HEAD / refs; index and object writes are noise.
 const GIT_STATE_CHANGE = /^\.git[\\/](HEAD|packed-refs|refs[\\/])/
 
@@ -148,7 +171,7 @@ export function refreshWatchers(): void {
       const w = watch(folder, { recursive: true }, (_event, name) => {
         const file = String(name ?? '')
         // Docs changed, or git HEAD / refs moved.
-        if (!DOC_CHANGE.test(file) && !GIT_STATE_CHANGE.test(file)) return
+        if (!DOC_EXT.test(file) && !GIT_STATE_CHANGE.test(file)) return
         if (file.includes('node_modules')) return
         if (timer) clearTimeout(timer)
         timer = setTimeout(() => {

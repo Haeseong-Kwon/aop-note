@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { Plus, Trash2, CornerDownRight, GripVertical } from 'lucide-react'
+import { Plus, Trash2, ChevronRight, GripVertical } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -21,23 +21,30 @@ import { StylePicker } from './StylePicker'
 import { cn } from '@/lib/utils'
 import type { Category, Task, UpdateCategoryInput } from '@shared/types'
 
+const INDENT_PX = 14
+
 interface CategoryRowProps {
   category: Category
-  child?: boolean
+  depth: number
   openCount: number
   active: boolean
+  /** undefined = no children (no chevron) */
+  collapsed?: boolean
   handle?: ReactNode
+  onToggle: () => void
   onSelect: () => void
-  onAddChild?: () => void
+  onAddChild: () => void
   onDelete: () => void
 }
 
 function CategoryRow({
   category,
-  child = false,
+  depth,
   openCount,
   active,
+  collapsed,
   handle,
+  onToggle,
   onSelect,
   onAddChild,
   onDelete
@@ -49,15 +56,22 @@ function CategoryRow({
   return (
     <div
       className={cn(
-        'group relative flex h-[30px] items-center gap-1.5 rounded-md pr-1 text-sm transition-colors',
-        child ? 'pl-7' : 'pl-1.5',
+        'group relative flex h-[30px] items-center gap-1 rounded-md pl-1.5 pr-1 text-sm transition-colors',
         active
           ? 'bg-accent font-medium text-foreground'
           : 'text-foreground/80 hover:bg-accent/60 hover:text-foreground'
       )}
+      style={{ paddingLeft: 6 + depth * INDENT_PX }}
     >
       {handle}
-      {child && <CornerDownRight className="h-3 w-3 shrink-0 opacity-40" />}
+      <button
+        onClick={onToggle}
+        disabled={collapsed === undefined}
+        aria-label={collapsed ? '펼치기' : '접기'}
+        className="no-drag flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent disabled:invisible"
+      >
+        <ChevronRight className={cn('h-3 w-3 transition-transform', !collapsed && 'rotate-90')} />
+      </button>
       <button
         ref={dotBtnRef}
         onClick={() => setPickerOpen((v) => !v)}
@@ -83,11 +97,9 @@ function CategoryRow({
         </span>
       )}
       <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
-        {onAddChild && (
-          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onAddChild} title="하위 카테고리 추가">
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
-        )}
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onAddChild} title="하위 카테고리 추가">
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onDelete} title="삭제">
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
@@ -112,23 +124,30 @@ function dragHandle(
   )
 }
 
-// A sortable child category nested under its root.
-function ChildRow({
-  category,
-  active,
-  openCount,
-  onSelect,
-  onDelete
-}: {
+interface CategoryNodeProps {
   category: Category
-  active: boolean
-  openCount: number
-  onSelect: () => void
-  onDelete: () => void
-}): JSX.Element {
+  depth: number
+  childrenOf: Map<string | null, Category[]>
+  collapsed: ReadonlySet<string>
+  activeCategoryId: string | null
+  openCount: Map<string, number>
+  addingParentId: string | null | undefined
+  renderInput: (depth: number) => ReactNode
+  onToggle: (id: string) => void
+  onSelect: (id: string) => void
+  onAddChild: (id: string) => void
+  onDelete: (id: string) => void
+}
+
+// A sortable folder with its (independently sortable) sub-folders, to any depth.
+function CategoryNode(props: CategoryNodeProps): JSX.Element {
+  const { category, depth, childrenOf, collapsed, addingParentId } = props
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: category.id
   })
+  const children = childrenOf.get(category.id) ?? []
+  const isCollapsed = collapsed.has(category.id)
+
   return (
     <div
       ref={setNodeRef}
@@ -137,71 +156,24 @@ function ChildRow({
     >
       <CategoryRow
         category={category}
-        child
-        active={active}
-        openCount={openCount}
+        depth={depth}
+        active={category.id === props.activeCategoryId}
+        openCount={props.openCount.get(category.id) ?? 0}
+        collapsed={children.length > 0 ? isCollapsed : undefined}
         handle={dragHandle(attributes, listeners)}
-        onSelect={onSelect}
-        onDelete={onDelete}
+        onToggle={() => props.onToggle(category.id)}
+        onSelect={() => props.onSelect(category.id)}
+        onAddChild={() => props.onAddChild(category.id)}
+        onDelete={() => props.onDelete(category.id)}
       />
-    </div>
-  )
-}
-
-interface RootBlockProps {
-  root: Category
-  children: Category[]
-  activeCategoryId: string | null
-  openCount: Map<string, number>
-  onSelect: (id: string) => void
-  onAddChild: (id: string) => void
-  onDelete: (id: string) => void
-  addingNode: ReactNode
-}
-
-// Sortable wrapper for a root category and its (independently sortable) children.
-function RootBlock({
-  root,
-  children,
-  activeCategoryId,
-  openCount,
-  onSelect,
-  onAddChild,
-  onDelete,
-  addingNode
-}: RootBlockProps): JSX.Element {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: root.id
-  })
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={isDragging ? 'relative z-10 opacity-80' : ''}
-    >
-      <CategoryRow
-        category={root}
-        active={root.id === activeCategoryId}
-        openCount={openCount.get(root.id) ?? 0}
-        handle={dragHandle(attributes, listeners)}
-        onSelect={() => onSelect(root.id)}
-        onAddChild={() => onAddChild(root.id)}
-        onDelete={() => onDelete(root.id)}
-      />
-      <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-        {children.map((c) => (
-          <ChildRow
-            key={c.id}
-            category={c}
-            active={c.id === activeCategoryId}
-            openCount={openCount.get(c.id) ?? 0}
-            onSelect={() => onSelect(c.id)}
-            onDelete={() => onDelete(c.id)}
-          />
-        ))}
-      </SortableContext>
-      {addingNode}
+      {!isCollapsed && (
+        <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          {children.map((c) => (
+            <CategoryNode key={c.id} {...props} category={c} depth={depth + 1} />
+          ))}
+        </SortableContext>
+      )}
+      {addingParentId === category.id && props.renderInput(depth + 1)}
     </div>
   )
 }
@@ -218,14 +190,21 @@ export function CategoryPanel(): JSX.Element {
 
   const [adding, setAdding] = useState<{ parentId: string | null } | null>(null)
   const [name, setName] = useState('')
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  // Build a 1-level tree: roots (parent_id null) + their direct children.
-  const tree = useMemo(() => {
-    const roots = categories.filter((c) => !c.parent_id)
-    const childrenOf = (id: string): Category[] => categories.filter((c) => c.parent_id === id)
-    return roots.map((root) => ({ root, children: childrenOf(root.id) }))
+  const childrenOf = useMemo(() => {
+    const map = new Map<string | null, Category[]>()
+    categories.forEach((c) => map.set(c.parent_id ?? null, [...(map.get(c.parent_id ?? null) ?? []), c]))
+    return map
   }, [categories])
+
+  const toggle = (id: string): void =>
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
 
   const openCount = useMemo(() => {
     const map = new Map<string, number>()
@@ -245,9 +224,11 @@ export function CategoryPanel(): JSX.Element {
   const startAdd = (parentId: string | null): void => {
     setAdding({ parentId })
     setName('')
+    // Show where the new sub-folder lands.
+    if (parentId) setCollapsed((prev) => new Set([...prev].filter((id) => id !== parentId)))
   }
 
-  // Reorder roots among roots, or children among their own siblings (1-level only).
+  // Reorder a folder among its own siblings (same parent).
   const onDragEnd = (e: DragEndEvent): void => {
     const { active, over } = e
     if (!over || active.id === over.id) return
@@ -273,7 +254,7 @@ export function CategoryPanel(): JSX.Element {
     return <section className="w-64 shrink-0 border-r border-border" />
   }
 
-  const rootIds = tree.map((t) => t.root.id)
+  const roots = childrenOf.get(null) ?? []
 
   return (
     <section className="glass-chrome flex w-64 shrink-0 flex-col border-r border-border">
@@ -292,29 +273,31 @@ export function CategoryPanel(): JSX.Element {
 
       <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
-            {tree.map(({ root, children }) => (
-              <RootBlock
+          <SortableContext items={roots.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+            {roots.map((root) => (
+              <CategoryNode
                 key={root.id}
-                root={root}
-                children={children}
+                category={root}
+                depth={0}
+                childrenOf={childrenOf}
+                collapsed={collapsed}
                 activeCategoryId={activeCategoryId}
                 openCount={openCount}
+                addingParentId={adding?.parentId}
+                renderInput={(depth) => (
+                  <CategoryInput
+                    value={name}
+                    placeholder="하위 카테고리"
+                    depth={depth}
+                    onChange={setName}
+                    onSubmit={submit}
+                    onCancel={() => setAdding(null)}
+                  />
+                )}
+                onToggle={toggle}
                 onSelect={selectCategory}
                 onAddChild={startAdd}
                 onDelete={deleteCategory}
-                addingNode={
-                  adding?.parentId === root.id ? (
-                    <CategoryInput
-                      value={name}
-                      placeholder="하위 카테고리"
-                      indent
-                      onChange={setName}
-                      onSubmit={submit}
-                      onCancel={() => setAdding(null)}
-                    />
-                  ) : null
-                }
               />
             ))}
           </SortableContext>
@@ -343,7 +326,7 @@ export function CategoryPanel(): JSX.Element {
 interface CategoryInputProps {
   value: string
   placeholder: string
-  indent?: boolean
+  depth?: number
   onChange: (v: string) => void
   onSubmit: () => void
   onCancel: () => void
@@ -352,13 +335,13 @@ interface CategoryInputProps {
 function CategoryInput({
   value,
   placeholder,
-  indent = false,
+  depth = 0,
   onChange,
   onSubmit,
   onCancel
 }: CategoryInputProps): JSX.Element {
   return (
-    <div className={cn('py-1', indent ? 'pl-7 pr-1' : 'px-2')}>
+    <div className="py-1 pr-1" style={{ paddingLeft: 8 + depth * INDENT_PX }}>
       <input
         autoFocus
         value={value}

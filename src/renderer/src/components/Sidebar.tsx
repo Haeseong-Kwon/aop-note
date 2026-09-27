@@ -12,6 +12,7 @@ import {
   Pencil,
   Trash2,
   GripVertical,
+  ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   Keyboard,
@@ -42,7 +43,10 @@ import { DeskIcon } from './DeskIcon'
 import { StylePicker } from './StylePicker'
 import { cn, IS_MAC } from '@/lib/utils'
 import type { Theme } from '@/store/useStore'
+import { flattenTree } from '@shared/tree'
 import type { Workspace, UpdateWorkspaceInput } from '@shared/types'
+
+const INDENT_PX = 14
 
 const THEMES: { value: Theme; icon: typeof Sun; label: string }[] = [
   { value: 'light', icon: Sun, label: '라이트' },
@@ -52,6 +56,11 @@ const THEMES: { value: Theme; icon: typeof Sun; label: string }[] = [
 
 interface DeskRowProps {
   ws: Workspace
+  depth: number
+  /** undefined = no sub-desks (no chevron) */
+  collapsed?: boolean
+  onToggle: () => void
+  onAddChild: () => void
   active: boolean
   editing: boolean
   editName: string
@@ -65,6 +74,10 @@ interface DeskRowProps {
 
 function DeskRow({
   ws,
+  depth,
+  collapsed,
+  onToggle,
+  onAddChild,
   active,
   editing,
   editName,
@@ -111,14 +124,14 @@ function DeskRow({
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        'group relative flex h-[30px] items-center gap-1.5 rounded-md px-2 text-sm transition-colors',
+        'group relative flex h-[30px] items-center gap-1.5 rounded-md pr-2 text-sm transition-colors',
         active
           ? 'bg-accent font-medium text-foreground'
           : 'text-foreground/80 hover:bg-accent/60 hover:text-foreground',
         isDragging && 'z-10 opacity-80'
       )}
+      style={{ transform: CSS.Transform.toString(transform), transition, paddingLeft: 8 + depth * INDENT_PX }}
     >
       <button
         {...attributes}
@@ -127,6 +140,14 @@ function DeskRow({
         className="no-drag -ml-0.5 cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
       >
         <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <button
+        onClick={onToggle}
+        disabled={collapsed === undefined}
+        aria-label={collapsed ? '하위 데스크 펼치기' : '하위 데스크 접기'}
+        className="no-drag -mx-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent disabled:hidden"
+      >
+        <ChevronRight className={cn('h-3 w-3 transition-transform', !collapsed && 'rotate-90')} />
       </button>
 
       <button
@@ -151,6 +172,9 @@ function DeskRow({
         {ws.name}
       </button>
       <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onAddChild} title="하위 데스크 추가">
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
         <Button
           size="icon"
           variant="ghost"
@@ -187,14 +211,16 @@ export function Sidebar(): JSX.Element {
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
 
-  const [adding, setAdding] = useState(false)
+  // false = not adding; null = new top-level desk; id = new sub-desk of that desk
+  const [adding, setAdding] = useState<false | string | null>(false)
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
   const [name, setName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const submit = async (): Promise<void> => {
-    if (name.trim()) await createWorkspace(name)
+    if (name.trim() && adding !== false) await createWorkspace(name, adding)
     setName('')
     setAdding(false)
   }
@@ -212,13 +238,30 @@ export function Sidebar(): JSX.Element {
     setEditingId(null)
   }
 
+  const rows = flattenTree(workspaces, collapsed)
+  const toggle = (id: string): void =>
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  const startAddChild = (parentId: string): void => {
+    setCollapsed((prev) => new Set([...prev].filter((id) => id !== parentId)))
+    setName('')
+    setAdding(parentId)
+  }
+
+  // Reorder a desk among its siblings (same parent).
   const onDragEnd = (e: DragEndEvent): void => {
     const { active, over } = e
     if (!over || active.id === over.id) return
-    const from = workspaces.findIndex((w) => w.id === active.id)
-    const to = workspaces.findIndex((w) => w.id === over.id)
+    const parentOf = (id: unknown): string | null => workspaces.find((w) => w.id === id)?.parent_id ?? null
+    if (parentOf(active.id) !== parentOf(over.id)) return
+    const siblings = workspaces.filter((w) => (w.parent_id ?? null) === parentOf(active.id))
+    const from = siblings.findIndex((w) => w.id === active.id)
+    const to = siblings.findIndex((w) => w.id === over.id)
     if (from < 0 || to < 0) return
-    const reordered = arrayMove(workspaces, from, to)
+    const reordered = arrayMove(siblings, from, to)
     const updates: UpdateWorkspaceInput[] = reordered.map((w, i) => ({ id: w.id, sort_order: i }))
     reorderWorkspaces(updates)
   }
@@ -279,7 +322,7 @@ export function Sidebar(): JSX.Element {
       <div className="group/section mt-5 flex items-center justify-between px-4 pb-1">
         <h2 className="text-xs font-medium text-muted-foreground">데스크</h2>
         <button
-          onClick={() => setAdding(true)}
+          onClick={() => setAdding(null)}
           title="새 데스크"
           aria-label="새 데스크"
           className="no-drag -mr-1 flex h-5 w-5 items-center justify-center rounded text-muted-foreground opacity-0 transition hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover/section:opacity-100"
@@ -290,14 +333,15 @@ export function Sidebar(): JSX.Element {
 
       <nav className="flex-1 space-y-px overflow-y-auto px-2 pb-2">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext
-            items={workspaces.map((w) => w.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {workspaces.map((ws) => (
+          <SortableContext items={rows.map((r) => r.item.id)} strategy={verticalListSortingStrategy}>
+            {rows.map(({ item: ws, depth, hasChildren }) => (
+              <div key={ws.id}>
               <DeskRow
-                key={ws.id}
                 ws={ws}
+                depth={depth}
+                collapsed={hasChildren ? collapsed.has(ws.id) : undefined}
+                onToggle={() => toggle(ws.id)}
+                onAddChild={() => startAddChild(ws.id)}
                 active={ws.id === activeId && smartView === null && !utilityView}
                 editing={editingId === ws.id}
                 editName={editName}
@@ -308,28 +352,25 @@ export function Sidebar(): JSX.Element {
                 onCancelRename={() => setEditingId(null)}
                 onDelete={() => deleteWorkspace(ws.id)}
               />
+              {adding === ws.id && (
+                <DeskNameInput
+                  value={name}
+                  depth={depth + 1}
+                  placeholder="하위 데스크 이름"
+                  onChange={setName}
+                  onSubmit={submit}
+                  onCancel={cancelAdd}
+                />
+              )}
+              </div>
             ))}
           </SortableContext>
         </DndContext>
 
-        {adding ? (
-          <div className="px-1 py-0.5">
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={submit}
-              onKeyDown={(e) => {
-                if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시
-                if (e.key === 'Enter') submit()
-                if (e.key === 'Escape') cancelAdd()
-              }}
-              placeholder="데스크 이름"
-              className="no-drag h-[30px] w-full rounded-md border border-input bg-background/70 px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
+        {adding === null ? (
+          <DeskNameInput value={name} depth={0} placeholder="데스크 이름" onChange={setName} onSubmit={submit} onCancel={cancelAdd} />
         ) : (
-          <NavItem icon={Plus} label="새 데스크" muted onClick={() => setAdding(true)} />
+          <NavItem icon={Plus} label="새 데스크" muted onClick={() => setAdding(null)} />
         )}
       </nav>
 
@@ -434,5 +475,39 @@ export function SidebarExpandButton(): JSX.Element | null {
     >
       <ChevronsRight className="h-4 w-4" />
     </button>
+  )
+}
+
+function DeskNameInput({
+  value,
+  depth,
+  placeholder,
+  onChange,
+  onSubmit,
+  onCancel
+}: {
+  value: string
+  depth: number
+  placeholder: string
+  onChange: (v: string) => void
+  onSubmit: () => void
+  onCancel: () => void
+}): JSX.Element {
+  return (
+    <div className="py-0.5 pr-1" style={{ paddingLeft: 4 + depth * INDENT_PX }}>
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onSubmit}
+        onKeyDown={(e) => {
+          if (e.nativeEvent.isComposing) return // 한글 IME 조합 Enter 무시
+          if (e.key === 'Enter') onSubmit()
+          if (e.key === 'Escape') onCancel()
+        }}
+        placeholder={placeholder}
+        className="no-drag h-[30px] w-full rounded-md border border-input bg-background/70 px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+      />
+    </div>
   )
 }

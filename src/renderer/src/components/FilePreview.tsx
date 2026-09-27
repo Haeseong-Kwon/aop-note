@@ -5,6 +5,7 @@ import { toastError } from '@/store/useToast'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { MarkdownView } from './MarkdownView'
+import { DocumentViewer } from './DocumentViewer'
 import type { FileBacklinks, ProjectFile } from '@shared/types'
 
 /** "docs/a.md" + "../b.md" → "b.md" (POSIX, no escaping above the project root). */
@@ -54,6 +55,11 @@ export function FilePreview(): JSX.Element | null {
   }
 
   const count = (back?.linked.length ?? 0) + (back?.files.length ?? 0)
+
+  // PDF, Word, 한글, Excel …: the same viewer as 문서함.
+  if (file?.binary) {
+    return <DocumentViewer projectFile={{ deskId: open.deskId, path: open.path }} fileName={file.title} onClose={close} />
+  }
 
   return (
     <Dialog open onOpenChange={(o) => (o ? null : close())}>

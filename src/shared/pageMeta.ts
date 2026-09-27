@@ -7,7 +7,7 @@ export type PageFont = 'default' | 'serif' | 'mono'
 export interface PageMeta {
   /** An emoji. */
   icon?: string
-  /** "gradient:<n>" | "color:#rrggbb" | "image:<https or aop-file url>" */
+  /** "gradient:<n>" | "color:#rrggbb" | "pattern:<n>" | "preset:<id>" (bundled image) | "image:<https or aop-file url>" */
   cover?: string
   /** Vertical focus of an image cover, 0 (top) – 100 (bottom). */
   coverPos?: number
@@ -18,7 +18,7 @@ export interface PageMeta {
 const MAX_ICON = 16
 const MAX_COVER = 2048
 // No whitespace, quotes, parentheses or backslashes: nothing that could end url(...).
-const COVER = /^(gradient:\d{1,2}|color:#[0-9a-f]{6}|image:(https:\/\/|aop-file:\/\/\/?)[^\s"'()\\]+)$/i
+const COVER = /^(gradient:\d{1,2}|pattern:\d{1,2}|preset:[a-z0-9-]{1,40}|color:#[0-9a-f]{6}|image:(https:\/\/|aop-file:\/\/\/?)[^\s"'()\\]+)$/i
 const FONTS: readonly PageFont[] = ['default', 'serif', 'mono']
 
 export function sanitizePageMeta(input: unknown): PageMeta {

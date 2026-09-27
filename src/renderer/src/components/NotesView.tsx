@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Plus, Search, FileText, X } from 'lucide-react'
+import { Plus, Search, FileText, X, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
 import { NotePage } from './NotePage'
 import { cn } from '@/lib/utils'
+import { flattenTree, type TreeRow } from '@shared/tree'
 import type { Task, TaskStatus } from '@shared/types'
 
 const STATUS_DOT: Record<TaskStatus, string> = {
@@ -26,41 +27,55 @@ function memoPreview(note: string): string {
   return line ?? '비어 있음'
 }
 
-function NoteListItem({
-  task,
-  active,
-  onSelect
-}: {
-  task: Task
+const INDENT_PX = 14
+
+interface NoteListItemProps {
+  row: TreeRow<Task>
   active: boolean
+  collapsed: boolean
   onSelect: () => void
-}): JSX.Element {
+  onToggle: () => void
+  onAddChild: () => void
+}
+
+function NoteListItem({ row, active, collapsed, onSelect, onToggle, onAddChild }: NoteListItemProps): JSX.Element {
+  const { item: task, depth, hasChildren } = row
   return (
-    <button
-      onClick={onSelect}
+    <div
       className={cn(
-        'flex w-full items-start gap-2 rounded-md px-2.5 py-2 text-left transition-colors',
+        'group flex items-start rounded-md pr-1 transition-colors',
         active ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
       )}
+      style={{ paddingLeft: depth * INDENT_PX }}
     >
-      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', STATUS_DOT[task.status])} />
-          <span
-            className={cn(
-              'truncate text-sm',
-              task.status === 'done' && 'text-muted-foreground line-through'
-            )}
-          >
-            {task.title || '제목 없음'}
+      <button
+        onClick={onToggle}
+        disabled={!hasChildren}
+        aria-label={collapsed ? '하위 메모 펼치기' : '하위 메모 접기'}
+        className="mt-2 flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent disabled:invisible"
+      >
+        <ChevronRight className={cn('h-3 w-3 transition-transform', !collapsed && 'rotate-90')} />
+      </button>
+      <button onClick={onSelect} className="flex min-w-0 flex-1 items-start gap-2 py-2 pl-1 text-left">
+        <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5">
+            <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', STATUS_DOT[task.status])} />
+            <span className={cn('truncate text-sm', task.status === 'done' && 'text-muted-foreground line-through')}>
+              {task.title || '제목 없음'}
+            </span>
           </span>
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{memoPreview(task.note)}</span>
         </span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-          {memoPreview(task.note)}
-        </span>
-      </span>
-    </button>
+      </button>
+      <button
+        onClick={onAddChild}
+        title="하위 메모 추가"
+        className="mt-1.5 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+    </div>
   )
 }
 
@@ -77,6 +92,7 @@ export function NotesView(): JSX.Element {
   const selectedId = useStore((s) => s.selectedNoteId)
   const setSelectedId = useStore((s) => s.selectNote)
   const [query, setQuery] = useState('')
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -85,10 +101,31 @@ export function NotesView(): JSX.Element {
           (t) => t.title.toLowerCase().includes(q) || t.note.toLowerCase().includes(q)
         )
       : tasks
-    return categories
-      .map((c) => ({ category: c, notes: matches.filter((t) => t.category_id === c.id) }))
+    return flattenTree(categories)
+      .map(({ item: c }) => {
+        const notes = matches.filter((t) => t.category_id === c.id)
+        // Searching shows hits flat; otherwise sub-memos nest under their parent.
+        const rows: TreeRow<Task>[] = q
+          ? notes.map((item) => ({ item, depth: 0, hasChildren: false }))
+          : flattenTree(notes, collapsed)
+        return { category: c, notes, rows }
+      })
       .filter((g) => g.notes.length > 0)
-  }, [tasks, categories, query])
+  }, [tasks, categories, query, collapsed])
+
+  const toggle = (id: string): void =>
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+
+  const newSubNote = async (parent: Task): Promise<void> => {
+    const task = await createTask({ category_id: parent.category_id, parent_id: parent.id, title: '제목 없음' })
+    if (!task) return
+    setCollapsed((prev) => new Set([...prev].filter((id) => id !== parent.id)))
+    setSelectedId(task.id)
+  }
 
   const visible = groups.flatMap((g) => g.notes)
   const selected = visible.find((t) => t.id === selectedId) ?? visible[0] ?? null
@@ -141,7 +178,7 @@ export function NotesView(): JSX.Element {
               {query ? '검색 결과가 없습니다.' : '메모가 없습니다.'}
             </p>
           ) : (
-            groups.map(({ category, notes }) => (
+            groups.map(({ category, notes, rows }) => (
               <div key={category.id} className="mb-3 last:mb-0">
                 <p className="flex items-center gap-1.5 px-2 pb-1 text-xs font-medium text-muted-foreground">
                   <span
@@ -152,12 +189,15 @@ export function NotesView(): JSX.Element {
                   <span className="ml-auto tabular-nums">{notes.length}</span>
                 </p>
                 <div className="space-y-0.5">
-                  {notes.map((t) => (
+                  {rows.map((row) => (
                     <NoteListItem
-                      key={t.id}
-                      task={t}
-                      active={t.id === selected?.id}
-                      onSelect={() => setSelectedId(t.id)}
+                      key={row.item.id}
+                      row={row}
+                      active={row.item.id === selected?.id}
+                      collapsed={collapsed.has(row.item.id)}
+                      onSelect={() => setSelectedId(row.item.id)}
+                      onToggle={() => toggle(row.item.id)}
+                      onAddChild={() => void newSubNote(row.item)}
                     />
                   ))}
                 </div>

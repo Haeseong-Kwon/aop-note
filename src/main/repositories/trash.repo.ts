@@ -8,6 +8,8 @@ import type { TrashItem, TrashKind } from '@shared/types'
 // Every row a single delete touched shares one deleted_at stamp (see the repos'
 // remove()), so "the batch" = rows under the item carrying the item's stamp.
 // `IS NOT` rather than `!=` so NULL (= alive) compares as "different".
+// A folder batch = same-stamp folders in the desk; a memo batch = same-stamp memos
+// in its folder (sub-memos always share their parent's folder).
 
 const LIST_SQL = `
   SELECT 'workspace' AS kind, w.id, w.name AS title, '' AS context, w.color, w.deleted_at,
@@ -19,7 +21,7 @@ const LIST_SQL = `
   UNION ALL
   SELECT 'category', c.id, c.name, w.name || COALESCE(' / ' || p.name, ''), c.color, c.deleted_at,
     (SELECT COUNT(*) FROM tasks t JOIN categories cc ON cc.id = t.category_id
-      WHERE (cc.id = c.id OR cc.parent_id = c.id) AND t.deleted_at = c.deleted_at)
+      WHERE cc.workspace_id = c.workspace_id AND cc.deleted_at = c.deleted_at AND t.deleted_at = c.deleted_at)
   FROM categories c
   JOIN workspaces w ON w.id = c.workspace_id
   LEFT JOIN categories p ON p.id = c.parent_id
@@ -28,11 +30,14 @@ const LIST_SQL = `
     AND (p.id IS NULL OR p.deleted_at IS NOT c.deleted_at)
 
   UNION ALL
-  SELECT 'task', t.id, t.title, w.name || ' / ' || c.name, c.color, t.deleted_at, 1
+  SELECT 'task', t.id, t.title, w.name || ' / ' || c.name, c.color, t.deleted_at,
+    (SELECT COUNT(*) FROM tasks x WHERE x.category_id = t.category_id AND x.deleted_at = t.deleted_at)
   FROM tasks t
   JOIN categories c ON c.id = t.category_id
   JOIN workspaces w ON w.id = c.workspace_id
+  LEFT JOIN tasks pt ON pt.id = t.parent_id
   WHERE t.deleted_at IS NOT NULL AND c.deleted_at IS NOT t.deleted_at
+    AND (pt.id IS NULL OR pt.deleted_at IS NOT t.deleted_at)
 
   ORDER BY deleted_at DESC
 `
@@ -71,17 +76,22 @@ function restoreEntity(db: Database.Database, kind: TrashKind, id: string, now: 
   if (kind === 'category') {
     db.prepare(
       `UPDATE tasks SET deleted_at = NULL, updated_at = ?
-       WHERE deleted_at = ? AND category_id IN (SELECT id FROM categories WHERE id = ? OR parent_id = ?)`
-    ).run(now, stamp, id, id)
+       WHERE deleted_at = ? AND category_id IN (SELECT id FROM categories WHERE workspace_id = ? AND deleted_at = ?)`
+    ).run(now, stamp, row.workspace_id, stamp)
     db.prepare(
-      'UPDATE categories SET deleted_at = NULL, updated_at = ? WHERE (id = ? OR parent_id = ?) AND deleted_at = ?'
-    ).run(now, id, id, stamp)
+      'UPDATE categories SET deleted_at = NULL, updated_at = ? WHERE workspace_id = ? AND deleted_at = ?'
+    ).run(now, row.workspace_id, stamp)
     if (row.parent_id) restoreEntity(db, 'category', row.parent_id, now)
     restoreEntity(db, 'workspace', row.workspace_id as string, now)
     return
   }
 
-  db.prepare('UPDATE tasks SET deleted_at = NULL, updated_at = ? WHERE id = ?').run(now, id)
+  db.prepare('UPDATE tasks SET deleted_at = NULL, updated_at = ? WHERE category_id = ? AND deleted_at = ?').run(
+    now,
+    row.category_id,
+    stamp
+  )
+  if (row.parent_id) restoreEntity(db, 'task', row.parent_id, now)
   restoreEntity(db, 'category', row.category_id as string, now)
 }
 
@@ -94,7 +104,10 @@ const DOOMED = `
       SELECT id FROM categories WHERE deleted_at IS NOT NULL OR workspace_id IN dw
       UNION SELECT c.id FROM categories c JOIN dc ON c.parent_id = dc.id
     ),
-    dt(id) AS (SELECT id FROM tasks WHERE deleted_at IS NOT NULL OR category_id IN dc),
+    dt(id) AS (
+      SELECT id FROM tasks WHERE deleted_at IS NOT NULL OR category_id IN dc
+      UNION SELECT t.id FROM tasks t JOIN dt ON t.parent_id = dt.id
+    ),
     dg(id) AS (SELECT id FROM goals WHERE deleted_at IS NOT NULL OR workspace_id IN dw),
     dp(id) AS (SELECT id FROM properties WHERE deleted_at IS NOT NULL OR workspace_id IN dw)
 `
@@ -102,7 +115,9 @@ const DOOMED = `
 /** Child tables before parents (foreign keys are on, no ON DELETE CASCADE). */
 const PURGE = [
   'DELETE FROM task_values WHERE task_id IN dt OR property_id IN dp',
-  'DELETE FROM attachments WHERE task_id IN dt OR deleted_at IS NOT NULL',
+  'DELETE FROM attachments WHERE task_id IN dt OR workspace_id IN dw OR deleted_at IS NOT NULL',
+  'UPDATE attachments SET folder_id = NULL WHERE folder_id IN (SELECT id FROM doc_folders WHERE workspace_id IN dw)',
+  'DELETE FROM doc_folders WHERE workspace_id IN dw',
   'UPDATE tasks SET goal_id = NULL WHERE goal_id IN dg',
   'DELETE FROM tasks WHERE id IN dt',
   'DELETE FROM categories WHERE id IN dc',
@@ -131,7 +146,7 @@ export const trashRepo = {
     const db = getDb()
     const count = this.list().length
     const files = db
-      .prepare(`${DOOMED} SELECT stored_name FROM attachments WHERE task_id IN dt OR deleted_at IS NOT NULL`)
+      .prepare(`${DOOMED} SELECT stored_name FROM attachments WHERE task_id IN dt OR workspace_id IN dw OR deleted_at IS NOT NULL`)
       .pluck()
       .all() as string[]
     db.transaction(() => {

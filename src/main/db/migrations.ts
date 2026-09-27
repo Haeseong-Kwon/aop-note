@@ -183,6 +183,61 @@ const migrations: Migration[] = [
         updated_at  TEXT NOT NULL
       );
     `)
+  },
+
+  // 0012 — sub-memos: a memo can sit under another memo (same folder)
+  (db) => {
+    db.exec(`
+      ALTER TABLE tasks ADD COLUMN parent_id TEXT REFERENCES tasks(id);
+      CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_id);
+    `)
+  },
+
+  // 0013 — documents without a memo (desk-level uploads) + nested document folders.
+  // Rebuilds attachments because SQLite can't drop NOT NULL from task_id.
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS doc_folders (
+        id            TEXT PRIMARY KEY,
+        workspace_id  TEXT NOT NULL REFERENCES workspaces(id),
+        name          TEXT NOT NULL,
+        parent_id     TEXT REFERENCES doc_folders(id),
+        created_at    TEXT NOT NULL,
+        updated_at    TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_doc_folders_workspace ON doc_folders(workspace_id);
+
+      CREATE TABLE attachments_new (
+        id            TEXT PRIMARY KEY,
+        task_id       TEXT REFERENCES tasks(id),
+        workspace_id  TEXT REFERENCES workspaces(id),
+        folder_id     TEXT REFERENCES doc_folders(id),
+        file_name     TEXT NOT NULL,
+        ext           TEXT NOT NULL DEFAULT '',
+        mime          TEXT NOT NULL DEFAULT '',
+        size          INTEGER NOT NULL DEFAULT 0,
+        stored_name   TEXT NOT NULL,
+        created_at    TEXT NOT NULL,
+        updated_at    TEXT NOT NULL,
+        deleted_at    TEXT,
+        CHECK (task_id IS NOT NULL OR workspace_id IS NOT NULL)
+      );
+      INSERT INTO attachments_new (id, task_id, file_name, ext, mime, size, stored_name, created_at, updated_at, deleted_at)
+        SELECT id, task_id, file_name, ext, mime, size, stored_name, created_at, updated_at, deleted_at FROM attachments;
+      DROP TABLE attachments;
+      ALTER TABLE attachments_new RENAME TO attachments;
+      CREATE INDEX IF NOT EXISTS idx_attachments_task ON attachments(task_id);
+      CREATE INDEX IF NOT EXISTS idx_attachments_workspace ON attachments(workspace_id);
+      CREATE INDEX IF NOT EXISTS idx_attachments_folder ON attachments(folder_id);
+    `)
+  },
+
+  // 0014 — sub-desks: a desk can sit under another desk (sidebar tree)
+  (db) => {
+    db.exec(`
+      ALTER TABLE workspaces ADD COLUMN parent_id TEXT REFERENCES workspaces(id);
+      CREATE INDEX IF NOT EXISTS idx_workspaces_parent ON workspaces(parent_id);
+    `)
   }
 ]
 

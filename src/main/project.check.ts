@@ -36,6 +36,26 @@ assert.equal(resolveFile(idx, 'auth'), 'docs/auth.md', 'unique base name resolve
 assert.equal(resolveFile(idx, 'README'), 'README.md')
 assert.equal(resolveFile(idx, '인증 흐름'), null)
 
+// --- non-dev folder: office / PDF / 한글 documents are graph nodes too ---
+const office = mkdtempSync(join(tmpdir(), 'aop-office-'))
+const nfd = (s: string): string => s.normalize('NFD') // macOS Finder stores 한글 file names decomposed
+put(office, nfd('계약서.pdf'), '%PDF-1.4')
+put(office, nfd('회의록/2026 킥오프.docx'), 'PK')
+put(office, nfd('제안서.hwp'), 'HWP')
+put(office, nfd('예산.xlsx'), 'PK')
+put(office, nfd('발표.pptx'), 'PK')
+put(office, nfd('메모.md'), `# 정리\n\n[[계약서]] 와 [발표](${encodeURIComponent('발표.pptx')}) 참고`)
+put(office, 'photo.jpg', 'jpg')
+const oidx = scanProject(office)
+const paths = oidx.files.map((f) => f.path.normalize('NFC')).sort()
+assert.deepEqual(paths, ['메모.md', '발표.pptx', '예산.xlsx', '제안서.hwp', '계약서.pdf', '회의록/2026 킥오프.docx'].sort())
+const byName = (n: string): (typeof oidx.files)[number] | undefined => oidx.files.find((f) => f.path.normalize('NFC') === n)
+assert.equal(byName('계약서.pdf')?.title, '계약서', 'binary docs: title = file name, NFC')
+assert.deepEqual(byName('계약서.pdf')?.links, [], 'binary docs are not parsed for links')
+assert.equal(resolveFile(oidx, '계약서')?.normalize('NFC'), '계약서.pdf', 'NFC [[link]] finds an NFD file name')
+assert.equal(resolveFile(oidx, '2026 킥오프')?.normalize('NFC'), '회의록/2026 킥오프.docx')
+assert.deepEqual(byName('메모.md')?.fileLinks.map((p) => p.normalize('NFC')), ['발표.pptx'], 'Markdown link to an office doc')
+
 // --- git repo: follow .gitignore via git ls-files, include untracked docs ---
 const repo = mkdtempSync(join(tmpdir(), 'aop-git-'))
 const git = (...args: string[]): string =>

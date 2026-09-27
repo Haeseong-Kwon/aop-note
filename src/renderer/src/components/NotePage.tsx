@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Trash2, CalendarDays, Hash, Smile, ImagePlus } from 'lucide-react'
+import { Trash2, CalendarDays, Hash, Smile, ImagePlus, FilePlus2, FileText, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { BlockNoteEditor, type MemoEditorHandle } from './BlockNoteEditor'
 import { MemoExportMenu } from './MemoExportMenu'
@@ -11,6 +11,7 @@ import { useMemoPersist } from '@/hooks/useMemoPersist'
 import { toDateInput, fromDateInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { parsePageMeta, type PageMeta } from '@shared/pageMeta'
+import { ancestorsOf } from '@shared/tree'
 import type { Attachment, Category, Task, TaskStatus } from '@shared/types'
 
 const STATUSES: { value: TaskStatus; label: string; active: string }[] = [
@@ -34,6 +35,9 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
   const updateTask = useStore((s) => s.updateTask)
   const deleteTask = useStore((s) => s.deleteTask)
   const duplicateNote = useStore((s) => s.duplicateNote)
+  const createTask = useStore((s) => s.createTask)
+  const selectNote = useStore((s) => s.selectNote)
+  const tasks = useStore((s) => s.tasks)
   const { dark, initialMarkdown, initialDoc, onMarkdownChange, persistNow, revision } = useMemoPersist(task)
   const [title, setTitle] = useState(task.title)
   const titleRef = useRef<HTMLInputElement>(null)
@@ -69,6 +73,15 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
     bodyRef.current?.focusStart()
   }
 
+  const ancestors = ancestorsOf(tasks, task.id)
+  const subNotes = tasks.filter((t) => t.parent_id === task.id)
+
+  const addSubNote = async (): Promise<void> => {
+    await persistNow()
+    const child = await createTask({ category_id: task.category_id, parent_id: task.id, title: '제목 없음' })
+    if (child) selectNote(child.id)
+  }
+
   // No confirm: the delete toast offers undo and the trash keeps it.
   const remove = (): void => void deleteTask(task.id)
   const fontClass = meta.font ? FONT_CLASS[meta.font] : undefined
@@ -83,6 +96,14 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
             {category.name}
           </span>
         )}
+        {ancestors.map((a) => (
+          <span key={a.id} className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+            <ChevronRight className="h-3 w-3 shrink-0 opacity-50" />
+            <button onClick={() => selectNote(a.id)} className="max-w-[10rem] truncate rounded px-1 hover:bg-accent hover:text-foreground">
+              {a.title || '제목 없음'}
+            </button>
+          </span>
+        ))}
         <span className="ml-auto text-[11px] text-muted-foreground">{savedLabel(task.updated_at)}</span>
         <MemoExportMenu taskId={task.id} flush={persistNow} />
         <NotePageMenu
@@ -178,7 +199,32 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
                 className="cursor-pointer bg-transparent text-xs outline-none"
               />
             </label>
+            <button
+              onClick={() => void addSubNote()}
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-accent hover:text-foreground"
+            >
+              <FilePlus2 className="h-3.5 w-3.5" />
+              하위 메모
+            </button>
           </div>
+
+          {subNotes.length > 0 && (
+            <nav aria-label="하위 메모" className="mt-4 space-y-0.5 border-l-2 border-border pl-2">
+              {subNotes.map((t) => {
+                const icon = parsePageMeta(t.page_meta).icon
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => selectNote(t.id)}
+                    className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-sm hover:bg-accent"
+                  >
+                    {icon ? <span className="w-4 text-center leading-none">{icon}</span> : <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                    <span className="truncate underline decoration-border underline-offset-4">{t.title || '제목 없음'}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          )}
         </div>
 
         <BlockNoteEditor

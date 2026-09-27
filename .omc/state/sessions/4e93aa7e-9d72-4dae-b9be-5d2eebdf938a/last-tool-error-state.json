@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"S=/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/4e93aa7e-9d72-4dae-b9be-5d2eebdf938a/scratchpad; cd $S/covers/raw && while read name path; do curl -sS -m 120 --resolve ...",
+  "error": "Exit code 127\nzsh: command not found: curl\nFAIL met-wheat-field\nzsh: command not found: curl\nFAIL met-great-wave\nzsh: command not found: curl\nFAIL met-harvesters\nzsh: command not found: curl\nFAIL met-heart-of-andes\nzsh: command not found: curl\nFAIL met-oxbow\nzsh: command not found: curl\nFAIL met-landers-peak\nzsh: command not found: curl\nFAIL met-whalers\nzsh: command not found: curl\nFAIL met-venice\nzsh: command not found: curl\nFAIL met-northeaster\nzsh: command not found: curl\nFAIL met-dance-class...",
+  "timestamp": "2026-09-27T20:01:23.066Z",
+  "retry_count": 2
+}

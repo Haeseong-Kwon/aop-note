@@ -139,7 +139,7 @@ interface AppState {
   navigateToTask: (payload: NavigatePayload) => Promise<void>
 
   // workspace / category
-  createWorkspace: (name: string) => Promise<void>
+  createWorkspace: (name: string, parentId?: string | null) => Promise<void>
   renameWorkspace: (id: string, name: string) => Promise<void>
   updateWorkspace: (input: UpdateWorkspaceInput) => Promise<void>
   reorderWorkspaces: (updates: UpdateWorkspaceInput[]) => Promise<void>
@@ -359,10 +359,10 @@ export const useStore = create<AppState>((set, get) => ({
     })
   },
 
-  createWorkspace: async (name) => {
+  createWorkspace: async (name, parentId = null) => {
     const trimmed = name.trim()
     if (!trimmed) return
-    const ws = await window.api.workspace.create({ name: trimmed })
+    const ws = await window.api.workspace.create({ name: trimmed, parent_id: parentId })
     set((s) => ({ workspaces: [...s.workspaces, ws] }))
     await get().selectWorkspace(ws.id)
   },

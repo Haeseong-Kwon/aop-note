@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { fromDateInput, fromDateTimeInput, formatDue, PRIORITY_META, RECURRENCE_LABEL } from '@/lib/format'
 import { parseQuickInput } from '@/lib/parseQuickInput'
 import { cn } from '@/lib/utils'
+import { flattenTree } from '@shared/tree'
 
 export function QuickCapture(): JSX.Element {
   const open = useStore((s) => s.quickCaptureOpen)
@@ -134,9 +135,9 @@ export function QuickCapture(): JSX.Element {
             className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
           >
             {categories.length === 0 && <option value="">카테고리 없음</option>}
-            {categories.map((c) => (
+            {flattenTree(categories).map(({ item: c, depth }) => (
               <option key={c.id} value={c.id}>
-                {c.parent_id ? '— ' : ''}
+                {'\u00a0\u00a0'.repeat(depth)}
                 {c.name}
               </option>
             ))}
