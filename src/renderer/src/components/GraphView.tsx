@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Waypoints, FolderGit2 } from 'lucide-react'
+import { Download, Waypoints, FolderGit2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { toastError } from '@/store/useToast'
 import { parseGraphSettings, type GraphSettings } from '@/lib/graphStyle'
 import { cn } from '@/lib/utils'
 import { PageHeader } from './PageHeader'
 import type { GraphData, NoteSearchHit } from '@shared/types'
+import { filterGraph } from '@shared/graphFilter'
 import { GraphSearch, type GraphSearchResult } from './graph/GraphSearch'
+import { GraphExportDialog } from './graph/GraphExportDialog'
 import { GraphCanvas, type PreparedGraph } from './graph/GraphCanvas'
 import { ResizablePane } from '@/components/ui/ResizablePane'
 
@@ -48,28 +50,13 @@ function projectEntries(data: GraphData): ProjectEntry[] {
   return [...byDesk.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** Keep the nodes to show (one project, or all) and re-index edges onto them. */
+/** The nodes to show (one project, or all), with edges re-indexed onto them. */
 function prepare(data: GraphData, linkedOnly: boolean, scope: string | null): PreparedGraph {
-  let scoped = data.nodes
-  if (scope) {
-    const own = new Set(data.nodes.filter((n) => n.workspace_id === scope).map((n) => n.id))
-    // Unwritten notes this project links to belong to its picture too.
-    const ghosts = new Set(
-      data.edges.flatMap((e) =>
-        own.has(e.source) && e.target.startsWith('ghost:') ? [e.target] : own.has(e.target) && e.source.startsWith('ghost:') ? [e.source] : []
-      )
-    )
-    scoped = data.nodes.filter((n) => own.has(n.id) || ghosts.has(n.id))
-  }
-  const nodes = linkedOnly ? scoped.filter((n) => n.links > 0) : scoped
+  const { nodes, edges: kept } = filterGraph(data, { scope, linkedOnly })
   const index = new Map(nodes.map((n, i) => [n.id, i]))
-  const edges: [number, number][] = []
+  const edges: [number, number][] = kept.map((e) => [index.get(e.source) as number, index.get(e.target) as number])
   const neighbours = nodes.map(() => new Set<number>())
-  for (const e of data.edges) {
-    const a = index.get(e.source)
-    const b = index.get(e.target)
-    if (a === undefined || b === undefined) continue
-    edges.push([a, b])
+  for (const [a, b] of edges) {
     neighbours[a].add(b)
     neighbours[b].add(a)
   }
@@ -124,6 +111,7 @@ export function GraphView(): JSX.Element {
     })
   }, [graph, noteHits, query])
   const matches = useMemo(() => (results ? new Set(results.map((r) => r.index)) : null), [results])
+  const [exporting, setExporting] = useState(false)
   const hiddenCount = results ? noteHits.length - results.filter((r) => r.kind === 'note').length : 0
   const entries = useMemo(() => (data ? projectEntries(data) : []), [data])
   const hasFolder = (id: string): boolean => Boolean(workspaces.find((w) => w.id === id)?.folder_path)
@@ -148,6 +136,16 @@ export function GraphView(): JSX.Element {
           )}
         >
           {linkedOnly ? '연결된 메모만' : '내용 있는 메모 모두'}
+        </button>
+        <button
+          onClick={() => setExporting(true)}
+          disabled={!graph || graph.nodes.length === 0}
+          title="LLM용으로 내보내기 · 그래프 보관함"
+          aria-label="LLM용으로 내보내기 · 그래프 보관함"
+          className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs text-foreground/85 transition-colors hover:bg-accent disabled:opacity-40"
+        >
+          <Download className="h-3.5 w-3.5" />
+          <span className="cq-hide-sm">내보내기 · 보관함</span>
         </button>
         <p className="cq-hide-md ml-auto flex min-w-0 items-center gap-3 overflow-hidden text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
@@ -212,6 +210,15 @@ export function GraphView(): JSX.Element {
           )}
         </div>
       </div>
+      {exporting && graph && (
+        <GraphExportDialog
+          scope={scope}
+          scopeName={scope ? (entries.find((e) => e.id === scope)?.name ?? '데스크') : '전체 세컨드브레인'}
+          linkedOnly={linkedOnly}
+          searchIds={results ? results.map((r) => graph.nodes[r.index].id) : null}
+          onClose={() => setExporting(false)}
+        />
+      )}
     </div>
   )
 }

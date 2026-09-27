@@ -8,6 +8,8 @@ import { writeVault } from '../main/vault'
 import { getProjectIndex, validateFolder } from '../main/projectIndex'
 import { getGitInfo } from '../main/git'
 import { eventsBetween } from '../main/calendars'
+import { buildGraphExport, scopeLabelFor, toExportOptions } from '../main/graphExport'
+import { graphArchive } from '../main/graphArchive'
 import { resolve, sep } from 'path'
 import { realpathSync } from 'fs'
 import { extractLinks } from '@shared/links'
@@ -21,6 +23,8 @@ export interface Tool {
 }
 
 const MAX_TITLE = 200
+/** export_graph detail levels → per-node body cap (null = whole body; titles never reads bodies). */
+const DETAIL_CHARS: Record<string, number | null> = { titles: null, summary: 1500, normal: 4000, full: null }
 const MAX_MARKDOWN = 100_000
 const DEFAULT_LIMIT = 10
 
@@ -232,6 +236,66 @@ export const TOOLS: Tool[] = [
       workspaceRepo.setFolder(desk.id, folder)
       return json({ desk: desk.name, folder })
     }
+  },
+  {
+    name: 'export_graph',
+    description:
+      'Export the knowledge graph (notes, project documents, [[links]]) as an LLM context pack: a legend, hub list, node table, link list and each node\'s body with its neighbours. Use it to load a whole desk or a topic (query + hops) into context before reasoning over it. Nodes are referenced as N1, N2… (N1 = most connected).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        desk: { type: 'string', description: 'Desk name or id. Omit for every desk.' },
+        query: { type: 'string', description: 'Centre on notes whose title or body contains this text.' },
+        hops: { type: 'number', description: 'With query: include neighbours this many links away (0–3). Default 1.' },
+        detail: { type: 'string', enum: ['titles', 'summary', 'normal', 'full'], description: 'Body size per node: titles only, 1,500 / 4,000 characters, or whole. Default normal.' },
+        format: { type: 'string', enum: ['md', 'json'], description: 'Default md (best for reading); json for programmatic use.' },
+        linked_only: { type: 'boolean', description: 'Skip notes without links. Default true.' },
+        save: { type: 'boolean', description: 'Also keep a copy in the app\'s 그래프 보관함 (graph archive).' },
+        title: { type: 'string', description: 'Name for the pack. Default: the desk name.' }
+      }
+    },
+    run: (args) => {
+      const deskRef = str(args, 'desk', MAX_TITLE, false)
+      const desk = deskRef ? findDesk(deskRef) : null
+      const query = str(args, 'query', MAX_TITLE, false)
+      const detail = str(args, 'detail', 20, false) || 'normal'
+      if (!(detail in DETAIL_CHARS)) throw new Error(`'detail' must be one of: ${Object.keys(DETAIL_CHARS).join(', ')}.`)
+      let focus: string[] | null = null
+      if (query) {
+        focus = searchRepo.notes(query).map((h) => h.id)
+        if (focus.length === 0) throw new Error(`No note matches '${query}'. Try search_notes with other words.`)
+      }
+      const opts = toExportOptions({
+        title: str(args, 'title', MAX_TITLE, false) || desk?.name || '전체 세컨드브레인',
+        format: args.format === 'json' ? 'json' : 'md',
+        scope: desk?.id ?? null,
+        linkedOnly: query ? false : args.linked_only !== false,
+        focus,
+        hops: typeof args.hops === 'number' ? args.hops : 1,
+        includeBodies: detail !== 'titles',
+        maxBodyChars: DETAIL_CHARS[detail]
+      })
+      const result = buildGraphExport(opts)
+      if (result.stats.nodes === 0) throw new Error('The selection has no nodes. Drop linked_only or pick another desk / query.')
+      if (args.save !== true) return result.content
+      const entry = graphArchive.save({ title: opts.title, format: opts.format, content: result.content, stats: result.stats, scopeLabel: scopeLabelFor(opts.filter) })
+      return `보관함에 저장: ${entry.title} (id ${entry.id})\n\n${result.content}`
+    }
+  },
+  {
+    name: 'list_saved_graphs',
+    description: 'List graph packs saved in the app\'s 그래프 보관함 (newest first) with their size in nodes and estimated tokens.',
+    inputSchema: { type: 'object', properties: {} },
+    run: () =>
+      json(
+        graphArchive.list().map((e) => ({ id: e.id, title: e.title, format: e.format, scope: e.scope, created_at: e.created_at, nodes: e.nodes, tokens: e.tokens }))
+      )
+  },
+  {
+    name: 'read_saved_graph',
+    description: 'Read a saved graph pack from the 그래프 보관함 by id (from list_saved_graphs) — a point-in-time snapshot of the knowledge graph.',
+    inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+    run: (args) => graphArchive.read(str(args, 'id', 64))
   },
   {
     name: 'list_desks',

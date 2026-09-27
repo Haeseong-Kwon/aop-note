@@ -301,6 +301,8 @@ export interface AppSettings {
 export interface McpInfo {
   /** One-line `claude mcp add …` command to paste into a terminal. */
   command: string
+  /** The same for OpenAI's Codex CLI (GPT): `codex mcp add …`. */
+  codexCommand: string
   /** Our SessionStart hook is present in ~/.claude/settings.json. */
   hookInstalled: boolean
 }
@@ -373,6 +375,39 @@ export interface GraphNode {
 export interface GraphData {
   nodes: GraphNode[]
   edges: { source: string; target: string }[]
+}
+
+export type GraphExportFormat = 'md' | 'json'
+
+export interface GraphExportStats {
+  nodes: number
+  edges: number
+  chars: number
+  /** Rough estimate (≈2 chars per token for Korean-heavy text). */
+  tokens: number
+}
+
+/** What to export: the graph view's filter + how much content. */
+export interface GraphExportRequest {
+  title: string
+  format: GraphExportFormat
+  scope: string | null
+  linkedOnly: boolean
+  /** Node ids (e.g. search hits) to centre on, with `hops` of neighbours. */
+  focus: string[] | null
+  hops: number
+  includeBodies: boolean
+  maxBodyChars: number | null
+}
+
+/** A saved pack in the 그래프 보관함. */
+export interface GraphArchiveEntry extends GraphExportStats {
+  id: string
+  title: string
+  file: string
+  format: GraphExportFormat
+  scope: string
+  created_at: string
 }
 
 export interface GitCommit {

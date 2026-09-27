@@ -9,6 +9,9 @@ import type {
   GoalWithProgress,
   SearchHit,
   NoteSearchHit,
+  GraphExportRequest,
+  GraphExportStats,
+  GraphArchiveEntry,
   Attachment,
   AttachmentWithContext,
   AttachmentAddInput,
@@ -137,6 +140,17 @@ export const IPC = {
     openFile: 'project:openFile',
     reveal: 'project:reveal',
     openInClaude: 'project:openInClaude'
+  },
+  graph: {
+    stats: 'graph:stats',
+    copy: 'graph:copy',
+    save: 'graph:save',
+    list: 'graph:list',
+    copyArchived: 'graph:copyArchived',
+    open: 'graph:open',
+    reveal: 'graph:reveal',
+    saveAs: 'graph:saveAs',
+    remove: 'graph:remove'
   },
   trash: {
     list: 'trash:list',
@@ -292,6 +306,21 @@ export interface Api {
     reveal(deskId: string, path?: string): Promise<void>
     /** Open a terminal in the folder running `claude`. */
     openInClaude(deskId: string): Promise<void>
+  }
+  /** LLM context packs of the knowledge graph + the 그래프 보관함. */
+  graph: {
+    /** Size of the export the request would produce (nodes, links, ~tokens). */
+    stats(req: GraphExportRequest): Promise<GraphExportStats>
+    /** Build and put on the clipboard. */
+    copy(req: GraphExportRequest): Promise<GraphExportStats>
+    save(req: GraphExportRequest): Promise<GraphArchiveEntry>
+    list(): Promise<GraphArchiveEntry[]>
+    copyArchived(id: string): Promise<void>
+    open(id: string): Promise<void>
+    reveal(id: string): Promise<void>
+    /** Save a copy wherever the user picks; false if cancelled. */
+    saveAs(id: string): Promise<boolean>
+    remove(id: string): Promise<void>
   }
   trash: {
     list(): Promise<TrashItem[]>

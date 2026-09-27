@@ -6,6 +6,9 @@ import { workspaceRepo } from './repositories/workspace.repo'
 import { DOC_EXT, TEXT_DOC_EXT, getProjectIndex, invalidateProject, validateFolder } from './projectIndex'
 import { getGitInfo, invalidateGit } from './git'
 import { renderPath } from './attachments'
+import { projectFilePath } from './projectFiles'
+
+export { projectFilePath }
 import type { AttachmentRender, ProjectFile, ProjectOverview, ProjectSummary, Workspace } from '@shared/types'
 
 const MAX_READ_BYTES = 2 * 1024 * 1024
@@ -95,13 +98,6 @@ export function readProjectFile(deskId: string, path: string): ProjectFile {
   const content =
     binary ? '' : file.size > MAX_READ_BYTES ? '_파일이 너무 커서 미리보기를 생략했습니다._' : readFileSync(join(folder, file.path), 'utf8')
   return { path: file.path, title: file.title, content, binary }
-}
-
-/** Absolute path of an indexed project document, or null — the guard behind aop-project:// URLs. */
-export function projectFilePath(deskId: string, path: string): string | null {
-  const folder = workspaceRepo.getById(deskId)?.folder_path
-  const file = folder ? getProjectIndex(folder)?.files.find((f) => f.path === path) : undefined
-  return folder && file ? join(folder, file.path) : null
 }
 
 /** PDF / Word / Excel … preview of a project document, same viewer as 문서함. */

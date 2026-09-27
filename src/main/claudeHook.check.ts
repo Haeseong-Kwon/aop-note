@@ -57,4 +57,14 @@ const withShell = withHook(user, winHook.command, winHook.shell)
 const ours = withShell.hooks.SessionStart.at(-1) as { hooks: { shell?: string; command: string }[] }
 assert.equal(ours.hooks[0].shell, 'powershell')
 assert.ok(ours.hooks[0].command.endsWith('# aop-note'), 'marker is a comment in PowerShell too')
+// Codex CLI (GPT models) takes the same stdio server: codex mcp add … --env … -- <command>
+import { codexAddCommand } from './claudeCommands'
+assert.equal(
+  codexAddCommand(mac),
+  `codex mcp add aop-note --env ELECTRON_RUN_AS_NODE=1 --env AOP_NOTE_DATA='/Users/o'\\''k/Library/Application Support/aop-note' -- '/Applications/aop-note.app/Contents/MacOS/aop-note' '/A/app.asar/out/mcp/server.js'`
+)
+assert.equal(
+  codexAddCommand(win),
+  `codex mcp add aop-note --env ELECTRON_RUN_AS_NODE=1 --env "AOP_NOTE_DATA=${win.dataDir}" -- "${win.exe}" "${win.script}"`
+)
 console.log('claude commands: all assertions passed')

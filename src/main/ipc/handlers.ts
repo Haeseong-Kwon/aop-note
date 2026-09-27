@@ -1,5 +1,8 @@
-import { join } from 'path'
-import { app, dialog, ipcMain, nativeTheme, shell, BrowserWindow } from 'electron'
+import { basename, join } from 'path'
+import { app, clipboard, dialog, ipcMain, nativeTheme, shell, BrowserWindow } from 'electron'
+import { copyFileSync } from 'fs'
+import { buildGraphExport, scopeLabelFor, toExportOptions } from '../graphExport'
+import { graphArchive } from '../graphArchive'
 import { IPC } from '@shared/ipc'
 import { workspaceRepo } from '../repositories/workspace.repo'
 import { categoryRepo } from '../repositories/category.repo'
@@ -28,7 +31,7 @@ import { backupInfo, exportBackup, restoreBackup, openDataFolder } from '../back
 import { loadSettings, saveSettings } from '../settings'
 import { setShortcutEnabled } from '../quickCapture'
 import { isHookInstalled, setHookInstalled } from '../claudeHook'
-import { hookSpec, mcpAddCommand, type LaunchSpec } from '../claudeCommands'
+import { codexAddCommand, hookSpec, mcpAddCommand, type LaunchSpec } from '../claudeCommands'
 import { applyBackdrop } from '../backdrop'
 import {
   addCalendar,
@@ -53,6 +56,7 @@ import {
 import type {
   CreateWorkspaceInput,
   CreateDocFolderInput,
+  GraphExportRequest,
   DocumentUploadInput,
   UpdateWorkspaceInput,
   CreateCategoryInput,
@@ -158,6 +162,34 @@ export function registerIpcHandlers(): void {
   handle(IPC.docFolder.rename, (id: string, name: string) => docFolderRepo.rename(id, name))
   handle(IPC.docFolder.move, (id: string, parentId: string | null) => docFolderRepo.move(id, parentId ?? null))
   handle(IPC.docFolder.remove, (id: string) => docFolderRepo.remove(id))
+
+  // ---- Graph export (LLM context packs) + 그래프 보관함 ----
+  handle(IPC.graph.stats, (req: GraphExportRequest) => buildGraphExport(toExportOptions(req)).stats)
+  handle(IPC.graph.copy, (req: GraphExportRequest) => {
+    const result = buildGraphExport(toExportOptions(req))
+    clipboard.writeText(result.content)
+    return result.stats
+  })
+  handle(IPC.graph.save, (req: GraphExportRequest) => {
+    const opts = toExportOptions(req)
+    const result = buildGraphExport(opts)
+    return graphArchive.save({ title: opts.title, format: opts.format, content: result.content, stats: result.stats, scopeLabel: scopeLabelFor(opts.filter) })
+  })
+  handle(IPC.graph.list, () => graphArchive.list())
+  handle(IPC.graph.copyArchived, (id: string) => clipboard.writeText(graphArchive.read(id)))
+  handle(IPC.graph.open, async (id: string) => {
+    const error = await shell.openPath(graphArchive.pathOf(id))
+    if (error) throw new Error(`파일을 열지 못했습니다: ${error}`)
+  })
+  handle(IPC.graph.reveal, (id: string) => shell.showItemInFolder(graphArchive.pathOf(id)))
+  handle(IPC.graph.saveAs, async (id: string) => {
+    const from = graphArchive.pathOf(id)
+    const res = await dialog.showSaveDialog({ title: '그래프 파일 저장', defaultPath: basename(from) })
+    if (res.canceled || !res.filePath) return false
+    copyFileSync(from, res.filePath)
+    return true
+  })
+  handle(IPC.graph.remove, (id: string) => graphArchive.remove(id))
 
   // ---- Links ----
   handle(IPC.link.backlinks, (taskId: string) => linkRepo.backlinks(taskId))
@@ -269,7 +301,11 @@ export function registerIpcHandlers(): void {
     dataDir: app.getPath('userData'),
     platform: process.platform
   })
-  handle(IPC.mcp.info, () => ({ command: mcpAddCommand(launchSpec()), hookInstalled: isHookInstalled() }))
+  handle(IPC.mcp.info, () => ({
+    command: mcpAddCommand(launchSpec()),
+    codexCommand: codexAddCommand(launchSpec()),
+    hookInstalled: isHookInstalled()
+  }))
   handle(IPC.mcp.setHook, (enabled: boolean) => {
     const hook = hookSpec(launchSpec())
     return setHookInstalled(Boolean(enabled), hook.command, hook.shell)

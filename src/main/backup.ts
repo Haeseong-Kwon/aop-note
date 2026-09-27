@@ -4,10 +4,12 @@ import { app, dialog, shell, BrowserWindow } from 'electron'
 import Database from 'better-sqlite3'
 import { getDb, closeDb, dbPath } from './db'
 import { attachmentsDir } from './attachmentPaths'
+import { graphArchive, graphArchiveDir } from './graphArchive'
 import type { BackupInfo } from '@shared/types'
 
 export const AUTO_BACKUP_KEEP = 7
 const DB_FILE = 'aop-note.db'
+const GRAPH_EXPORTS = 'graph-exports'
 
 export const backupsDir = (): string => join(app.getPath('userData'), 'backups')
 
@@ -29,13 +31,16 @@ export async function autoBackup(now = new Date()): Promise<boolean> {
   return true
 }
 
-/** Write "AOP Note 백업 <date time>/" (DB + attachments) under parentDir; returns its path. */
+/** Write "AOP Note 백업 <date time>/" (DB + attachments + 그래프 보관함) under parentDir; returns its path. */
 export async function exportBackupTo(parentDir: string, now = new Date()): Promise<string> {
   const folder = join(parentDir, `AOP Note 백업 ${stamp(now)}`)
   mkdirSync(folder, { recursive: true })
   await getDb().backup(join(folder, DB_FILE))
   if (existsSync(attachmentsDir())) {
     cpSync(attachmentsDir(), join(folder, 'attachments'), { recursive: true })
+  }
+  if (existsSync(graphArchiveDir())) {
+    cpSync(graphArchiveDir(), join(folder, GRAPH_EXPORTS), { recursive: true })
   }
   return folder
 }
@@ -113,6 +118,8 @@ export async function restoreBackup(win: BrowserWindow | null): Promise<boolean>
   if (existsSync(join(dir, 'attachments'))) {
     cpSync(join(dir, 'attachments'), attachmentsDir(), { recursive: true, force: true })
   }
+  // Same for the 그래프 보관함: add the backup's packs to the ones already here.
+  graphArchive.importFrom(join(dir, GRAPH_EXPORTS))
 
   app.relaunch()
   app.exit(0)

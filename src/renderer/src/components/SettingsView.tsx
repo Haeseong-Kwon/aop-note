@@ -15,7 +15,6 @@ export function SettingsView(): JSX.Element {
   const [busy, setBusy] = useState(false)
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [mcp, setMcp] = useState<McpInfo | null>(null)
-  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     window.api.backup.info().then(setInfo, toastError)
@@ -57,13 +56,6 @@ export function SettingsView(): JSX.Element {
     } catch (e) {
       toastError(e)
     }
-  }
-
-  const copyCommand = async (): Promise<void> => {
-    if (!mcp) return
-    await navigator.clipboard.writeText(mcp.command)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
   }
 
   const toggle = async (key: keyof AppSettings): Promise<void> => {
@@ -144,7 +136,7 @@ export function SettingsView(): JSX.Element {
             <CalendarSubscriptions />
           </Section>
 
-          <Section title="Obsidian · Claude Code">
+          <Section title="Obsidian · AI 에이전트">
             <SettingRow
               label="Obsidian 볼트로 미러링"
               description={
@@ -179,20 +171,16 @@ export function SettingsView(): JSX.Element {
               )}
             </SettingRow>
             <div className="py-3.5">
-              <p className="text-sm font-medium">Claude Code에 연결 (MCP)</p>
+              <p className="text-sm font-medium">AI 에이전트에 연결 (MCP) — Claude Code · Codex(GPT)</p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                Claude Code가 어떤 코드베이스에서 작업하든 AOP Note의 메모를 검색·읽기·추가하고 [[링크]]로 엮을 수
-                있게 됩니다. {IS_MAC ? '터미널' : '명령 프롬프트(cmd)'}에서 아래 명령을 한 번 실행하세요. 삭제 권한은 주지 않습니다.
+                어떤 코드베이스에서 작업하든 에이전트가 AOP Note의 메모를 검색·읽기·추가하고 [[링크]]로 엮으며, 세컨드브레인 그래프를
+                통째로 내보내 읽을 수 있게 됩니다. 쓰는 도구의 명령을 {IS_MAC ? '터미널' : '명령 프롬프트(cmd)'}에서 한 번 실행하세요.
+                삭제 권한은 주지 않습니다.
               </p>
               {mcp && (
-                <div className="mt-2.5 flex items-start gap-2 rounded-md border border-border bg-muted/40 p-2.5">
-                  <code className="min-w-0 flex-1 select-all break-all font-mono text-[11px] leading-relaxed">
-                    {mcp.command}
-                  </code>
-                  <Button variant="ghost" size="sm" onClick={copyCommand} aria-label="명령 복사">
-                    {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    {copied ? '복사됨' : '복사'}
-                  </Button>
+                <div className="mt-2.5 space-y-2">
+                  <CommandBox label="Claude Code" command={mcp.command} />
+                  <CommandBox label="Codex CLI (GPT)" command={mcp.codexCommand} />
                 </div>
               )}
             </div>
@@ -212,7 +200,7 @@ export function SettingsView(): JSX.Element {
           <Section title="데이터">
             <SettingRow
               label="백업 내보내기"
-              description="모든 데스크, 작업, 메모와 첨부 파일을 선택한 폴더에 저장합니다."
+              description="모든 데스크, 작업, 메모, 첨부 파일과 그래프 보관함을 선택한 폴더에 저장합니다."
             >
               <Button variant="outline" size="sm" onClick={exportBackup} disabled={busy}>
                 <Download className="h-3.5 w-3.5" />
@@ -307,5 +295,28 @@ function Switch({ label, checked, disabled, onChange }: SwitchProps): JSX.Elemen
         )}
       />
     </button>
+  )
+}
+
+const COPIED_MS = 2000
+
+function CommandBox({ label, command }: { label: string; command: string }): JSX.Element {
+  const [copied, setCopied] = useState(false)
+  const copy = async (): Promise<void> => {
+    await navigator.clipboard.writeText(command)
+    setCopied(true)
+    setTimeout(() => setCopied(false), COPIED_MS)
+  }
+  return (
+    <div className="rounded-md border border-border bg-muted/40 p-2.5">
+      <p className="mb-1 text-[11px] font-medium text-muted-foreground">{label}</p>
+      <div className="flex items-start gap-2">
+        <code className="min-w-0 flex-1 select-all break-all font-mono text-[11px] leading-relaxed">{command}</code>
+        <Button variant="ghost" size="sm" onClick={() => void copy()} aria-label={`${label} 명령 복사`}>
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? '복사됨' : '복사'}
+        </Button>
+      </div>
+    </div>
   )
 }

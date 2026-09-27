@@ -30,7 +30,7 @@ async function main(): Promise<void> {
   assert.equal(await handleMessage({ jsonrpc: '2.0', method: 'notifications/initialized' }), null, 'notifications get no reply')
 
   const names = (await call('tools/list')).result.tools.map((t: { name: string }) => t.name)
-  assert.deepEqual(names.sort(), ['append_to_note', 'create_note', 'get_project_context', 'link_project', 'list_desks', 'list_events', 'list_tasks', 'read_note', 'search_notes'])
+  assert.deepEqual(names.sort(), ['append_to_note', 'create_note', 'export_graph', 'get_project_context', 'link_project', 'list_desks', 'list_events', 'list_saved_graphs', 'list_tasks', 'read_note', 'read_saved_graph', 'search_notes'])
 
   // Write → search → read, with links and backlinks.
   let r = await tool('create_note', { title: '인증 흐름', desk: 'mcp 데스크', category: '아키텍처', markdown: 'JWT 대신 세션. [[세션 저장소]] 참고', due: '2099-01-02' })
@@ -66,6 +66,28 @@ async function main(): Promise<void> {
 
   const unknown = await call('bogus/method')
   assert.equal(unknown.error?.code, -32601)
+
+  // Graph export for LLMs: the whole desk, or a search hit + neighbours; optionally saved to the 보관함.
+  r = await tool('export_graph', { desk: 'MCP 데스크' })
+  assert.equal(r.isError, false, r.text)
+  assert.match(r.text, /^# 세컨드브레인: MCP 데스크/)
+  assert.ok(r.text.includes('인증 흐름 → N') || r.text.includes('→ N'), 'link list present')
+  assert.ok(r.text.includes('JWT 대신 세션'), 'bodies included by default')
+  r = await tool('export_graph', { query: 'Redis', hops: 0, detail: 'titles', format: 'json' })
+  const pack = JSON.parse(r.text) as { nodes: { title: string; body: string | null }[] }
+  assert.deepEqual(pack.nodes.map((n) => n.title), ['세션 저장소'], 'only the search hit')
+  assert.equal(pack.nodes[0].body, null, 'titles only')
+  r = await tool('export_graph', { query: '존재하지않는검색어' })
+  assert.equal(r.isError, true, 'nothing matched → a message the agent can act on')
+  r = await tool('export_graph', { desk: 'MCP 데스크', save: true, title: '에이전트 스냅샷' })
+  assert.match(r.text, /보관함에 저장: .*에이전트 스냅샷/)
+  r = await tool('list_saved_graphs', {})
+  const saved = JSON.parse(r.text) as { id: string; title: string }[]
+  assert.equal(saved[0].title, '에이전트 스냅샷')
+  r = await tool('read_saved_graph', { id: saved[0].id })
+  assert.match(r.text, /^# 세컨드브레인: 에이전트 스냅샷/)
+  r = await tool('export_graph', { detail: 'everything' })
+  assert.equal(r.isError, true, 'unknown detail level is rejected')
 
   console.log('mcp: all assertions passed')
 }

@@ -417,3 +417,24 @@ import { DEFAULT_GRAPH_SETTINGS, labelAlpha, nodeRadius, parseGraphSettings } fr
   assert.ok(!('evil' in saved))
   console.log('graph style: all assertions passed')
 }
+
+// --- graph filter (shared by the graph view and the LLM export) ---------------------
+import { filterGraph } from '@shared/graphFilter'
+{
+  const node = (id: string, desk: string | null, links: number, kind: 'note' | 'file' | 'ghost' = 'note') =>
+    ({ id, title: id, color: '', kind, path: null, workspace_id: desk, workspace_name: desk, category_id: null, links })
+  const data = {
+    nodes: [node('a', 'd1', 2), node('b', 'd1', 2), node('c', 'd1', 1), node('lonely', 'd1', 0), node('x', 'd2', 1), node('ghost:y', null, 1, 'ghost')],
+    edges: [{ source: 'a', target: 'b' }, { source: 'b', target: 'c' }, { source: 'a', target: 'ghost:y' }, { source: 'x', target: 'a' }]
+  }
+  const ids = (g: { nodes: { id: string }[] }): string[] => g.nodes.map((n) => n.id).sort()
+  assert.deepEqual(ids(filterGraph(data, { scope: null, linkedOnly: false })), ['a', 'b', 'c', 'ghost:y', 'lonely', 'x'])
+  assert.deepEqual(ids(filterGraph(data, { scope: null, linkedOnly: true })), ['a', 'b', 'c', 'ghost:y', 'x'], 'no orphans')
+  assert.deepEqual(ids(filterGraph(data, { scope: 'd1', linkedOnly: true })), ['a', 'b', 'c', 'ghost:y'], 'one desk + the ghosts it links to')
+  const scoped = filterGraph(data, { scope: 'd1', linkedOnly: false })
+  assert.ok(!scoped.edges.some((e) => e.source === 'x'), 'edges only between kept nodes')
+  assert.deepEqual(ids(filterGraph(data, { scope: null, linkedOnly: false, focus: ['c'], hops: 0 })), ['c'])
+  assert.deepEqual(ids(filterGraph(data, { scope: null, linkedOnly: false, focus: ['c'], hops: 1 })), ['b', 'c'])
+  assert.deepEqual(ids(filterGraph(data, { scope: null, linkedOnly: false, focus: ['c'], hops: 2 })), ['a', 'b', 'c'])
+  console.log('graph filter: all assertions passed')
+}

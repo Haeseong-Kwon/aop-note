@@ -30,6 +30,13 @@ export function mcpAddCommand(s: LaunchSpec): string {
   return `${base} -e AOP_NOTE_DATA=${posix(s.dataDir)} -- ${posix(s.exe)} ${posix(s.script)}`
 }
 
+/** The same server for OpenAI's Codex CLI (GPT models), which also speaks MCP over stdio. */
+export function codexAddCommand(s: LaunchSpec): string {
+  const base = 'codex mcp add aop-note --env ELECTRON_RUN_AS_NODE=1'
+  if (s.platform === 'win32') return `${base} --env ${cmd(`AOP_NOTE_DATA=${s.dataDir}`)} -- ${cmd(s.exe)} ${cmd(s.script)}`
+  return `${base} --env AOP_NOTE_DATA=${posix(s.dataDir)} -- ${posix(s.exe)} ${posix(s.script)}`
+}
+
 /** SessionStart hook that prints the brief for the session's folder. */
 export function hookSpec(s: LaunchSpec): HookSpec {
   if (s.platform === 'win32') {

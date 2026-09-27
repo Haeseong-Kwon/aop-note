@@ -4,6 +4,7 @@ import type { Api, NavigatePayload } from '@shared/ipc'
 import type {
   CreateWorkspaceInput,
   CreateDocFolderInput,
+  GraphExportRequest,
   DocumentUploadInput,
   UpdateWorkspaceInput,
   CreateCategoryInput,
@@ -88,6 +89,17 @@ const api: Api = {
     rename: (id: string, name: string) => ipcRenderer.invoke(IPC.docFolder.rename, id, name),
     move: (id: string, parentId: string | null) => ipcRenderer.invoke(IPC.docFolder.move, id, parentId),
     remove: (id: string) => ipcRenderer.invoke(IPC.docFolder.remove, id)
+  },
+  graph: {
+    stats: (req: GraphExportRequest) => ipcRenderer.invoke(IPC.graph.stats, req),
+    copy: (req: GraphExportRequest) => ipcRenderer.invoke(IPC.graph.copy, req),
+    save: (req: GraphExportRequest) => ipcRenderer.invoke(IPC.graph.save, req),
+    list: () => ipcRenderer.invoke(IPC.graph.list),
+    copyArchived: (id: string) => ipcRenderer.invoke(IPC.graph.copyArchived, id),
+    open: (id: string) => ipcRenderer.invoke(IPC.graph.open, id),
+    reveal: (id: string) => ipcRenderer.invoke(IPC.graph.reveal, id),
+    saveAs: (id: string) => ipcRenderer.invoke(IPC.graph.saveAs, id),
+    remove: (id: string) => ipcRenderer.invoke(IPC.graph.remove, id)
   },
   link: {
     backlinks: (taskId: string) => ipcRenderer.invoke(IPC.link.backlinks, taskId),

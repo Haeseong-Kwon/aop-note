@@ -5,6 +5,7 @@ import { join } from 'path'
 import { autoBackup, backupsDir, exportBackupTo, validateBackupDir, AUTO_BACKUP_KEEP } from './backup'
 import { attachmentsDir } from './attachmentPaths'
 import { workspaceRepo } from './repositories/workspace.repo'
+import { graphArchive } from './graphArchive'
 
 async function main(): Promise<void> {
   workspaceRepo.create({ name: '백업 대상' })
@@ -33,6 +34,20 @@ async function main(): Promise<void> {
   assert.ok(folder.startsWith(parent))
   assert.ok(existsSync(join(folder, 'attachments', 'spec.pdf')))
   validateBackupDir(folder)
+
+  // The 그래프 보관함 travels with the backup, and restoring merges it (nothing lost on either side).
+  const kept = graphArchive.save({ title: '백업될 팩', format: 'md', content: '# 팩', stats: { nodes: 1, edges: 0, chars: 3, tokens: 2 }, scopeLabel: '전체' })
+  const withGraphs = await exportBackupTo(mkdtempSync(join(tmpdir(), 'aop-export2-')), today)
+  assert.ok(existsSync(join(withGraphs, 'graph-exports', 'index.json')), 'archive manifest in the backup')
+  assert.ok(existsSync(join(withGraphs, 'graph-exports', kept.file)), 'archive file in the backup')
+  graphArchive.remove(kept.id)
+  const local = graphArchive.save({ title: '로컬 팩', format: 'json', content: '{}', stats: { nodes: 0, edges: 0, chars: 2, tokens: 1 }, scopeLabel: '전체' })
+  assert.equal(graphArchive.importFrom(join(withGraphs, 'graph-exports')), 1, 'one entry restored')
+  assert.equal(graphArchive.importFrom(join(withGraphs, 'graph-exports')), 0, 'importing twice adds nothing')
+  const ids = graphArchive.list().map((e) => e.id)
+  assert.ok(ids.includes(kept.id) && ids.includes(local.id), 'restored entry joins the local one')
+  assert.equal(graphArchive.read(kept.id), '# 팩')
+  assert.equal(graphArchive.importFrom(join(tmpdir(), 'no-such-dir')), 0, 'backups from before the archive existed')
 
   // Restoring from something that is not a backup is refused with a clear message.
   const empty = mkdtempSync(join(tmpdir(), 'aop-empty-'))
