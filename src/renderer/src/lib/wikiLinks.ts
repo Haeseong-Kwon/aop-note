@@ -3,6 +3,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { extractLinks } from '@shared/links'
+import { MOD_CLICK } from './utils'
 
 export interface WikiLinksOptions {
   /** ⌘/Ctrl-click on a [[link]]: open (or create) the note with that title. */
@@ -23,7 +24,7 @@ function decorate(doc: PMNode): DecorationSet {
         Decoration.inline(
           from,
           from + link.length,
-          { class: 'bn-wikilink', title: `${link.target} — ⌘+클릭으로 열기` },
+          { class: 'bn-wikilink', title: `${link.target} — ${MOD_CLICK}으로 열기` },
           { target: link.target }
         )
       )

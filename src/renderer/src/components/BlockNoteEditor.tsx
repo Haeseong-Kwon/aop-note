@@ -27,6 +27,7 @@ import { WikiLinks } from '@/lib/wikiLinks'
 import { useStore } from '@/store/useStore'
 import { cn } from '@/lib/utils'
 import type { Attachment } from '@shared/types'
+import { MOD_CLICK } from '@/lib/utils'
 
 const LINK_SUGGESTIONS = 8
 
@@ -275,7 +276,7 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
         .slice(0, LINK_SUGGESTIONS)
         .map((t) => ({ ...t, onItemClick: insert(t.title) }))
       if (q && !titles.some((t) => t.title.toLowerCase() === q.toLowerCase())) {
-        items.push({ title: `[[${q}]]`, subtext: '아직 없는 메모 — ⌘+클릭하면 만들어집니다', onItemClick: insert(q) })
+        items.push({ title: `[[${q}]]`, subtext: `아직 없는 메모 — ${MOD_CLICK}하면 만들어집니다`, onItemClick: insert(q) })
       }
       return items
     }

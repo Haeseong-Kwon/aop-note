@@ -14,6 +14,7 @@
     "start": "electron-vite preview",
     "package": "npm run build && electron-builder",
     "package:mac": "npm run build && electron-builder --mac",
+    "package:win": "node scripts/package-win.mjs",
     "install:mac": "bash scripts/install-mac.sh",
     "postinstall": "electron-builder install-app-deps",
     "test": "npm run test:renderer && npm run test:main",

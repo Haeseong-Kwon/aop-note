@@ -61,7 +61,8 @@ const api: Api = {
     remove: (id: string) => ipcRenderer.invoke(IPC.goal.remove, id)
   },
   search: {
-    query: (text: string) => ipcRenderer.invoke(IPC.search.query, text)
+    query: (text: string) => ipcRenderer.invoke(IPC.search.query, text),
+    notes: (text: string) => ipcRenderer.invoke(IPC.search.notes, text)
   },
   memo: {
     export: (taskId: string, format: ExportFormat) =>

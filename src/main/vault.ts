@@ -22,9 +22,13 @@ const INDEX = 'AOP Note.md'
 // Characters Obsidian / file systems reject in note names, plus link syntax.
 const UNSAFE = /[\\/:*?"<>|#^[\]]/g
 
+// Windows device names can't be files, even with an extension ("nul.txt").
+const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i
+
 export function fileNameFor(title: string): string {
-  const name = title.replace(UNSAFE, '-').replace(/\s+/g, ' ').trim().replace(/^\.+/, '').trim()
-  return name || '제목 없음'
+  const name = title.replace(UNSAFE, '-').replace(/\s+/g, ' ').trim().replace(/^\.+/, '').replace(/[. ]+$/, '')
+  if (!name) return '제목 없음'
+  return RESERVED.test(name) ? `${name}-` : name
 }
 
 const localDate = (iso: string): string => {

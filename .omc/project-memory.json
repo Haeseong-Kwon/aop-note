@@ -401,6 +401,54 @@
       "accessCount": 1,
       "lastAccessed": 1790538520265,
       "type": "file"
+    },
+    {
+      "path": "src/main/claudeCommands.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790542571793,
+      "type": "file"
+    },
+    {
+      "path": "scripts/package-win.mjs",
+      "accessCount": 1,
+      "lastAccessed": 1790542683909,
+      "type": "file"
+    },
+    {
+      "path": "src/main/backdrop.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790542935520,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/lib/paneWidth.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790542995077,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/ui/ResizablePane.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790543008201,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/graph/GraphCanvas.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790543972554,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/graph/GraphSettingsPanel.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790543995631,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/graph/GraphSearch.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790544611717,
+      "type": "file"
     }
   ],
   "userDirectives": []

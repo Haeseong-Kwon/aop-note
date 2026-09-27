@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { MarkdownView } from './MarkdownView'
 import { DocumentViewer } from './DocumentViewer'
 import type { FileBacklinks, ProjectFile } from '@shared/types'
+import { FILE_MANAGER } from '@/lib/utils'
 
 /** "docs/a.md" + "../b.md" → "b.md" (POSIX, no escaping above the project root). */
 function joinPath(fromFile: string, href: string): string {
@@ -76,7 +77,7 @@ export function FilePreview(): JSX.Element | null {
             onClick={() => window.api.project.reveal(open.deskId, open.path).catch(toastError)}
           >
             <FolderOpen className="h-3.5 w-3.5" />
-            Finder에서 보기
+            {FILE_MANAGER}에서 보기
           </Button>
         </header>
 

@@ -136,9 +136,9 @@ export function DocumentsView(): JSX.Element {
           if (payload && !inCategory) handleDrop(folderId, payload)
         }}
       >
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-5">
+        <header className="cq flex h-12 shrink-0 items-center gap-2 border-b border-border px-5">
           <Breadcrumb location={location} folders={folders} memoGroups={memoGroups} onNavigate={setLocation} />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap">
             {editing ? (
               <FolderNameInput
                 initial={editing.mode === 'rename' ? editing.folder.name : ''}
@@ -147,13 +147,21 @@ export function DocumentsView(): JSX.Element {
                 onCancel={() => setEditing(null)}
               />
             ) : (
-              <Button size="sm" variant="ghost" disabled={inCategory} onClick={() => setEditing({ mode: 'create', parentId: folderId })}>
-                <FolderPlus className="h-4 w-4" />새 폴더
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={inCategory}
+                onClick={() => setEditing({ mode: 'create', parentId: folderId })}
+                title="새 폴더"
+                aria-label="새 폴더"
+              >
+                <FolderPlus className="h-4 w-4" />
+                <span className="cq-hide-md">새 폴더</span>
               </Button>
             )}
-            <Button size="sm" disabled={inCategory} onClick={() => fileInput.current?.click()}>
+            <Button size="sm" disabled={inCategory} onClick={() => fileInput.current?.click()} title="업로드" aria-label="업로드">
               <Upload className="h-4 w-4" />
-              업로드
+              <span className="cq-hide-sm">업로드</span>
             </Button>
             <input
               ref={fileInput}
@@ -262,7 +270,7 @@ function FolderNameInput({
         if (e.key === 'Enter') onSubmit(value)
         if (e.key === 'Escape') onCancel()
       }}
-      className="h-8 w-48 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+      className="h-8 w-48 min-w-0 rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
     />
   )
 }

@@ -31,3 +31,30 @@ assert.deepEqual(off.hooks.SessionStart, user.hooks.SessionStart)
 assert.deepEqual(withoutHook(withHook({}, CMD)), { hooks: {} })
 
 console.log('claude hook: all assertions passed')
+
+// --- launch commands per platform (Windows: cmd-quoted MCP command, PowerShell hook) ---
+import { mcpAddCommand, hookSpec } from './claudeCommands'
+const mac = { exe: "/Applications/aop-note.app/Contents/MacOS/aop-note", script: "/A/app.asar/out/mcp/server.js", dataDir: "/Users/o'k/Library/Application Support/aop-note", platform: 'darwin' as const }
+assert.equal(
+  mcpAddCommand(mac),
+  `claude mcp add aop-note --scope user -e ELECTRON_RUN_AS_NODE=1 -e AOP_NOTE_DATA='/Users/o'\\''k/Library/Application Support/aop-note' -- '/Applications/aop-note.app/Contents/MacOS/aop-note' '/A/app.asar/out/mcp/server.js'`
+)
+assert.deepEqual(hookSpec(mac), {
+  command: `ELECTRON_RUN_AS_NODE=1 AOP_NOTE_DATA='/Users/o'\\''k/Library/Application Support/aop-note' '/Applications/aop-note.app/Contents/MacOS/aop-note' '/A/app.asar/out/mcp/server.js' --brief`
+})
+const win = { exe: 'C:\\Users\\Kim O\'Neil\\AppData\\Local\\Programs\\aop-note\\aop-note.exe', script: 'C:\\Users\\Kim O\'Neil\\AppData\\Local\\Programs\\aop-note\\resources\\app.asar\\out\\mcp\\server.js', dataDir: 'C:\\Users\\Kim O\'Neil\\AppData\\Roaming\\aop-note', platform: 'win32' as const }
+assert.equal(
+  mcpAddCommand(win),
+  `claude mcp add aop-note --scope user -e ELECTRON_RUN_AS_NODE=1 -e "AOP_NOTE_DATA=${win.dataDir}" -- "${win.exe}" "${win.script}"`
+)
+const winHook = hookSpec(win)
+assert.equal(winHook.shell, 'powershell', 'Claude Code would otherwise pick Git Bash or PowerShell depending on the machine')
+assert.equal(
+  winHook.command,
+  `$env:ELECTRON_RUN_AS_NODE='1'; $env:AOP_NOTE_DATA='C:\\Users\\Kim O''Neil\\AppData\\Roaming\\aop-note'; & 'C:\\Users\\Kim O''Neil\\AppData\\Local\\Programs\\aop-note\\aop-note.exe' 'C:\\Users\\Kim O''Neil\\AppData\\Local\\Programs\\aop-note\\resources\\app.asar\\out\\mcp\\server.js' --brief`
+)
+const withShell = withHook(user, winHook.command, winHook.shell)
+const ours = withShell.hooks.SessionStart.at(-1) as { hooks: { shell?: string; command: string }[] }
+assert.equal(ours.hooks[0].shell, 'powershell')
+assert.ok(ours.hooks[0].command.endsWith('# aop-note'), 'marker is a comment in PowerShell too')
+console.log('claude commands: all assertions passed')

@@ -1,5 +1,5 @@
 import { getDb } from '../db'
-import type { SearchHit } from '@shared/types'
+import type { NoteSearchHit, SearchHit } from '@shared/types'
 
 // Lightweight LIKE-based search across tasks, categories, and workspaces.
 // Kept in one place so it can later be swapped for an FTS5 virtual table
@@ -7,7 +7,38 @@ import type { SearchHit } from '@shared/types'
 
 const escapeLike = (s: string): string => s.replace(/[\\%_]/g, (m) => `\\${m}`)
 
+const NOTE_HIT_LIMIT = 500
+const SNIPPET_CONTEXT = 30
+
+/** The text around the first case-insensitive match, on one line; '' if the note doesn't contain it. */
+function snippetAround(note: string, needle: string): string {
+  const at = note.toLowerCase().indexOf(needle.toLowerCase())
+  if (at < 0) return ''
+  const start = Math.max(0, at - SNIPPET_CONTEXT)
+  const end = Math.min(note.length, at + needle.length + SNIPPET_CONTEXT)
+  const text = note.slice(start, end).replace(/\s+/g, ' ').trim()
+  return `${start > 0 ? '…' : ''}${text}${end < note.length ? '…' : ''}`
+}
+
 export const searchRepo = {
+  /** Every live memo whose title or body contains `text` (graph search), with a body snippet. */
+  notes(text: string): NoteSearchHit[] {
+    const trimmed = text.trim()
+    if (!trimmed) return []
+    const rows = getDb()
+      .prepare(
+        `SELECT t.id, t.title, t.note FROM tasks t
+         JOIN categories c ON c.id = t.category_id
+         JOIN workspaces w ON w.id = c.workspace_id
+         WHERE t.deleted_at IS NULL AND c.deleted_at IS NULL AND w.deleted_at IS NULL
+           AND (t.title LIKE @like ESCAPE '\\' OR t.note LIKE @like ESCAPE '\\')
+         ORDER BY t.updated_at DESC
+         LIMIT ${NOTE_HIT_LIMIT}`
+      )
+      .all({ like: `%${escapeLike(trimmed)}%` }) as { id: string; title: string; note: string }[]
+    return rows.map((r) => ({ id: r.id, title: r.title, snippet: snippetAround(r.note, trimmed) }))
+  },
+
   query(text: string): SearchHit[] {
     const trimmed = text.trim()
     if (!trimmed) return []

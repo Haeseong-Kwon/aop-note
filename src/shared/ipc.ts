@@ -8,6 +8,7 @@ import type {
   TaskWithContext,
   GoalWithProgress,
   SearchHit,
+  NoteSearchHit,
   Attachment,
   AttachmentWithContext,
   AttachmentAddInput,
@@ -91,7 +92,8 @@ export const IPC = {
     remove: 'goal:remove'
   },
   search: {
-    query: 'search:query'
+    query: 'search:query',
+    notes: 'search:notes'
   },
   memo: {
     export: 'memo:export'
@@ -234,6 +236,8 @@ export interface Api {
   }
   search: {
     query(text: string): Promise<SearchHit[]>
+    /** Memos whose title or body contains the text (graph search). */
+    notes(text: string): Promise<NoteSearchHit[]>
   }
   memo: {
     /** Export a task's memo (title + note) to a file the user picks. */

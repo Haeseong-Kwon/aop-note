@@ -7,11 +7,11 @@ import { dirname, join } from 'path'
 // We edit the user's ~/.claude/settings.json, so: only on an explicit toggle, merge
 // instead of overwrite, back the file up once, and refuse to touch invalid JSON.
 
-const MARKER = '# aop-note' // shell comment identifying our entry; ignored when run
+const MARKER = '# aop-note' // comment in sh and PowerShell alike: identifies our entry, ignored when run
 
 interface HookEntry {
   matcher?: string
-  hooks: { type: string; command: string }[]
+  hooks: { type: string; command: string; shell?: string }[]
 }
 type Settings = Record<string, unknown> & { hooks?: Record<string, HookEntry[]> }
 
@@ -22,10 +22,15 @@ export function hasHook(settings: Settings): boolean {
 }
 
 /** New settings with exactly one AOP Note SessionStart entry (replacing an older one). */
-export function withHook(settings: Settings, command: string): Settings & { hooks: Record<string, HookEntry[]> } {
+export function withHook(
+  settings: Settings,
+  command: string,
+  shell?: string
+): Settings & { hooks: Record<string, HookEntry[]> } {
   const hooks = settings.hooks ?? {}
   const others = (hooks.SessionStart ?? []).filter((e) => !isOurs(e))
-  const ours: HookEntry = { hooks: [{ type: 'command', command: command.includes(MARKER) ? command : `${command} ${MARKER}` }] }
+  const marked = command.includes(MARKER) ? command : `${command} ${MARKER}`
+  const ours: HookEntry = { hooks: [{ type: 'command', command: marked, ...(shell ? { shell } : {}) }] }
   return { ...settings, hooks: { ...hooks, SessionStart: [...others, ours] } }
 }
 
@@ -60,10 +65,10 @@ export function isHookInstalled(): boolean {
   }
 }
 
-export function setHookInstalled(enabled: boolean, command: string): boolean {
+export function setHookInstalled(enabled: boolean, command: string, shell?: string): boolean {
   const path = claudeSettingsPath()
   const current = readSettings(path)
-  const next = enabled ? withHook(current, command) : withoutHook(current)
+  const next = enabled ? withHook(current, command, shell) : withoutHook(current)
   const backup = `${path}.aop-note-backup`
   if (existsSync(path) && !existsSync(backup)) copyFileSync(path, backup) // first edit only
   mkdirSync(dirname(path), { recursive: true })

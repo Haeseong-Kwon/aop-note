@@ -1,7 +1,7 @@
 import { join, basename } from 'path'
 import { pathToFileURL } from 'url'
 import { existsSync } from 'fs'
-import { app, shell, BrowserWindow, protocol, net } from 'electron'
+import { app, shell, BrowserWindow, Menu, protocol, net } from 'electron'
 import { getDb, closeDb } from './db'
 import { registerIpcHandlers } from './ipc/handlers'
 import { startDueNotifier } from './notifications'
@@ -13,12 +13,26 @@ import { scheduleVaultSync } from './vault'
 import { projectFilePath, startProjectWatching } from './projects'
 import { syncAllCalendars } from './calendars'
 import { IPC } from '@shared/ipc'
+import { applyBackdrop, solidBackdrop } from './backdrop'
 
 let stopNotifier: (() => void) | null = null
 let stopQuickCapture: (() => void) | null = null
 let stopProjectWatching: (() => void) | null = null
 let calendarTimer: ReturnType<typeof setInterval> | null = null
 const CALENDAR_SYNC_MS = 30 * 60_000
+
+// Windows: toasts only show for an app with an AppUserModelID (must match the installer's appId).
+if (process.platform === 'win32') app.setAppUserModelId('com.aop.note')
+
+// One copy of the app (one SQLite writer). A second launch focuses the running window.
+if (!app.requestSingleInstanceLock()) app.exit(0) // exit now: quit() would still let 'ready' open a window
+app.on('second-instance', () => {
+  const win = BrowserWindow.getAllWindows()[0]
+  if (!win) return
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+})
 
 // Custom scheme to serve attachment files to the renderer (PDF iframe, images)
 // without exposing file:// or relaxing sandboxing. Must be registered before ready.
@@ -45,7 +59,7 @@ function createWindow(): BrowserWindow {
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     // macOS: a transparent backdrop lets the native vibrancy blur show through the
     // translucent panels in the renderer. Other platforms keep a solid backdrop.
-    backgroundColor: isMac ? '#00000000' : '#0b0b0f',
+    backgroundColor: isMac ? '#00000000' : solidBackdrop(),
     ...(isMac
       ? { vibrancy: 'under-window' as const, visualEffectState: 'active' as const }
       : {}),
@@ -61,6 +75,8 @@ function createWindow(): BrowserWindow {
   })
 
   win.on('ready-to-show', () => win.show())
+  win.on('enter-full-screen', () => applyBackdrop(win))
+  win.on('leave-full-screen', () => applyBackdrop(win))
 
   win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -78,6 +94,9 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  // Windows / Linux: no File·Edit·View menu bar — the app has its own UI for everything,
+  // and copy/paste/undo shortcuts work in Chromium without menu items there.
+  if (!isMac) Menu.setApplicationMenu(null)
   // Serve attachment files via aop-file://<storedName> (basename-guarded).
   protocol.handle('aop-file', (request) => {
     // A standard scheme may put the filename in the host (aop-file://name) or the

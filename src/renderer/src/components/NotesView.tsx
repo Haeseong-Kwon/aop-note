@@ -6,6 +6,7 @@ import { NotePage } from './NotePage'
 import { cn } from '@/lib/utils'
 import { flattenTree, type TreeRow } from '@shared/tree'
 import type { Task, TaskStatus } from '@shared/types'
+import { ResizablePane } from '@/components/ui/ResizablePane'
 
 const STATUS_DOT: Record<TaskStatus, string> = {
   todo: 'bg-slate-400',
@@ -143,7 +144,15 @@ export function NotesView(): JSX.Element {
 
   return (
     <div className="flex h-full">
-      <aside className="glass-chrome flex w-64 shrink-0 flex-col border-r border-border">
+      <ResizablePane
+        as="aside"
+        id="notes"
+        label="메모 목록"
+        min={200}
+        max={520}
+        fallback={256}
+        className="glass-chrome flex flex-col border-r border-border"
+      >
         <div className="space-y-2 border-b border-border p-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -205,7 +214,7 @@ export function NotesView(): JSX.Element {
             ))
           )}
         </div>
-      </aside>
+      </ResizablePane>
 
       <div className="min-w-0 flex-1">
         {selected ? (

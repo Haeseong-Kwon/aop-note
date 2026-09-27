@@ -19,6 +19,7 @@ import { useStore } from '@/store/useStore'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { SearchHit } from '@shared/types'
+import { shortcut } from '@/lib/utils'
 
 const HIT_ICONS = {
   task: CheckSquare,
@@ -105,7 +106,7 @@ export function CommandPalette(): JSX.Element {
         run: () => openHit(hit)
       }))
     : [
-        { key: 'a-capture', group: '바로 가기', icon: SquarePen, title: '빠른 추가', hint: '⌘N', run: () => openQuickCapture() },
+        { key: 'a-capture', group: '바로 가기', icon: SquarePen, title: '빠른 추가', hint: shortcut('Mod', 'N'), run: () => openQuickCapture() },
         { key: 'a-today', group: '바로 가기', icon: Sun, title: '오늘', run: () => selectSmartView('today') },
         { key: 'a-week', group: '바로 가기', icon: CalendarCheck, title: '이번 주', run: () => selectSmartView('week') },
         { key: 'a-help', group: '바로 가기', icon: Keyboard, title: '키보드 단축키', hint: '?', run: toggleHelp },

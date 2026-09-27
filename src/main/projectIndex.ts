@@ -1,7 +1,7 @@
 import { execFileSync } from 'child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { homedir } from 'os'
-import { isAbsolute, join, posix, resolve } from 'path'
+import { isAbsolute, join, parse, posix, resolve } from 'path'
 import { extractLinks } from '@shared/links'
 import { READ_ONLY_GIT_ENV } from './git'
 
@@ -179,6 +179,6 @@ export function validateFolder(input: string): string {
     /* missing */
   }
   if (!isDir) throw new Error(`폴더를 찾을 수 없습니다: ${folder}`)
-  if (folder === '/' || folder === homedir()) throw new Error('홈 폴더나 루트 전체는 연결할 수 없습니다. 프로젝트 폴더를 고르세요.')
+  if (parse(folder).root === folder || folder === homedir()) throw new Error('홈 폴더나 루트 전체는 연결할 수 없습니다. 프로젝트 폴더를 고르세요.')
   return folder
 }

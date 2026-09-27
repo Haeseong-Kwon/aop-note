@@ -99,8 +99,8 @@
     background: transparent;
     margin: 0;
     font-family:
-      'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      sans-serif;
+      'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+      'Segoe UI', 'Malgun Gothic', '맑은 고딕', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     /* Korean wraps at word boundaries, not mid-syllable-cluster. */
     word-break: keep-all;
@@ -188,7 +188,7 @@
 /* BlockNote memo editor — blend with the app theme + Korean (Pretendard) font. */
 .bn-container {
   --bn-font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, sans-serif;
+    'Apple SD Gothic Neo', 'Segoe UI', 'Malgun Gothic', '맑은 고딕', Roboto, sans-serif;
   --bn-colors-editor-background: transparent;
   --bn-colors-editor-text: hsl(var(--foreground));
   background: transparent;
@@ -220,16 +220,36 @@
   padding-inline: 6rem;
 }
 
+/* Memo page gutters follow the page's own width (container units), up to the design
+   values — 3.5rem normal, 6rem full width — so a narrow column keeps its text readable.
+   The editor sits 1rem inside the title column (its block handles live in that gap). */
+.note-page {
+  container-type: inline-size;
+  --page-gutter: clamp(1.5rem, 7cqi, 3.5rem);
+}
+.note-page--full {
+  --page-gutter: clamp(1.5rem, 9cqi, 6rem);
+}
+.page-column {
+  padding-inline: var(--page-gutter);
+}
+.note-page .bn-memo--page .bn-editor {
+  padding-inline: max(0.5rem, calc(var(--page-gutter) - 1rem));
+}
+.note-page--full .bn-memo--full .bn-editor {
+  padding-inline: var(--page-gutter);
+}
+
 /* Page fonts (Notion's Default / Serif / Mono). */
 .font-note-serif,
 .font-note-serif .bn-container {
-  font-family: 'AppleMyungjo', 'Nanum Myeongjo', 'Noto Serif KR', Georgia, serif;
-  --bn-font-family: 'AppleMyungjo', 'Nanum Myeongjo', 'Noto Serif KR', Georgia, serif;
+  font-family: 'AppleMyungjo', 'Nanum Myeongjo', 'Noto Serif KR', 'Batang', '바탕', Georgia, serif;
+  --bn-font-family: 'AppleMyungjo', 'Nanum Myeongjo', 'Noto Serif KR', 'Batang', '바탕', Georgia, serif;
 }
 .font-note-mono,
 .font-note-mono .bn-container {
-  font-family: 'SF Mono', Menlo, 'D2Coding', monospace;
-  --bn-font-family: 'SF Mono', Menlo, 'D2Coding', monospace;
+  font-family: 'SF Mono', Menlo, 'D2Coding', Consolas, 'Malgun Gothic', monospace;
+  --bn-font-family: 'SF Mono', Menlo, 'D2Coding', Consolas, 'Malgun Gothic', monospace;
 }
 
 /* Callout: icon + text on a soft tinted box; BlockNote's block colour menu sets the tint. */
@@ -544,4 +564,28 @@ textarea:focus-visible,
 }
 .bn-memo .bn-synced-item:hover {
   background: hsl(var(--accent));
+}
+
+/* While a pane edge is dragged: keep the resize cursor everywhere, no text selection. */
+body.is-resizing,
+body.is-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* Toolbars that live in resizable columns size themselves to their own width, not the
+   window's: .cq makes an element a size container; inside it, labels drop to icon-only
+   as the column narrows (the control keeps its title / aria-label). */
+.cq {
+  container-type: inline-size;
+}
+@container (max-width: 46rem) {
+  .cq-hide-md {
+    display: none;
+  }
+}
+@container (max-width: 30rem) {
+  .cq-hide-sm {
+    display: none;
+  }
 }

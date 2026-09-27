@@ -18,7 +18,15 @@ mac:
   category: public.app-category.productivity
 win:
   target:
-    - nsis
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: AOP Note
+  artifactName: ${productName}-Setup-${version}.${ext}
 linux:
   target:
     - AppImage

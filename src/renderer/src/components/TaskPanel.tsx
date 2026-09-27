@@ -39,8 +39,8 @@ export function TaskPanel(): JSX.Element {
       <CategoryPanel />
 
       <section className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-5">
-          <div className="flex min-w-0 items-center gap-2">
+        <div className="cq flex h-12 shrink-0 items-center gap-3 border-b border-border px-5">
+          <div className="flex min-w-[4.5rem] flex-1 items-center gap-2">
             {activeCategory && (
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -52,14 +52,14 @@ export function TaskPanel(): JSX.Element {
             </h2>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
             {view === 'list' && activeCategory && (
               <>
                 <select
                   value={listPrefs.sort}
                   onChange={(e) => setListPrefs({ sort: e.target.value as TaskSort })}
                   aria-label="정렬"
-                  className="h-8 rounded-md border border-input bg-background/60 px-2 text-xs text-muted-foreground outline-none hover:text-foreground focus:ring-2 focus:ring-ring"
+                  className="cq-hide-sm h-8 rounded-md border border-input bg-background/60 px-2 text-xs text-muted-foreground outline-none hover:text-foreground focus:ring-2 focus:ring-ring"
                 >
                   <option value="manual">직접 정렬</option>
                   <option value="due">기한순</option>
@@ -68,31 +68,33 @@ export function TaskPanel(): JSX.Element {
                 <button
                   onClick={() => setListPrefs({ hideDone: !listPrefs.hideDone })}
                   aria-pressed={listPrefs.hideDone}
-                  title={listPrefs.hideDone ? '완료된 작업 보이기' : '완료된 작업 숨기기'}
+                  title={listPrefs.hideDone ? `완료된 작업 보이기 (${hiddenDone}개 숨김)` : '완료된 작업 숨기기'}
+                  aria-label={listPrefs.hideDone ? `완료된 작업 보이기 (${hiddenDone}개 숨김)` : '완료된 작업 숨기기'}
                   className={cn(
                     'flex h-8 items-center gap-1.5 rounded-md px-2 text-xs transition-colors hover:bg-accent',
                     listPrefs.hideDone ? 'text-foreground' : 'text-muted-foreground'
                   )}
                 >
                   {listPrefs.hideDone ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  {listPrefs.hideDone ? `완료 ${hiddenDone}개 숨김` : '완료 표시'}
+                  <span className="cq-hide-md">{listPrefs.hideDone ? `완료 ${hiddenDone}개 숨김` : '완료 표시'}</span>
                 </button>
               </>
             )}
             <Tabs value={view} onValueChange={(v) => setView(v as ViewMode)}>
               <TabsList>
-                <TabsTrigger value="list" className="gap-1.5">
+                <TabsTrigger value="list" className="gap-1.5" title="리스트" aria-label="리스트">
                   <LayoutList className="h-3.5 w-3.5" />
-                  리스트
+                  <span className="cq-hide-md">리스트</span>
                 </TabsTrigger>
-                <TabsTrigger value="kanban" className="gap-1.5">
+                <TabsTrigger value="kanban" className="gap-1.5" title="칸반" aria-label="칸반">
                   <Columns3 className="h-3.5 w-3.5" />
-                  칸반
+                  <span className="cq-hide-md">칸반</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button size="sm" onClick={() => openQuickCapture()} disabled={!activeCategory}>
-              <Plus className="h-4 w-4" />새 작업
+            <Button size="sm" onClick={() => openQuickCapture()} disabled={!activeCategory} title="새 작업" aria-label="새 작업">
+              <Plus className="h-4 w-4" />
+              <span className="cq-hide-sm">새 작업</span>
             </Button>
           </div>
         </div>

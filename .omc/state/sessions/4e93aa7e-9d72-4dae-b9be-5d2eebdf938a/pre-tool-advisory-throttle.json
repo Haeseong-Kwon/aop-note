@@ -1,22 +1,22 @@
 {
   "version": 1,
   "entries": {
-    "445ed27a3872b681d98190bae61ccb84954e1bc4e140df5370be958dee776b3a": {
-      "last_emitted_at_ms": 1790539635577,
-      "message": "Verify changes work after editing. Test functionality before marking complete."
-    },
     "466399dafa2d20f60587180bad0a07358eb7f2bce724df0ff682f038ad33f5ad": {
-      "last_emitted_at_ms": 1790539600616,
+      "last_emitted_at_ms": 1790545220559,
       "message": "Read multiple files in parallel when possible for faster analysis."
     },
     "79a93d4a2f8f50b95f852280616242fee1855dc99a3c75211917f55e72e95fae": {
-      "last_emitted_at_ms": 1790539563900,
+      "last_emitted_at_ms": 1790545196311,
       "message": "Use parallel execution for independent tasks. Use run_in_background for long operations (npm install, builds, tests)."
     },
-    "808cb04420bcb368ab4716038ddd950b51198d0402b6cf8e965d66ca42ebccbe": {
-      "last_emitted_at_ms": 1790538518020,
-      "message": "[SLOP WARNING] Detected fallback/workaround language in this tool input. Do not make potential slop: avoid ad-hoc fallback layers, workaround shims, or environment-specific patches unless explicitly justified. For architecture concerns, consult the architect for a concrete design first. If this seems environment-specific, ask the user to confirm constraints before proceeding.\n\nVerify changes work after editing. Test functionality before marking complete."
+    "445ed27a3872b681d98190bae61ccb84954e1bc4e140df5370be958dee776b3a": {
+      "last_emitted_at_ms": 1790544600099,
+      "message": "Verify changes work after editing. Test functionality before marking complete."
+    },
+    "f755e8222c5ecd1b69a120c7463dcdc3106363a8d0dbabde259b4ab67a934a7e": {
+      "last_emitted_at_ms": 1790542433331,
+      "message": "Spawning agent: claude-code-guide (inherit) | Task: Claude Code Windows hook shell"
     }
   },
-  "updated_at": "2026-09-27T20:07:15.577Z"
+  "updated_at": "2026-09-27T21:40:20.559Z"
 }

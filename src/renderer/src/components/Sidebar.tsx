@@ -41,10 +41,11 @@ import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
 import { DeskIcon } from './DeskIcon'
 import { StylePicker } from './StylePicker'
-import { cn, IS_MAC } from '@/lib/utils'
+import { cn, IS_MAC, shortcut } from '@/lib/utils'
 import type { Theme } from '@/store/useStore'
 import { flattenTree } from '@shared/tree'
 import type { Workspace, UpdateWorkspaceInput } from '@shared/types'
+import { ResizablePane } from '@/components/ui/ResizablePane'
 
 const INDENT_PX = 14
 
@@ -267,7 +268,16 @@ export function Sidebar(): JSX.Element {
   }
 
   return (
-    <aside className="glass-chrome glass-pane group/sidebar flex w-60 shrink-0 flex-col">
+    <ResizablePane
+      as="aside"
+      id="sidebar"
+      label="사이드바"
+      min={200}
+      max={420}
+      fallback={240}
+      maxShare={0.35}
+      className="glass-chrome glass-pane group/sidebar flex flex-col"
+    >
       {/* On macOS the traffic lights sit in the top-left, so the brand row starts below them. */}
       <div className={cn('drag-region flex shrink-0 items-center gap-2 px-3 pb-2', IS_MAC ? 'pt-9' : 'pt-3')}>
         <div className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground">
@@ -276,7 +286,7 @@ export function Sidebar(): JSX.Element {
         <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight">AOP Note</span>
         <button
           onClick={toggleSidebar}
-          title="사이드바 접기 (⌘\)"
+          title={`사이드바 접기 (${shortcut('Mod', '\\')})`}
           aria-label="사이드바 접기"
           className="no-drag flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover/sidebar:opacity-100"
         >
@@ -285,8 +295,8 @@ export function Sidebar(): JSX.Element {
       </div>
 
       <nav className="space-y-px px-2">
-        <NavItem icon={Search} label="검색" hint="⌘P" onClick={openPalette} />
-        <NavItem icon={SquarePen} label="빠른 추가" hint="⌘N" onClick={() => openQuickCapture()} />
+        <NavItem icon={Search} label="검색" hint={shortcut('Mod', 'P')} onClick={openPalette} />
+        <NavItem icon={SquarePen} label="빠른 추가" hint={shortcut('Mod', 'N')} onClick={() => openQuickCapture()} />
         <NavItem
           icon={Sun}
           label="오늘"
@@ -418,7 +428,7 @@ export function Sidebar(): JSX.Element {
           <Keyboard className="h-4 w-4" />
         </button>
       </div>
-    </aside>
+    </ResizablePane>
   )
 }
 
@@ -465,7 +475,7 @@ export function SidebarExpandButton(): JSX.Element | null {
   return (
     <button
       onClick={toggleSidebar}
-      title="사이드바 열기 (⌘\)"
+      title={`사이드바 열기 (${shortcut('Mod', '\\')})`}
       aria-label="사이드바 열기"
       // Clears the macOS traffic lights, which now float over this header.
       className={cn(

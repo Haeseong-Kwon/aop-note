@@ -367,3 +367,53 @@ import { COVER_GRADIENTS, COVER_PATTERNS, COVER_PRESETS, coverStyle, randomCover
   // background-image takes images only: a bare colour layer would void the whole value in the browser.
   for (const g of COVER_GRADIENTS) assert.ok(!/,\s*#[0-9a-f]{3,8}\s*$/i.test(g), `gradient must not end in a bare colour: ${g}`)
 }
+{
+  const { shortcut } = await import('./utils')
+  // Node's navigator isn't a Mac, so this exercises the Windows / Linux notation.
+  assert.equal(shortcut('Mod', 'P'), 'Ctrl+P')
+  assert.equal(shortcut('Mod', 'Shift', 'Space'), 'Ctrl+Shift+Space')
+  console.log('shortcut labels: all assertions passed')
+}
+
+// --- resizable panes: widths are clamped, stored values validated ------------------
+import { clampWidth, parseStoredWidth } from './paneWidth'
+{
+  const limits = { min: 180, max: 480, fallback: 240 }
+  assert.equal(clampWidth(100, limits), 180)
+  assert.equal(clampWidth(900, limits), 480)
+  assert.equal(clampWidth(300.6, limits), 301, 'whole pixels')
+  assert.equal(parseStoredWidth(null, limits), 240, 'nothing saved → default')
+  assert.equal(parseStoredWidth('320', limits), 320)
+  assert.equal(parseStoredWidth('9999', limits), 480, 'saved on a bigger screen → clamped')
+  assert.equal(parseStoredWidth('abc', limits), 240, 'garbage → default')
+  console.log('pane width: all assertions passed')
+}
+
+// --- graph (Obsidian-style): tunable forces, node sizes, label fade, saved settings ----
+import { DEFAULT_FORCES } from './forceLayout'
+import { DEFAULT_GRAPH_SETTINGS, labelAlpha, nodeRadius, parseGraphSettings } from './graphStyle'
+{
+  // Longer links spread a linked pair further apart.
+  const spread = (linkLength: number): number => {
+    const l = createLayout(2, [[0, 1]])
+    for (let i = 0; i < 600; i++) tickLayout(l, { ...DEFAULT_FORCES, linkLength })
+    return Math.hypot(l.x[0] - l.x[1], l.y[0] - l.y[1])
+  }
+  assert.ok(spread(220) > spread(60) + 60, 'link distance setting takes effect')
+
+  assert.ok(nodeRadius(0, 1) < nodeRadius(9, 1), 'hubs are bigger')
+  assert.ok(nodeRadius(4, 2) > nodeRadius(4, 1), 'node size setting scales')
+  assert.equal(labelAlpha(0.3, 1), 0, 'zoomed out → no labels')
+  assert.equal(labelAlpha(3, 1), 1, 'zoomed in → full labels')
+  const mid = labelAlpha(1.1, 1)
+  assert.ok(mid > 0 && mid < 1, 'labels fade in, not pop')
+
+  assert.deepEqual(parseGraphSettings(null), DEFAULT_GRAPH_SETTINGS)
+  assert.deepEqual(parseGraphSettings('{bad json'), DEFAULT_GRAPH_SETTINGS)
+  const saved = parseGraphSettings(JSON.stringify({ nodeSize: 99, linkLength: 150, deskColors: true, evil: 1 }))
+  assert.equal(saved.nodeSize, 2.5, 'out-of-range values are clamped')
+  assert.equal(saved.linkLength, 150)
+  assert.equal(saved.deskColors, true)
+  assert.ok(!('evil' in saved))
+  console.log('graph style: all assertions passed')
+}

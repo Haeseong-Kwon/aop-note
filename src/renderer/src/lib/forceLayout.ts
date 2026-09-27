@@ -13,10 +13,16 @@ export interface Layout {
   edges: readonly (readonly [number, number])[]
 }
 
-const REPULSION = 4000
+/** The graph view's 힘 sliders (Obsidian: repel / link distance / center force). */
+export interface Forces {
+  repulsion: number
+  linkLength: number
+  gravity: number
+}
+
+export const DEFAULT_FORCES: Forces = { repulsion: 4000, linkLength: 110, gravity: 0.008 }
+
 const SPRING = 0.04
-const LINK_LENGTH = 110
-const GRAVITY = 0.008
 const DAMPING = 0.82
 const MAX_SPEED = 12
 
@@ -34,7 +40,7 @@ export function createLayout(count: number, edges: readonly (readonly [number, n
 }
 
 /** Advance one step; returns the mean speed (≈ remaining motion) so callers can stop when settled. */
-export function tickLayout(l: Layout): number {
+export function tickLayout(l: Layout, forces: Forces = DEFAULT_FORCES): number {
   const n = l.x.length
   const fx = new Float64Array(n)
   const fy = new Float64Array(n)
@@ -51,7 +57,7 @@ export function tickLayout(l: Layout): number {
         dy = 0.1
         d2 = 0.02
       }
-      const f = REPULSION / d2
+      const f = forces.repulsion / d2
       const d = Math.sqrt(d2)
       fx[i] += (dx / d) * f
       fy[i] += (dy / d) * f
@@ -64,7 +70,7 @@ export function tickLayout(l: Layout): number {
     const dx = l.x[b] - l.x[a]
     const dy = l.y[b] - l.y[a]
     const d = Math.hypot(dx, dy) || 0.01
-    const f = SPRING * (d - LINK_LENGTH)
+    const f = SPRING * (d - forces.linkLength)
     fx[a] += (dx / d) * f
     fy[a] += (dy / d) * f
     fx[b] -= (dx / d) * f
@@ -78,8 +84,8 @@ export function tickLayout(l: Layout): number {
       l.vy[i] = 0
       continue
     }
-    fx[i] -= l.x[i] * GRAVITY
-    fy[i] -= l.y[i] * GRAVITY
+    fx[i] -= l.x[i] * forces.gravity
+    fy[i] -= l.y[i] * forces.gravity
     l.vx[i] = (l.vx[i] + fx[i]) * DAMPING
     l.vy[i] = (l.vy[i] + fy[i]) * DAMPING
     const speed = Math.hypot(l.vx[i], l.vy[i])

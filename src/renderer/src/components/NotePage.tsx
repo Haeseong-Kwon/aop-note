@@ -85,15 +85,16 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
   // No confirm: the delete toast offers undo and the trash keeps it.
   const remove = (): void => void deleteTask(task.id)
   const fontClass = meta.font ? FONT_CLASS[meta.font] : undefined
-  const column = meta.fullWidth ? 'max-w-none px-24' : 'max-w-3xl px-14'
+  const column = meta.fullWidth ? 'max-w-none page-column' : 'max-w-3xl page-column'
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 px-4">
+      <header className="cq flex h-11 shrink-0 items-center gap-2 px-4">
+        <nav aria-label="메모 위치" className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         {category && (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: category.color }} />
-            {category.name}
+          <span className="flex min-w-0 shrink items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: category.color }} />
+            <span className="truncate">{category.name}</span>
           </span>
         )}
         {ancestors.map((a) => (
@@ -104,7 +105,8 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
             </button>
           </span>
         ))}
-        <span className="ml-auto text-[11px] text-muted-foreground">{savedLabel(task.updated_at)}</span>
+        </nav>
+        <span className="cq-hide-sm shrink-0 whitespace-nowrap text-[11px] text-muted-foreground">{savedLabel(task.updated_at)}</span>
         <MemoExportMenu taskId={task.id} flush={persistNow} />
         <NotePageMenu
           meta={meta}
@@ -124,7 +126,7 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={cn('note-page min-h-0 flex-1 overflow-y-auto', meta.fullWidth && 'note-page--full')}>
         <NoteCover taskId={task.id} meta={meta} onChange={setMeta} />
 
         <div className={cn('group/title mx-auto w-full', column, meta.cover ? 'pt-0' : 'pt-10', fontClass)}>
@@ -177,7 +179,8 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
             className="mt-1 w-full bg-transparent text-[2.5rem] font-bold leading-tight tracking-tight outline-none placeholder:text-muted-foreground/30"
           />
 
-          <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+          {/* Wraps as whole chips on a narrow page (Korean keep-all would otherwise stack letters). */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 whitespace-nowrap text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <Hash className="h-3.5 w-3.5" />
               {STATUSES.map((s) => (

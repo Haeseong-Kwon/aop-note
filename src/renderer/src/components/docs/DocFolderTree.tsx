@@ -4,6 +4,7 @@ import { flattenTree } from '@shared/tree'
 import { cn } from '@/lib/utils'
 import type { DocFolder } from '@shared/types'
 import { FOLDER_MIME, isDroppable, readDrop, type DropPayload } from './dnd'
+import { ResizablePane } from '@/components/ui/ResizablePane'
 
 export type DocLocation = { kind: 'folder'; id: string | null } | { kind: 'category'; id: string }
 
@@ -82,7 +83,15 @@ export function DocFolderTree(props: DocFolderTreeProps): JSX.Element {
     )
 
   return (
-    <aside className="glass-chrome flex w-60 shrink-0 flex-col border-r border-border">
+    <ResizablePane
+      as="aside"
+      id="doc-folders"
+      label="폴더 트리"
+      min={180}
+      max={480}
+      fallback={240}
+      className="glass-chrome flex flex-col border-r border-border"
+    >
       <div className="flex h-12 items-center justify-between px-4">
         <h2 className="text-sm font-semibold tracking-tight">폴더</h2>
         <button
@@ -158,7 +167,7 @@ export function DocFolderTree(props: DocFolderTreeProps): JSX.Element {
           </>
         )}
       </nav>
-    </aside>
+    </ResizablePane>
   )
 }
 

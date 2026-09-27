@@ -3,6 +3,7 @@
 import './repositories/trash.check'
 import './repositories/hierarchy.check'
 import './repositories/docs.check'
+import './repositories/search.check'
 import './backup.check'
 import './repositories/recurrence.check'
 import './repositories/reminder.check'

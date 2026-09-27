@@ -5,6 +5,7 @@ import { useToast, toastError } from '@/store/useToast'
 import { Button } from '@/components/ui/button'
 import { formatRelative } from '@/lib/format'
 import type { ProjectOverview, Workspace } from '@shared/types'
+import { FILE_MANAGER } from '@/lib/utils'
 
 /** The desk's linked local folder: its docs (in the brain), git state, and a door to Claude Code. */
 export function ProjectView({ desk }: { desk: Workspace }): JSX.Element {
@@ -72,14 +73,15 @@ export function ProjectView({ desk }: { desk: Workspace }): JSX.Element {
     )
   }
 
-  const name = desk.folder_path.split('/').filter(Boolean).pop()
+  const name = desk.folder_path.split(/[\\/]/).filter(Boolean).pop()
   const git = overview?.git
 
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-5xl px-8 py-6">
         <div className="flex flex-wrap items-start gap-3">
-          <div className="min-w-0 flex-1">
+          {/* A floor on the title's width: buttons wrap below it instead of crushing it. */}
+          <div className="min-w-[14rem] flex-1">
             <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
               <FolderGit2 className="h-6 w-6 shrink-0 text-primary" />
               <span className="truncate">{name}</span>
@@ -92,7 +94,7 @@ export function ProjectView({ desk }: { desk: Workspace }): JSX.Element {
           </Button>
           <Button variant="outline" size="sm" onClick={() => window.api.project.reveal(desk.id).catch(toastError)}>
             <FolderOpen className="h-3.5 w-3.5" />
-            Finder
+            {FILE_MANAGER}
           </Button>
           <Button variant="ghost" size="sm" onClick={choose}>
             폴더 변경

@@ -7,6 +7,7 @@ import { CalendarSubscriptions } from './CalendarSubscriptions'
 import { AiSettings } from './AiSettings'
 import { cn } from '@/lib/utils'
 import type { AppSettings, BackupInfo, McpInfo } from '@shared/types'
+import { IS_MAC, shortcut } from '@/lib/utils'
 
 export function SettingsView(): JSX.Element {
   const showToast = useToast((s) => s.show)
@@ -112,7 +113,7 @@ export function SettingsView(): JSX.Element {
               />
             </SettingRow>
             <SettingRow
-              label="어디서나 빠른 추가 (⌘⇧Space)"
+              label={`어디서나 빠른 추가 (${shortcut('Mod', 'Shift', 'Space')})`}
               description="다른 앱을 쓰는 중에도 단축키로 작업을 바로 추가합니다."
             >
               <Switch
@@ -181,7 +182,7 @@ export function SettingsView(): JSX.Element {
               <p className="text-sm font-medium">Claude Code에 연결 (MCP)</p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                 Claude Code가 어떤 코드베이스에서 작업하든 AOP Note의 메모를 검색·읽기·추가하고 [[링크]]로 엮을 수
-                있게 됩니다. 터미널에서 아래 명령을 한 번 실행하세요. 삭제 권한은 주지 않습니다.
+                있게 됩니다. {IS_MAC ? '터미널' : '명령 프롬프트(cmd)'}에서 아래 명령을 한 번 실행하세요. 삭제 권한은 주지 않습니다.
               </p>
               {mcp && (
                 <div className="mt-2.5 flex items-start gap-2 rounded-md border border-border bg-muted/40 p-2.5">

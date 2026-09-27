@@ -1,4 +1,4 @@
-import { execFile } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import { watch, readFileSync, type FSWatcher } from 'fs'
 import { extname, join } from 'path'
 import { dialog, shell, type BrowserWindow } from 'electron'
@@ -125,9 +125,26 @@ export function revealInFinder(deskId: string, path?: string): void {
   else void shell.openPath(folder)
 }
 
-/** Open a terminal in the project running `claude` (macOS Terminal; elsewhere just the folder). */
+/** Open a terminal in the project running `claude` (macOS Terminal, Windows console; elsewhere just the folder). */
 export function openInClaudeCode(deskId: string): Promise<void> {
   const { folder } = deskFolder(deskId)
+  if (process.platform === 'win32') {
+    // `start` opens a new console window in the folder. Windows paths can't contain
+    // double quotes, so quoting the folder is enough; nothing else here is user input.
+    const child = spawn('cmd.exe', ['/c', `start "Claude Code" /D "${folder}" cmd.exe /k claude`], {
+      detached: true,
+      stdio: 'ignore',
+      windowsVerbatimArguments: true,
+      windowsHide: true
+    })
+    return new Promise((done, fail) => {
+      child.once('error', (error) => fail(new Error(`터미널을 열지 못했습니다: ${error.message}`)))
+      child.once('spawn', () => {
+        child.unref()
+        done()
+      })
+    })
+  }
   if (process.platform !== 'darwin') {
     return shell.openPath(folder).then(() => undefined)
   }

@@ -39,25 +39,38 @@ function readApiKey(): string | null {
 }
 
 let cliCache: string | null | undefined
-/** Apps started from Finder get a minimal PATH, so look in the usual places and the login shell. */
-export function findClaudeCli(): string | null {
-  if (cliCache !== undefined) return cliCache
-  const candidates = [
+
+/** Where the claude CLI is looked for when it isn't on the app's (minimal) PATH. */
+function cliCandidates(): string[] {
+  if (process.platform === 'win32') {
+    // Only real executables: a .cmd shim would need a shell, and the prompt is passed as arguments.
+    return [join(homedir(), '.local', 'bin', 'claude.exe')]
+  }
+  return [
     join(homedir(), '.local', 'bin', 'claude'),
     join(homedir(), '.claude', 'local', 'claude'),
     '/opt/homebrew/bin/claude',
     '/usr/local/bin/claude'
   ]
-  cliCache = candidates.find((p) => existsSync(p)) ?? null
-  if (!cliCache) {
-    try {
-      const shell = process.env.SHELL || '/bin/zsh'
-      const found = execFileSync(shell, ['-lc', 'command -v claude'], { encoding: 'utf8', timeout: 5000 }).trim()
-      cliCache = found && existsSync(found) ? found : null
-    } catch {
-      cliCache = null
-    }
+}
+
+/** Ask the system: `where claude.exe` on Windows, the login shell elsewhere (apps started from Finder get a minimal PATH). */
+function cliOnPath(): string | null {
+  try {
+    const out =
+      process.platform === 'win32'
+        ? execFileSync('where.exe', ['claude.exe'], { encoding: 'utf8', timeout: 5000, windowsHide: true })
+        : execFileSync(process.env.SHELL || '/bin/zsh', ['-lc', 'command -v claude'], { encoding: 'utf8', timeout: 5000 })
+    const found = out.split(/\r?\n/)[0].trim()
+    return found && existsSync(found) ? found : null
+  } catch {
+    return null
   }
+}
+
+export function findClaudeCli(): string | null {
+  if (cliCache !== undefined) return cliCache
+  cliCache = cliCandidates().find((p) => existsSync(p)) ?? cliOnPath()
   return cliCache
 }
 
@@ -161,7 +174,7 @@ function viaCli(id: string, model: string, prompt: { system: string; user: strin
     '--system-prompt', prompt.system
   ]
   return new Promise((resolve, reject) => {
-    const child: ChildProcess = spawn(cli, args, { cwd: tmpdir(), env: process.env, stdio: ['pipe', 'pipe', 'pipe'] })
+    const child: ChildProcess = spawn(cli, args, { cwd: tmpdir(), env: process.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
     let buffered = ''
     let streamed = ''
     let stderr = ''

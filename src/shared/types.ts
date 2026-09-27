@@ -164,6 +164,14 @@ export type AttachmentRender =
   | { kind: 'text'; text: string }
   | { kind: 'unsupported'; reason: string }
 
+/** A memo matching a graph search (title or body). */
+export interface NoteSearchHit {
+  id: string
+  title: string
+  /** Text around the first body match; '' when only the title matched. */
+  snippet: string
+}
+
 /** A hit in the command palette / quick switcher. */
 export interface SearchHit {
   type: 'task' | 'category' | 'workspace'

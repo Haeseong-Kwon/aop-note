@@ -50,7 +50,7 @@ export function MainArea(): JSX.Element {
 
   if (utilityView) {
     return (
-      <main className="glass-panel glass-pane flex flex-1 flex-col">
+      <main className="glass-panel glass-pane flex min-w-0 flex-1 flex-col">
         {utilityView === 'trash' && <TrashView />}
         {utilityView === 'settings' && <SettingsView />}
         {utilityView === 'graph' && <GraphView />}
@@ -63,7 +63,7 @@ export function MainArea(): JSX.Element {
   // Smart views ("오늘"/"이번 주") span all desks and replace the desk layout.
   if (smartView) {
     return (
-      <main className="glass-panel glass-pane flex flex-1 flex-col">
+      <main className="glass-panel glass-pane flex min-w-0 flex-1 flex-col">
         <SmartView />
       </main>
     )
@@ -73,7 +73,7 @@ export function MainArea(): JSX.Element {
 
   if (!desk) {
     return (
-      <main className="glass-panel glass-pane flex flex-1 flex-col">
+      <main className="glass-panel glass-pane flex min-w-0 flex-1 flex-col">
         <div className="drag-region flex h-12 shrink-0 items-center px-3">
           <SidebarExpandButton />
         </div>
@@ -87,13 +87,15 @@ export function MainArea(): JSX.Element {
   }
 
   return (
-    <main className="glass-pane flex flex-1 flex-col">
+    <main className="glass-pane flex min-w-0 flex-1 flex-col">
       {/* items-stretch so the tab underline sits exactly on the header's bottom border */}
-      <header className="glass-chrome drag-region flex h-12 shrink-0 items-stretch gap-3 border-b border-border px-3">
+      <header className="cq glass-chrome drag-region flex h-12 shrink-0 items-stretch gap-3 overflow-hidden border-b border-border px-3">
         <div className="flex min-w-0 items-center gap-2">
           <SidebarExpandButton />
           <DeskIcon color={desk.color} icon={desk.icon} />
-          <h1 className="max-w-[16rem] truncate text-sm font-semibold tracking-tight">{desk.name}</h1>
+          <h1 className="max-w-[16rem] truncate text-sm font-semibold tracking-tight" title={desk.name}>
+            {desk.name}
+          </h1>
         </div>
 
         <span aria-hidden className="my-auto h-4 w-px bg-border" />
@@ -104,10 +106,12 @@ export function MainArea(): JSX.Element {
               <TabsTrigger
                 key={value}
                 value={value}
+                title={label}
+                aria-label={label}
                 className="relative h-full gap-1.5 rounded-none px-2.5 text-muted-foreground hover:text-foreground focus-visible:bg-accent/60 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-full after:bg-transparent data-[state=active]:after:bg-foreground"
               >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="cq-hide-md">{label}</span>
               </TabsTrigger>
             ))}
           </TabsList>

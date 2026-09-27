@@ -28,6 +28,8 @@ import { backupInfo, exportBackup, restoreBackup, openDataFolder } from '../back
 import { loadSettings, saveSettings } from '../settings'
 import { setShortcutEnabled } from '../quickCapture'
 import { isHookInstalled, setHookInstalled } from '../claudeHook'
+import { hookSpec, mcpAddCommand, type LaunchSpec } from '../claudeCommands'
+import { applyBackdrop } from '../backdrop'
 import {
   addCalendar,
   eventsBetween,
@@ -125,6 +127,7 @@ export function registerIpcHandlers(): void {
 
   // ---- Search ----
   handle(IPC.search.query, (text: string) => searchRepo.query(text))
+  handle(IPC.search.notes, (text: string) => searchRepo.notes(String(text ?? '')))
 
   // ---- Memo export ----
   handle(IPC.memo.export, (taskId: string, format: ExportFormat) => exportMemo(taskId, format))
@@ -193,7 +196,7 @@ export function registerIpcHandlers(): void {
     if (typeof patch.launchAtLogin === 'boolean') app.setLoginItemSettings({ openAtLogin: next.launchAtLogin })
     if (typeof patch.globalShortcut === 'boolean' && !setShortcutEnabled(next.globalShortcut)) {
       saveSettings({ globalShortcut: false }) // don't claim a shortcut we couldn't register
-      throw new Error('⌘⇧Space를 다른 앱이 이미 쓰고 있어 켤 수 없습니다.')
+      throw new Error(`${process.platform === 'darwin' ? '⌘⇧Space' : 'Ctrl+Shift+Space'}를 다른 앱이 이미 쓰고 있어 켤 수 없습니다.`)
     }
     return next
   })
@@ -260,21 +263,17 @@ export function registerIpcHandlers(): void {
   handle(IPC.calendar.events, (fromIso: string, toIso: string) => eventsBetween(fromIso, toIso))
 
   // ---- Claude Code (MCP server + SessionStart hook) ----
-  // Both run this app's own Electron binary in Node mode, so the bundled SQLite
-  // module matches and nothing else needs installing.
-  const q = (v: string): string => `'${v.replace(/'/g, `'\\''`)}'` // POSIX single quotes
-  const launch = (extra = ''): string => {
-    const script = join(app.getAppPath(), 'out', 'mcp', 'server.js')
-    return `${q(process.execPath)} ${q(script)}${extra}`
-  }
-  const dataEnv = (): string => `AOP_NOTE_DATA=${q(app.getPath('userData'))}`
-  handle(IPC.mcp.info, () => ({
-    command: `claude mcp add aop-note --scope user -e ELECTRON_RUN_AS_NODE=1 -e ${dataEnv()} -- ${launch()}`,
-    hookInstalled: isHookInstalled()
-  }))
-  handle(IPC.mcp.setHook, (enabled: boolean) =>
-    setHookInstalled(Boolean(enabled), `ELECTRON_RUN_AS_NODE=1 ${dataEnv()} ${launch(' --brief')}`)
-  )
+  const launchSpec = (): LaunchSpec => ({
+    exe: process.execPath,
+    script: join(app.getAppPath(), 'out', 'mcp', 'server.js'),
+    dataDir: app.getPath('userData'),
+    platform: process.platform
+  })
+  handle(IPC.mcp.info, () => ({ command: mcpAddCommand(launchSpec()), hookInstalled: isHookInstalled() }))
+  handle(IPC.mcp.setHook, (enabled: boolean) => {
+    const hook = hookSpec(launchSpec())
+    return setHookInstalled(Boolean(enabled), hook.command, hook.shell)
+  })
 
   // ---- Vault mirror ----
   handle(IPC.vault.choose, async () => {
@@ -316,9 +315,6 @@ export function registerIpcHandlers(): void {
   // under-window vibrancy; elsewhere the window has a solid backdrop to repaint.
   handle(IPC.theme.set, (theme: 'light' | 'dark') => {
     nativeTheme.themeSource = theme
-    if (process.platform !== 'darwin') {
-      const backdrop = theme === 'dark' ? '#0b0b0f' : '#eef0f4'
-      for (const win of BrowserWindow.getAllWindows()) win.setBackgroundColor(backdrop)
-    }
+    for (const win of BrowserWindow.getAllWindows()) applyBackdrop(win)
   })
 }

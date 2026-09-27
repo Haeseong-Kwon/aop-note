@@ -11,6 +11,12 @@ import { attachmentsDir } from './attachmentPaths'
 assert.equal(fileNameFor('광고 소재 A/B 테스트'), '광고 소재 A-B 테스트')
 assert.equal(fileNameFor('  what? "quote" #tag  '), 'what- -quote- -tag')
 assert.equal(fileNameFor('...'), '제목 없음', 'nothing usable left')
+// Names Windows can't create: reserved device names, trailing dots / spaces.
+assert.equal(fileNameFor('CON'), 'CON-')
+assert.equal(fileNameFor('nul.txt'), 'nul.txt-')
+assert.equal(fileNameFor('com1'), 'com1-')
+assert.equal(fileNameFor('회의록...'), '회의록')
+assert.equal(fileNameFor('console'), 'console', 'only exact device names')
 
 const ws = workspaceRepo.create({ name: '볼트 데스크' })
 const parent = categoryRepo.create({ workspace_id: ws.id, name: '연구' })

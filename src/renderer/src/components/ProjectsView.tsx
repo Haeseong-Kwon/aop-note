@@ -7,6 +7,7 @@ import { formatRelative } from '@/lib/format'
 import { PageHeader } from './PageHeader'
 import { DeskIcon } from './DeskIcon'
 import type { ProjectSummary } from '@shared/types'
+import { FILE_MANAGER } from '@/lib/utils'
 
 /** Every desk linked to a local folder, plus the desks that could be. */
 export function ProjectsView(): JSX.Element {
@@ -105,7 +106,7 @@ export function ProjectsView(): JSX.Element {
                   <Button
                     variant="ghost"
                     size="sm"
-                    title="Finder에서 열기"
+                    title={`${FILE_MANAGER}에서 열기`}
                     onClick={() => window.api.project.reveal(p.desk_id).catch(toastError)}
                   >
                     <FolderOpen className="h-3.5 w-3.5" />
