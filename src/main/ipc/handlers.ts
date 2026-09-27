@@ -158,6 +158,7 @@ export function registerIpcHandlers(): void {
   // ---- Trash ----
   handle(IPC.trash.list, () => trashRepo.list())
   handle(IPC.trash.restore, (kind: TrashKind, id: string) => trashRepo.restore(kind, id))
+  handle(IPC.trash.empty, () => trashRepo.empty())
 
   // ---- Settings ----
   handle(IPC.settings.get, () => ({

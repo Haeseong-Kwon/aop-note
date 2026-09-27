@@ -1,4 +1,6 @@
 import type Database from 'better-sqlite3'
+import { rmSync } from 'fs'
+import { pathForStored } from '../attachmentPaths'
 import { getDb } from '../db'
 import { nowIso } from './util'
 import type { TrashItem, TrashKind } from '@shared/types'
@@ -83,6 +85,32 @@ function restoreEntity(db: Database.Database, kind: TrashKind, id: string, now: 
   restoreEntity(db, 'category', row.category_id as string, now)
 }
 
+// Everything in the trash plus whatever only lives under it. Recursive so a
+// category under a trashed parent / desk goes too, whatever its own stamp.
+const DOOMED = `
+  WITH RECURSIVE
+    dw(id) AS (SELECT id FROM workspaces WHERE deleted_at IS NOT NULL),
+    dc(id) AS (
+      SELECT id FROM categories WHERE deleted_at IS NOT NULL OR workspace_id IN dw
+      UNION SELECT c.id FROM categories c JOIN dc ON c.parent_id = dc.id
+    ),
+    dt(id) AS (SELECT id FROM tasks WHERE deleted_at IS NOT NULL OR category_id IN dc),
+    dg(id) AS (SELECT id FROM goals WHERE deleted_at IS NOT NULL OR workspace_id IN dw),
+    dp(id) AS (SELECT id FROM properties WHERE deleted_at IS NOT NULL OR workspace_id IN dw)
+`
+
+/** Child tables before parents (foreign keys are on, no ON DELETE CASCADE). */
+const PURGE = [
+  'DELETE FROM task_values WHERE task_id IN dt OR property_id IN dp',
+  'DELETE FROM attachments WHERE task_id IN dt OR deleted_at IS NOT NULL',
+  'UPDATE tasks SET goal_id = NULL WHERE goal_id IN dg',
+  'DELETE FROM tasks WHERE id IN dt',
+  'DELETE FROM categories WHERE id IN dc',
+  'DELETE FROM goals WHERE id IN dg',
+  'DELETE FROM properties WHERE id IN dp',
+  'DELETE FROM workspaces WHERE id IN dw'
+]
+
 export const trashRepo = {
   list(): TrashItem[] {
     return getDb().prepare(LIST_SQL).all() as TrashItem[]
@@ -96,5 +124,21 @@ export const trashRepo = {
       .get(id) as { deleted_at: string | null } | undefined
     if (!row?.deleted_at) throw new Error('휴지통에서 해당 항목을 찾을 수 없습니다.')
     db.transaction(() => restoreEntity(db, kind, id, nowIso()))()
+  },
+
+  /** Permanently delete everything in the trash (and its attachment files). Returns the entries removed. */
+  empty(): number {
+    const db = getDb()
+    const count = this.list().length
+    const files = db
+      .prepare(`${DOOMED} SELECT stored_name FROM attachments WHERE task_id IN dt OR deleted_at IS NOT NULL`)
+      .pluck()
+      .all() as string[]
+    db.transaction(() => {
+      for (const sql of PURGE) db.prepare(`${DOOMED} ${sql}`).run()
+    })()
+    // Files after the commit: a failed transaction must not lose them.
+    for (const name of files) rmSync(pathForStored(name), { force: true })
+    return count
   }
 }

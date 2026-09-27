@@ -124,7 +124,8 @@ export const IPC = {
   },
   trash: {
     list: 'trash:list',
-    restore: 'trash:restore'
+    restore: 'trash:restore',
+    empty: 'trash:empty'
   },
   ai: {
     status: 'ai:status',
@@ -262,6 +263,8 @@ export interface Api {
     list(): Promise<TrashItem[]>
     /** Restore one delete (and any deleted parent it needs to be visible). */
     restore(kind: TrashKind, id: string): Promise<void>
+    /** Permanently delete everything in the trash; resolves with the entries removed. */
+    empty(): Promise<number>
   }
   ai: {
     status(): Promise<AiStatus>

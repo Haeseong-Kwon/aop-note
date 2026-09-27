@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Trash2, LayoutGrid, Folder, CheckSquare, RotateCcw, Search } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { toastError } from '@/store/useToast'
+import { useToast, toastError } from '@/store/useToast'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { formatRelative } from '@/lib/format'
 import { PageHeader } from './PageHeader'
 import type { TrashItem, TrashKind } from '@shared/types'
@@ -16,6 +18,8 @@ export function TrashView(): JSX.Element {
   const restoreFromTrash = useStore((s) => s.restoreFromTrash)
   const [items, setItems] = useState<TrashItem[] | null>(null)
   const [filter, setFilter] = useState('')
+  const [confirming, setConfirming] = useState(false)
+  const showToast = useToast((s) => s.show)
 
   const load = (): void => {
     window.api.trash.list().then(setItems, toastError)
@@ -33,9 +37,47 @@ export function TrashView(): JSX.Element {
     load()
   }
 
+  const empty = async (): Promise<void> => {
+    setConfirming(false)
+    try {
+      const n = await window.api.trash.empty()
+      showToast({ message: `휴지통을 비웠습니다 (${n}개 영구 삭제).` })
+    } catch (e) {
+      toastError(e)
+    }
+    load()
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <PageHeader icon={Trash2} title="휴지통" count={items?.length} />
+      <PageHeader
+        icon={Trash2}
+        title="휴지통"
+        count={items?.length}
+        actions={
+          items && items.length > 0 ? (
+            <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setConfirming(true)}>
+              휴지통 비우기
+            </Button>
+          ) : undefined
+        }
+      />
+      <Dialog open={confirming} onOpenChange={setConfirming}>
+        <DialogContent className="max-w-sm">
+          <DialogTitle>휴지통을 비울까요?</DialogTitle>
+          <DialogDescription>
+            {items?.length ?? 0}개 항목과 그 안의 작업·메모·첨부 파일이 영구 삭제되며 되돌릴 수 없습니다.
+          </DialogDescription>
+          <div className="mt-2 flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => setConfirming(false)}>
+              취소
+            </Button>
+            <Button size="sm" variant="destructive" onClick={() => void empty()}>
+              영구 삭제
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-8 py-6">

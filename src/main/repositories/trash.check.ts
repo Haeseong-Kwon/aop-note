@@ -3,6 +3,10 @@ import { workspaceRepo } from './workspace.repo'
 import { categoryRepo } from './category.repo'
 import { taskRepo } from './task.repo'
 import { trashRepo } from './trash.repo'
+import { propertyRepo } from './property.repo'
+import { getDb } from '../db'
+import { pathForStored } from '../attachmentPaths'
+import { existsSync, writeFileSync } from 'node:fs'
 
 // Deletes stamp rows with a millisecond ISO time; keep separate deletes apart.
 function tick(): void {
@@ -72,5 +76,39 @@ assert.equal(trashRepo.list().length, 0)
 // 4. Unknown ids / kinds fail loudly (kind comes from the renderer and is interpolated as a table name).
 assert.throws(() => trashRepo.restore('constructor' as never, loose.id), /알 수 없는/)
 assert.throws(() => trashRepo.restore('task', 'nope'), /휴지통/)
+
+// 5. Emptying the trash hard-deletes every trashed row (and what hangs off it), leaves live data alone.
+const keep = taskRepo.create({ category_id: child.id, title: '남길 작업' })
+const doomedWs = workspaceRepo.create({ name: '버릴 데스크' })
+const doomedCat = categoryRepo.create({ workspace_id: doomedWs.id, name: '버릴 카테고리' })
+const doomedChild = categoryRepo.create({ workspace_id: doomedWs.id, name: '하위', parent_id: doomedCat.id })
+const inDesk = taskRepo.create({ category_id: doomedChild.id, title: '데스크와 함께' })
+const prop = propertyRepo.create({ workspace_id: doomedWs.id, name: '단계', type: 'text' })
+propertyRepo.setValue(inDesk.id, prop.id, '초안')
+const db = getDb()
+db.prepare(
+  "INSERT INTO attachments (id, task_id, file_name, stored_name, created_at, updated_at) VALUES ('att1', ?, 'a.txt', 'purge-test.txt', '', '')"
+).run(inDesk.id)
+writeFileSync(pathForStored('purge-test.txt'), 'x')
+tick()
+taskRepo.remove(loose.id)
+tick()
+workspaceRepo.remove(doomedWs.id)
+assert.equal(trashRepo.list().length, 2)
+assert.equal(trashRepo.empty(), 2)
+assert.equal(trashRepo.list().length, 0)
+for (const [table, id] of [
+  ['tasks', loose.id],
+  ['tasks', inDesk.id],
+  ['categories', doomedChild.id],
+  ['workspaces', doomedWs.id],
+  ['properties', prop.id],
+  ['attachments', 'att1']
+]) assert.equal(db.prepare(`SELECT 1 FROM ${table} WHERE id = ?`).get(id), undefined, `${table} ${id} purged`)
+assert.equal(db.prepare('SELECT COUNT(*) AS n FROM task_values WHERE task_id = ?').pluck().get(inDesk.id), 0)
+assert.ok(!existsSync(pathForStored('purge-test.txt')), 'attachment file removed')
+assert.ok(taskRepo.getById(keep.id))
+assert.ok(workspaceRepo.getById(ws.id))
+assert.equal(trashRepo.empty(), 0)
 
 console.log('trash: all assertions passed')

@@ -96,7 +96,8 @@ const api: Api = {
   },
   trash: {
     list: () => ipcRenderer.invoke(IPC.trash.list),
-    restore: (kind: TrashKind, id: string) => ipcRenderer.invoke(IPC.trash.restore, kind, id)
+    restore: (kind: TrashKind, id: string) => ipcRenderer.invoke(IPC.trash.restore, kind, id),
+    empty: () => ipcRenderer.invoke(IPC.trash.empty)
   },
   ai: {
     status: () => ipcRenderer.invoke(IPC.ai.status),

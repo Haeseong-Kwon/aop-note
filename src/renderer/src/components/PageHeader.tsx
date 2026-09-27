@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { SidebarExpandButton } from './Sidebar'
 
@@ -5,10 +6,12 @@ interface PageHeaderProps {
   icon: LucideIcon
   title: string
   count?: number
+  /** Right-aligned buttons. */
+  actions?: ReactNode
 }
 
 /** Header strip for pages outside a desk (smart views, trash, settings). */
-export function PageHeader({ icon: Icon, title, count }: PageHeaderProps): JSX.Element {
+export function PageHeader({ icon: Icon, title, count, actions }: PageHeaderProps): JSX.Element {
   return (
     <div className="drag-region flex h-12 shrink-0 items-center gap-2 border-b border-border px-5">
       <SidebarExpandButton />
@@ -19,6 +22,7 @@ export function PageHeader({ icon: Icon, title, count }: PageHeaderProps): JSX.E
           {count}
         </span>
       )}
+      {actions && <div className="no-drag ml-auto flex items-center gap-1">{actions}</div>}
     </div>
   )
 }
