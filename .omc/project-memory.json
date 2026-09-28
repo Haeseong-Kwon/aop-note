@@ -277,6 +277,12 @@
       "type": "file"
     },
     {
+      "path": "src/renderer/src/components/graph/GraphCanvas.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1790556814284,
+      "type": "file"
+    },
+    {
       "path": "src/renderer/src/hooks/useMemoPersist.ts",
       "accessCount": 1,
       "lastAccessed": 1784404905723,
@@ -430,12 +436,6 @@
       "path": "src/renderer/src/components/ui/ResizablePane.tsx",
       "accessCount": 1,
       "lastAccessed": 1790543008201,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/graph/GraphCanvas.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1790543972554,
       "type": "file"
     },
     {

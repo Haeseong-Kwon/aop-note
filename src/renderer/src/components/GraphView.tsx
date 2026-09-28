@@ -9,12 +9,21 @@ import type { GraphData, NoteSearchHit } from '@shared/types'
 import { filterGraph } from '@shared/graphFilter'
 import { GraphSearch, type GraphSearchResult } from './graph/GraphSearch'
 import { GraphExportDialog } from './graph/GraphExportDialog'
-import { GraphCanvas, type PreparedGraph } from './graph/GraphCanvas'
+import { GraphCanvas, type GraphMode, type PreparedGraph } from './graph/GraphCanvas'
 import { ResizablePane } from '@/components/ui/ResizablePane'
 
 const SETTINGS_KEY = 'aop-graph-settings'
 const SEARCH_DEBOUNCE_MS = 150
 const STRUCTURE_KEY = 'aop-graph-structure'
+const MODE_KEY = 'aop-graph-mode'
+
+function loadModePref(): GraphMode {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'tree' ? 'tree' : 'network'
+  } catch {
+    return 'network'
+  }
+}
 
 function loadStructurePref(): boolean {
   try {
@@ -64,12 +73,13 @@ function prepare(data: GraphData, structure: boolean, scope: string | null): Pre
   const { nodes, edges: kept } = filterGraph(data, { scope, linkedOnly: true, structure })
   const index = new Map(nodes.map((n, i) => [n.id, i]))
   const edges: [number, number][] = kept.map((e) => [index.get(e.source) as number, index.get(e.target) as number])
+  const edgeKinds = kept.map((e) => e.kind ?? 'link')
   const neighbours = nodes.map(() => new Set<number>())
   for (const [a, b] of edges) {
     neighbours[a].add(b)
     neighbours[b].add(a)
   }
-  return { nodes, edges, neighbours }
+  return { nodes, edges, edgeKinds, neighbours }
 }
 
 export function GraphView(): JSX.Element {
@@ -104,7 +114,18 @@ export function GraphView(): JSX.Element {
     window.api.link.graph().then(setData, toastError)
   }, [projectVersion])
 
-  const graph = useMemo(() => (data ? prepare(data, structure, scope) : null), [data, structure, scope])
+  const [mode, setModeState] = useState<GraphMode>(loadModePref)
+  const setMode = (next: GraphMode): void => {
+    setModeState(next)
+    try {
+      localStorage.setItem(MODE_KEY, next)
+    } catch {
+      /* not remembered, still applied */
+    }
+  }
+  // The tree is drawn from the structure, so it always includes it.
+  const withStructure = structure || mode === 'tree'
+  const graph = useMemo(() => (data ? prepare(data, withStructure, scope) : null), [data, withStructure, scope])
 
   // Search: memo titles and bodies come from the database (debounced); documents and
   // unwritten notes are matched by title here.
@@ -146,22 +167,29 @@ export function GraphView(): JSX.Element {
           hiddenCount={hiddenCount}
           onPick={(index) => setFocus((f) => ({ index, seq: (f?.seq ?? 0) + 1 }))}
         />
-        <div role="group" aria-label="그래프에 담을 연결" className="flex h-8 shrink-0 items-center rounded-md border border-border p-0.5 text-xs">
-          {([true, false] as const).map((on) => (
-            <button
-              key={String(on)}
-              onClick={() => structure !== on && toggleStructure()}
-              aria-pressed={structure === on}
-              title={on ? '모든 메모·문서를 데스크·카테고리·폴더 구조와 함께' : '[[링크]]로 이어진 것만 (옵시디언 방식)'}
-              className={cn(
-                'h-full rounded px-2 transition-colors',
-                structure === on ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {on ? '구조 포함' : '링크만'}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="보기"
+          options={[
+            { value: 'network', text: '네트워크', title: '힘으로 배치한 지식 그래프' },
+            { value: 'tree', text: '트리', title: '데스크 → 카테고리 → 메모, 폴더 → 문서 순서의 트리 (클릭해서 접기·펼치기)' }
+          ]}
+          value={mode}
+          onChange={(v) => setMode(v as GraphMode)}
+        />
+        <Segmented
+          label="그래프에 담을 연결"
+          options={[
+            { value: 'on', text: '구조 포함', title: '모든 메모·문서를 데스크·카테고리·폴더 구조와 함께' },
+            {
+              value: 'off',
+              text: '링크만',
+              title: mode === 'tree' ? '트리는 구조로 그려서 링크만 보기는 네트워크에서 쓸 수 있습니다' : '[[링크]]로 이어진 것만 (옵시디언 방식)',
+              disabled: mode === 'tree'
+            }
+          ]}
+          value={withStructure ? 'on' : 'off'}
+          onChange={(v) => (v === 'on') !== structure && toggleStructure()}
+        />
         <button
           onClick={() => setExporting(true)}
           disabled={!graph || graph.nodes.length === 0}
@@ -244,7 +272,7 @@ export function GraphView(): JSX.Element {
             </div>
           ) : (
             graph && (
-              <GraphCanvas graph={graph} matches={matches} focus={focus} settings={settings} onSettingsChange={changeSettings} />
+              <GraphCanvas graph={graph} matches={matches} focus={focus} settings={settings} onSettingsChange={changeSettings} mode={mode} />
             )
           )}
         </div>
@@ -254,7 +282,7 @@ export function GraphView(): JSX.Element {
           scope={scope}
           scopeName={scope ? (entries.find((e) => e.id === scope)?.name ?? '데스크') : '전체 세컨드브레인'}
           linkedOnly
-          structure={structure}
+          structure={withStructure}
           searchIds={results ? results.map((r) => graph.nodes[r.index].id) : null}
           onClose={() => setExporting(false)}
         />
@@ -296,5 +324,34 @@ function ScopeItem({ label, detail, active, color, linked, onClick }: ScopeItemP
         <span className="block truncate text-[11px] text-muted-foreground">{detail}</span>
       </span>
     </button>
+  )
+}
+
+interface SegmentOption {
+  value: string
+  text: string
+  title: string
+  disabled?: boolean
+}
+
+function Segmented({ label, options, value, onChange }: { label: string; options: SegmentOption[]; value: string; onChange: (v: string) => void }): JSX.Element {
+  return (
+    <div role="group" aria-label={label} className="flex h-8 shrink-0 items-center rounded-md border border-border p-0.5 text-xs">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => o.value !== value && onChange(o.value)}
+          aria-pressed={o.value === value}
+          disabled={o.disabled}
+          title={o.title}
+          className={cn(
+            'h-full rounded px-2 transition-colors disabled:opacity-40',
+            o.value === value ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {o.text}
+        </button>
+      ))}
+    </div>
   )
 }

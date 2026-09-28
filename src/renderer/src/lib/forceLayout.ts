@@ -99,3 +99,22 @@ export function tickLayout(l: Layout, forces: Forces = DEFAULT_FORCES): number {
   }
   return n ? motion / n : 0
 }
+
+const EASE = 0.2
+
+/** Glide every node toward a fixed position (tree view); returns the mean remaining move.
+ *  Velocities are cleared so the physics resumes calmly when switching back. */
+export function easeTo(l: Layout, tx: Float64Array, ty: Float64Array): number {
+  const n = l.x.length
+  let motion = 0
+  for (let i = 0; i < n; i++) {
+    const dx = tx[i] - l.x[i]
+    const dy = ty[i] - l.y[i]
+    l.x[i] += dx * EASE
+    l.y[i] += dy * EASE
+    l.vx[i] = 0
+    l.vy[i] = 0
+    motion += Math.abs(dx) + Math.abs(dy)
+  }
+  return n ? (motion * EASE) / n : 0
+}

@@ -446,3 +446,45 @@ import { filterGraph } from '@shared/graphFilter'
   assert.equal(labelAlphaFor(3, 1, 0), 1)
   console.log('graph label priority: all assertions passed')
 }
+
+// --- tree layout (graph "트리" view): tidy left→right tree over containment edges ---
+import { treeLayout } from './treeLayout'
+{
+  // 0 desk ─┬ 1 category ─┬ 3 memo ── 5 sub-memo
+  //         │             └ 4 memo
+  //         └ 2 category
+  // 6 orphan (no structure)
+  const edges: [number, number][] = [[0, 1], [0, 2], [1, 3], [1, 4], [3, 5]]
+  const t = treeLayout(7, edges, new Set(), { gapX: 100, gapY: 20 })
+  assert.deepEqual([...t.depth], [0, 1, 1, 2, 2, 3, 0])
+  assert.ok(t.x[3] > t.x[1] && t.x[1] > t.x[0], 'children to the right')
+  const rows = (ids: number[]): number[] => ids.map((i) => t.y[i])
+  assert.ok(rows([5, 4, 2]).every((y, i, a) => i === 0 || y > a[i - 1]), 'leaves stacked top to bottom in order')
+  assert.equal(t.y[3], t.y[5], 'a parent with one child sits level with it')
+  assert.equal(t.y[1], (t.y[3] + t.y[4]) / 2, 'a parent is centred on its children')
+  assert.ok(t.y[6] > t.y[2], 'orphans after the trees')
+  assert.ok(t.visible.every(Boolean))
+  assert.deepEqual([...t.childCount], [2, 2, 0, 1, 0, 0, 0])
+
+  // Collapsing hides the subtree and parks it on the collapsed node (for the fold animation).
+  const c = treeLayout(7, edges, new Set([1]), { gapX: 100, gapY: 20 })
+  assert.deepEqual(c.visible, [true, true, true, false, false, false, true])
+  assert.equal(c.x[5], c.x[1])
+  assert.equal(c.y[5], c.y[1])
+  assert.ok(c.y[2] - c.y[1] === 20, 'collapsed node takes one row')
+
+  // Second parent and cycles don't break it: first parent wins, every node placed once.
+  const odd = treeLayout(3, [[0, 1], [1, 2], [2, 1], [0, 2]], new Set(), { gapX: 100, gapY: 20 })
+  assert.deepEqual([...odd.depth], [0, 1, 2])
+  console.log('tree layout: all assertions passed')
+}
+{
+  const { easeTo } = await import('./forceLayout')
+  const l = createLayout(2, [])
+  const tx = new Float64Array([100, -50])
+  const ty = new Float64Array([0, 80])
+  let m = Infinity
+  for (let i = 0; i < 80; i++) m = easeTo(l, tx, ty)
+  assert.ok(m < 0.02 && Math.abs(l.x[0] - 100) < 0.1 && Math.abs(l.y[1] - 80) < 0.1, 'eases onto the tree positions')
+  console.log('tree easing: all assertions passed')
+}
