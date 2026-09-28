@@ -23,6 +23,10 @@ export interface DocFile {
   fileLinks: string[]
   size: number
   mtime: number
+  /** Absolute file path (set in a desk's merged index, where `path` carries a folder prefix). */
+  abs?: string
+  /** Path inside its own folder, without the prefix. */
+  rel?: string
 }
 
 export interface ProjectIndex {
@@ -139,10 +143,13 @@ export function scanProject(root: string): ProjectIndex {
 export function resolveFile(index: ProjectIndex, target: string): string | null {
   const t = nfc(target.trim().replace(/\\/g, '/').replace(/^\.?\//, '')).toLowerCase()
   if (!t) return null
-  const exact = index.files.find((f) => {
-    const p = nfc(f.path).toLowerCase()
-    return p === t || p.replace(EXT, '') === t
-  })
+  // Exact path — also as written inside its own folder, so [[docs/api]] survives a second folder.
+  const exact = index.files.find((f) =>
+    [f.path, f.rel ?? f.path].some((path) => {
+      const p = nfc(path).toLowerCase()
+      return p === t || p.replace(EXT, '') === t
+    })
+  )
   if (exact) return exact.path
   const byName = index.files.filter((f) => {
     const name = nfc(posix.basename(f.path)).toLowerCase()

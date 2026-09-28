@@ -295,7 +295,8 @@ export interface Api {
     list(): Promise<ProjectSummary[]>
     /** Pick a folder to link to the desk. Null if cancelled. */
     choose(deskId: string): Promise<Workspace | null>
-    unlink(deskId: string): Promise<Workspace>
+    /** Unlink one folder (by its path), or all of them. */
+    unlink(deskId: string, folder?: string): Promise<Workspace>
     overview(deskId: string): Promise<ProjectOverview | null>
     /** Read an indexed document (other paths are refused). */
     readFile(deskId: string, path: string): Promise<ProjectFile>
@@ -305,7 +306,7 @@ export interface Api {
     openFile(deskId: string, path: string): Promise<void>
     reveal(deskId: string, path?: string): Promise<void>
     /** Open a terminal in the folder running `claude`. */
-    openInClaude(deskId: string): Promise<void>
+    openInClaude(deskId: string, folder?: string): Promise<void>
   }
   /** LLM context packs of the knowledge graph + the 그래프 보관함. */
   graph: {

@@ -1,8 +1,9 @@
-import { join, posix } from 'path'
+import { posix } from 'path'
 import { readFileSync } from 'fs'
 import { taskRepo } from './task.repo'
 import { workspaceRepo } from './workspace.repo'
-import { getProjectIndex, resolveFile, type ProjectIndex } from '../projectIndex'
+import { resolveFile } from '../projectIndex'
+import { getDeskIndex, type DeskIndex } from '../projectFiles'
 import { getGitInfo } from '../git'
 import { addAppStructure } from './graphStructure'
 import { extractLinks, normalizeTitle } from '@shared/links'
@@ -56,12 +57,13 @@ function lineAt(text: string, index: number): string {
 
 interface Project {
   desk: Workspace
-  index: ProjectIndex
+  /** All of the desk's linked folders as one index (see getDeskIndex). */
+  index: DeskIndex
 }
 
 function projects(): Project[] {
   return workspaceRepo.list().flatMap((desk) => {
-    const index = desk.folder_path ? getProjectIndex(desk.folder_path) : null
+    const index = getDeskIndex(desk.id)
     return index ? [{ desk, index }] : []
   })
 }
@@ -94,7 +96,8 @@ function resolveFromFile(tasks: TaskWithContext[], project: Project, target: str
 
 function readDoc(project: Project, path: string): string {
   try {
-    return readFileSync(join(project.index.root, path), 'utf8')
+    const file = project.index.files.find((f) => f.path === path)
+    return file?.abs ? readFileSync(file.abs, 'utf8') : ''
   } catch {
     return '' // deleted since the index was built
   }
@@ -149,7 +152,7 @@ export const linkRepo = {
 
     const commits: CommitMention[] = []
     for (const project of all) {
-      for (const c of getGitInfo(project.index.root)?.commits ?? []) {
+      for (const c of project.index.folders.flatMap((f) => (f.index ? getGitInfo(f.path)?.commits ?? [] : []))) {
         const hit = extractLinks(c.subject).some((l) =>
           sameTarget(resolveFromNote(tasks, all, l.target, project.desk.id), wanted)
         )
@@ -255,6 +258,8 @@ export const linkRepo = {
     // Folder structure: every document hangs off its folder, up to the linked folder itself,
     // so a plain folder of PDFs / 한글 files (no [[links]] anywhere) is still a connected graph.
     for (const project of all) {
+      // Several folders: each one's top level hangs off the desk (no shared root folder).
+      const multi = project.index.folders.length > 1
       const folderId = (dir: string): string => `folder:${project.desk.id}:${dir}`
       const folderNode = (dir: string): string => {
         const id = folderId(dir)
@@ -269,7 +274,8 @@ export const linkRepo = {
             workspace_id: project.desk.id,
             workspace_name: project.desk.name
           })
-          if (dir) connect(folderNode(parentDir(dir)), id, 'structure')
+          if (dir && multi && !dir.includes('/')) connect(`desk:${project.desk.id}`, id, 'structure')
+          else if (dir) connect(folderNode(parentDir(dir)), id, 'structure')
         }
         return id
       }

@@ -238,6 +238,24 @@ const migrations: Migration[] = [
       ALTER TABLE workspaces ADD COLUMN parent_id TEXT REFERENCES workspaces(id);
       CREATE INDEX IF NOT EXISTS idx_workspaces_parent ON workspaces(parent_id);
     `)
+  },
+
+  // 0015 — several linked folders per desk (a project can span a docs folder and repos).
+  // workspaces.folder_path stays as the primary (first) folder for older readers.
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_folders (
+        id            TEXT PRIMARY KEY,
+        workspace_id  TEXT NOT NULL REFERENCES workspaces(id),
+        path          TEXT NOT NULL,
+        sort_order    INTEGER NOT NULL DEFAULT 0,
+        created_at    TEXT NOT NULL,
+        UNIQUE (workspace_id, path)
+      );
+      CREATE INDEX IF NOT EXISTS idx_project_folders_workspace ON project_folders(workspace_id);
+      INSERT INTO project_folders (id, workspace_id, path, sort_order, created_at)
+        SELECT lower(hex(randomblob(16))), id, folder_path, 0, updated_at FROM workspaces WHERE folder_path IS NOT NULL;
+    `)
   }
 ]
 

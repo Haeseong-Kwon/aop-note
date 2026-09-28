@@ -201,7 +201,8 @@ export function registerIpcHandlers(): void {
   // ---- Project folders (read-only) ----
   handle(IPC.project.list, () => listProjects())
   handle(IPC.project.choose, (deskId: string) => chooseFolder(BrowserWindow.getFocusedWindow(), deskId))
-  handle(IPC.project.unlink, (deskId: string) => unlinkFolder(deskId))
+  const optionalFolder = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
+  handle(IPC.project.unlink, (deskId: string, folder?: string) => unlinkFolder(deskId, optionalFolder(folder)))
   handle(IPC.project.overview, (deskId: string) => projectOverview(deskId))
   handle(IPC.project.readFile, (deskId: string, path: string) => readProjectFile(deskId, path))
   handle(IPC.project.renderFile, (deskId: string, path: string) => renderProjectFile(deskId, path))
@@ -210,7 +211,7 @@ export function registerIpcHandlers(): void {
     if (error) throw new Error(`파일을 열지 못했습니다: ${error}`)
   })
   handle(IPC.project.reveal, (deskId: string, path?: string) => revealInFinder(deskId, path))
-  handle(IPC.project.openInClaude, (deskId: string) => openInClaudeCode(deskId))
+  handle(IPC.project.openInClaude, (deskId: string, folder?: string) => openInClaudeCode(deskId, optionalFolder(folder)))
 
   // ---- Trash ----
   handle(IPC.trash.list, () => trashRepo.list())

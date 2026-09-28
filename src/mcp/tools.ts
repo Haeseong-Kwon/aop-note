@@ -5,7 +5,8 @@ import { searchRepo } from '../main/repositories/search.repo'
 import { linkRepo, resolveIn } from '../main/repositories/link.repo'
 import { loadSettings } from '../main/settings'
 import { writeVault } from '../main/vault'
-import { getProjectIndex, validateFolder } from '../main/projectIndex'
+import { validateFolder } from '../main/projectIndex'
+import { deskFolders, getDeskIndex } from '../main/projectFiles'
 import { getGitInfo } from '../main/git'
 import { eventsBetween } from '../main/calendars'
 import { buildGraphExport, scopeLabelFor, toExportOptions } from '../main/graphExport'
@@ -121,12 +122,12 @@ function deskForDir(dir: string): Workspace | null {
     const folder = real(linked)
     return target === folder || target.startsWith(folder.endsWith(sep) ? folder : folder + sep)
   }
-  return (
-    workspaceRepo
-      .list()
-      .filter((w) => w.folder_path && inside(w.folder_path))
-      .sort((a, b) => (b.folder_path?.length ?? 0) - (a.folder_path?.length ?? 0))[0] ?? null
-  )
+  // The desk whose linked folder is the deepest one containing dir (any of its folders).
+  const hits = workspaceRepo
+    .list()
+    .flatMap((w) => workspaceRepo.folders(w.id).filter(inside).map((folder) => ({ w, depth: folder.length })))
+    .sort((a, b) => b.depth - a.depth)
+  return hits[0]?.w ?? null
 }
 
 /**
@@ -136,26 +137,31 @@ function deskForDir(dir: string): Workspace | null {
  */
 export function projectBrief(dir: string, now = new Date()): string | null {
   const desk = deskForDir(dir)
-  if (!desk?.folder_path) return null
+  if (!desk) return null
+  const folders = deskFolders(desk.id)
   const tasks = taskRepo.listAllWithContext().filter((t) => t.workspace_id === desk.id)
   const open = tasks.filter((t) => t.status !== 'done').slice(0, BRIEF_TASKS)
   const recent = [...tasks]
     .filter((t) => t.note.trim())
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
     .slice(0, BRIEF_NOTES)
-  const git = getGitInfo(desk.folder_path)
-  const docs = getProjectIndex(desk.folder_path)?.files ?? []
+  const docs = getDeskIndex(desk.id)?.files ?? []
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const today = eventsBetween(dayStart.toISOString(), new Date(dayStart.getTime() + 86_400_000).toISOString())
 
   const lines = [
     `# AOP Note 프로젝트: ${desk.name}`,
     '',
-    `- 폴더: ${desk.folder_path}`,
-    git
-      ? `- git: ${git.branch ?? 'detached HEAD'} · 변경 ${git.changed}개${git.ahead ? ` · 푸시 안 한 커밋 ${git.ahead}` : ''}`
-      : '- git: 저장소 아님',
-    ...(git?.commits.slice(0, BRIEF_COMMITS).map((c) => `  - ${c.short} ${c.subject}`) ?? []),
+    ...folders.flatMap((f) => {
+      const git = f.index ? getGitInfo(f.path) : null
+      return [
+        `- 폴더${folders.length > 1 ? ` (${f.label})` : ''}: ${f.path}${f.index ? '' : ' — 찾을 수 없음'}`,
+        git
+          ? `  - git: ${git.branch ?? 'detached HEAD'} · 변경 ${git.changed}개${git.ahead ? ` · 푸시 안 한 커밋 ${git.ahead}` : ''}`
+          : '  - git: 저장소 아님',
+        ...(git?.commits.slice(0, BRIEF_COMMITS).map((c) => `    - ${c.short} ${c.subject}`) ?? [])
+      ]
+    }),
     '',
     `## 열린 작업 (${open.length})`,
     ...(open.length
@@ -217,7 +223,10 @@ export const TOOLS: Tool[] = [
         projectBrief(cwd) ??
         `No AOP Note desk is linked to ${cwd}. Desks: ${workspaceRepo
           .list()
-          .map((w) => (w.folder_path ? `${w.name} (→ ${w.folder_path})` : w.name))
+          .map((w) => {
+            const folders = workspaceRepo.folders(w.id)
+            return folders.length ? `${w.name} (→ ${folders.join(', ')})` : w.name
+          })
           .join(', ')}. To link this repository, call link_project with a desk and the repository root path.`
       )
     }

@@ -453,13 +453,28 @@ export interface GitInfo {
 
 /** What the 프로젝트 tab shows for a desk's linked folder. */
 export interface ProjectOverview {
+  /** The primary (first) linked folder. */
   folder: string
-  /** False when the folder was moved or deleted since it was linked. */
+  /** False when a linked folder was moved or deleted since it was linked. */
   exists: boolean
+  /** git state of the primary folder. */
   git: GitInfo | null
+  /** Documents of every linked folder (paths start with the folder's label when there are several). */
   files: { path: string; title: string; size: number; mtime: number }[]
   totalFiles: number
   truncated: boolean
+  /** Every linked folder, in order. */
+  folders: ProjectFolderInfo[]
+}
+
+export interface ProjectFolderInfo {
+  path: string
+  /** Its name in the desk's document list ("web", "web (2)"). */
+  label: string
+  exists: boolean
+  git: GitInfo | null
+  docs: number
+  totalFiles: number
 }
 
 /** A project document opened for reading. */
@@ -477,7 +492,9 @@ export interface ProjectSummary {
   name: string
   color: string
   icon: string
+  /** The primary (first) linked folder. */
   folder: string
+  folders: string[]
   exists: boolean
   docs: number
   git: {

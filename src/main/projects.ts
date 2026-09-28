@@ -1,12 +1,12 @@
 import { execFile, spawn } from 'child_process'
 import { watch, readFileSync, type FSWatcher } from 'fs'
-import { extname, join } from 'path'
+import { extname } from 'path'
 import { dialog, shell, type BrowserWindow } from 'electron'
 import { workspaceRepo } from './repositories/workspace.repo'
-import { DOC_EXT, TEXT_DOC_EXT, getProjectIndex, invalidateProject, validateFolder } from './projectIndex'
+import { DOC_EXT, TEXT_DOC_EXT, invalidateProject, validateFolder } from './projectIndex'
 import { getGitInfo, invalidateGit } from './git'
 import { renderPath } from './attachments'
-import { projectFilePath } from './projectFiles'
+import { deskFolders, getDeskIndex, projectFilePath } from './projectFiles'
 
 export { projectFilePath }
 import type { AttachmentRender, ProjectFile, ProjectOverview, ProjectSummary, Workspace } from '@shared/types'
@@ -14,14 +14,18 @@ import type { AttachmentRender, ProjectFile, ProjectOverview, ProjectSummary, Wo
 const MAX_READ_BYTES = 2 * 1024 * 1024
 const WATCH_DEBOUNCE_MS = 800
 
-function deskFolder(deskId: string): { desk: Workspace; folder: string } {
-  const desk = workspaceRepo.getById(deskId)
-  if (!desk?.folder_path) throw new Error('이 데스크에는 연결된 폴더가 없습니다.')
-  return { desk, folder: desk.folder_path }
+/** One of the desk's linked folders: `folder` if it is linked, else the primary one. */
+function deskFolder(deskId: string, folder?: string): string {
+  const folders = workspaceRepo.folders(deskId)
+  if (folders.length === 0) throw new Error('이 데스크에는 연결된 폴더가 없습니다.')
+  if (folder === undefined) return folders[0]
+  if (!folders.includes(folder)) throw new Error('이 데스크에 연결된 폴더가 아닙니다.')
+  return folder
 }
 
+/** Link one more folder to the desk (a project can span several). */
 export function linkFolder(deskId: string, folder: string): Workspace {
-  const desk = workspaceRepo.setFolder(deskId, validateFolder(folder))
+  const desk = workspaceRepo.addFolder(deskId, validateFolder(folder))
   refreshWatchers()
   return desk
 }
@@ -39,32 +43,45 @@ export async function chooseFolder(win: BrowserWindow | null, deskId: string): P
   return linkFolder(deskId, folder)
 }
 
-export function unlinkFolder(deskId: string): Workspace {
-  const desk = workspaceRepo.setFolder(deskId, null)
+/** Unlink one folder, or every folder when none is given. */
+export function unlinkFolder(deskId: string, folder?: string): Workspace {
+  const desk = folder === undefined ? workspaceRepo.setFolder(deskId, null) : workspaceRepo.removeFolder(deskId, folder)
   refreshWatchers()
   return desk
 }
 
 export function projectOverview(deskId: string): ProjectOverview | null {
-  const desk = workspaceRepo.getById(deskId)
-  if (!desk?.folder_path) return null
-  const index = getProjectIndex(desk.folder_path)
+  const folders = deskFolders(deskId)
+  if (folders.length === 0) return null
+  const index = getDeskIndex(deskId)
+  const primary = folders[0]
   return {
-    folder: desk.folder_path,
-    exists: index !== null,
-    git: index ? getGitInfo(desk.folder_path) : null,
+    folder: primary.path,
+    exists: folders.every((f) => f.index !== null),
+    git: primary.index ? getGitInfo(primary.path) : null,
     files: (index?.files ?? []).map(({ path, title, size, mtime }) => ({ path, title, size, mtime })),
     totalFiles: index?.totalFiles ?? 0,
-    truncated: index?.truncated ?? false
+    truncated: index?.truncated ?? false,
+    folders: folders.map((f) => ({
+      path: f.path,
+      label: f.label,
+      exists: f.index !== null,
+      git: f.index ? getGitInfo(f.path) : null,
+      docs: f.index?.files.length ?? 0,
+      totalFiles: f.index?.totalFiles ?? 0
+    }))
   }
 }
 
 /** Every desk with a linked folder, for the 프로젝트 list. */
 export function listProjects(): ProjectSummary[] {
   return workspaceRepo.list().flatMap((desk) => {
-    if (!desk.folder_path) return []
-    const index = getProjectIndex(desk.folder_path)
-    const git = index ? getGitInfo(desk.folder_path) : null
+    const folders = deskFolders(desk.id)
+    if (folders.length === 0) return []
+    const index = getDeskIndex(desk.id)
+    // The desk's git state: the first linked folder that is a repo.
+    const repo = folders.find((f) => f.index?.git)
+    const git = repo ? getGitInfo(repo.path) : null
     const last = git?.commits[0]
     return [
       {
@@ -72,8 +89,9 @@ export function listProjects(): ProjectSummary[] {
         name: desk.name,
         color: desk.color,
         icon: desk.icon,
-        folder: desk.folder_path,
-        exists: index !== null,
+        folder: folders[0].path,
+        folders: folders.map((f) => f.path),
+        exists: folders.every((f) => f.index !== null),
         docs: index?.files.length ?? 0,
         git: git
           ? {
@@ -91,12 +109,11 @@ export function listProjects(): ProjectSummary[] {
 
 /** Only documents in the index can be read — the renderer can't ask for arbitrary paths. */
 export function readProjectFile(deskId: string, path: string): ProjectFile {
-  const { folder } = deskFolder(deskId)
-  const file = getProjectIndex(folder)?.files.find((f) => f.path === path)
-  if (!file) throw new Error(`프로젝트 문서가 아닙니다: ${path}`)
+  const file = getDeskIndex(deskId)?.files.find((f) => f.path === path)
+  if (!file?.abs) throw new Error(`프로젝트 문서가 아닙니다: ${path}`)
   const binary = !TEXT_DOC_EXT.test(file.path)
   const content =
-    binary ? '' : file.size > MAX_READ_BYTES ? '_파일이 너무 커서 미리보기를 생략했습니다._' : readFileSync(join(folder, file.path), 'utf8')
+    binary ? '' : file.size > MAX_READ_BYTES ? '_파일이 너무 커서 미리보기를 생략했습니다._' : readFileSync(file.abs, 'utf8')
   return { path: file.path, title: file.title, content, binary }
 }
 
@@ -114,16 +131,16 @@ export function openProjectFileExternal(deskId: string, path: string): Promise<s
   return shell.openPath(abs)
 }
 
+/** A document (by index path) in the file manager, or one linked folder (by its absolute path), or the primary folder. */
 export function revealInFinder(deskId: string, path?: string): void {
-  const { folder } = deskFolder(deskId)
-  const file = path ? getProjectIndex(folder)?.files.find((f) => f.path === path) : null
-  if (file) shell.showItemInFolder(join(folder, file.path))
-  else void shell.openPath(folder)
+  const abs = path ? projectFilePath(deskId, path) : null
+  if (abs) return shell.showItemInFolder(abs)
+  void shell.openPath(deskFolder(deskId, path && workspaceRepo.folders(deskId).includes(path) ? path : undefined))
 }
 
 /** Open a terminal in the project running `claude` (macOS Terminal, Windows console; elsewhere just the folder). */
-export function openInClaudeCode(deskId: string): Promise<void> {
-  const { folder } = deskFolder(deskId)
+export function openInClaudeCode(deskId: string, which?: string): Promise<void> {
+  const folder = deskFolder(deskId, which)
   if (process.platform === 'win32') {
     // `start` opens a new console window in the folder. Windows paths can't contain
     // double quotes, so quoting the folder is enough; nothing else here is user input.
@@ -166,22 +183,23 @@ let notify: (deskId: string) => void = () => undefined
 // Branch switches and commits move HEAD / refs; index and object writes are noise.
 const GIT_STATE_CHANGE = /^\.git[\\/](HEAD|packed-refs|refs[\\/])/
 
+/** One watcher per linked folder; a change anywhere refreshes that folder's desk. */
 export function refreshWatchers(): void {
-  const desks = workspaceRepo.list().filter((d) => d.folder_path)
-  for (const [id, w] of watchers) {
-    if (!desks.some((d) => d.id === id)) {
-      w.close()
-      watchers.delete(id)
-    }
+  const wanted = new Map<string, { deskId: string; folder: string }>()
+  for (const desk of workspaceRepo.list()) {
+    for (const folder of workspaceRepo.folders(desk.id)) wanted.set(`${desk.id}\u0000${folder}`, { deskId: desk.id, folder })
   }
-  for (const desk of desks) {
-    const folder = desk.folder_path as string
-    const existing = watchers.get(desk.id) as (FSWatcher & { folder?: string }) | undefined
-    if (existing?.folder === folder) continue
-    existing?.close()
+  for (const [key, w] of watchers) {
+    if (wanted.has(key)) continue
+    w.close()
+    watchers.delete(key)
+  }
+  for (const [key, { deskId, folder }] of wanted) {
+    if (watchers.has(key)) continue
     let timer: ReturnType<typeof setTimeout> | null = null
     try {
-      const w = watch(folder, { recursive: true }, (_event, name) => {
+      // persistent: false — a watcher never keeps the process alive on its own (quit, checks).
+      const w = watch(folder, { recursive: true, persistent: false }, (_event, name) => {
         const file = String(name ?? '')
         // Docs changed, or git HEAD / refs moved.
         if (!DOC_EXT.test(file) && !GIT_STATE_CHANGE.test(file)) return
@@ -190,12 +208,11 @@ export function refreshWatchers(): void {
         timer = setTimeout(() => {
           invalidateProject(folder)
           invalidateGit(folder)
-          notify(desk.id)
+          notify(deskId)
         }, WATCH_DEBOUNCE_MS)
-      }) as FSWatcher & { folder?: string }
-      w.folder = folder
+      })
       w.on('error', () => w.close()) // folder removed: stop quietly; overview reports it missing
-      watchers.set(desk.id, w)
+      watchers.set(key, w)
     } catch (error) {
       console.error('[projects] cannot watch', folder, error)
     }

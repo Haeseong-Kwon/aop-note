@@ -83,7 +83,10 @@ export function ProjectsView(): JSX.Element {
                         </span>
                       )}
                     </span>
-                    <span className="mt-0.5 block truncate font-mono text-[11px] text-muted-foreground">{p.folder}</span>
+                    <span className="mt-0.5 block truncate font-mono text-[11px] text-muted-foreground" title={p.folders.join('\n')}>
+                      {p.folder}
+                      {p.folders.length > 1 && ` 외 ${p.folders.length - 1}개 폴더`}
+                    </span>
                     <span className="mt-1 block truncate text-xs text-muted-foreground">
                       문서 {p.docs}개
                       {p.git && ` · 변경 ${p.git.changed}개`}

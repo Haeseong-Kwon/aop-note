@@ -112,13 +112,13 @@ const api: Api = {
   project: {
     list: () => ipcRenderer.invoke(IPC.project.list),
     choose: (deskId: string) => ipcRenderer.invoke(IPC.project.choose, deskId),
-    unlink: (deskId: string) => ipcRenderer.invoke(IPC.project.unlink, deskId),
+    unlink: (deskId: string, folder?: string) => ipcRenderer.invoke(IPC.project.unlink, deskId, folder),
     overview: (deskId: string) => ipcRenderer.invoke(IPC.project.overview, deskId),
     readFile: (deskId: string, path: string) => ipcRenderer.invoke(IPC.project.readFile, deskId, path),
     renderFile: (deskId: string, path: string) => ipcRenderer.invoke(IPC.project.renderFile, deskId, path),
     openFile: (deskId: string, path: string) => ipcRenderer.invoke(IPC.project.openFile, deskId, path),
     reveal: (deskId: string, path?: string) => ipcRenderer.invoke(IPC.project.reveal, deskId, path),
-    openInClaude: (deskId: string) => ipcRenderer.invoke(IPC.project.openInClaude, deskId)
+    openInClaude: (deskId: string, folder?: string) => ipcRenderer.invoke(IPC.project.openInClaude, deskId, folder)
   },
   trash: {
     list: () => ipcRenderer.invoke(IPC.trash.list),

@@ -82,13 +82,49 @@ export const workspaceRepo = {
     return updated
   },
 
-  /** Link (or with null, unlink) a local project folder. Callers validate the path. */
-  setFolder(id: string, folderPath: string | null): Workspace {
+  /** The desk's linked folders, in the order they were added (the first is the primary). */
+  folders(id: string): string[] {
+    return getDb()
+      .prepare('SELECT path FROM project_folders WHERE workspace_id = ? ORDER BY sort_order ASC, created_at ASC')
+      .pluck()
+      .all(id) as string[]
+  },
+
+  /** Link one more local folder (no-op if already linked). Callers validate the path. */
+  addFolder(id: string, folderPath: string): Workspace {
     if (!this.getById(id)) throw new Error(`Workspace not found: ${id}`)
+    const db = getDb()
+    const next = (db.prepare('SELECT COALESCE(MAX(sort_order), -1) + 1 FROM project_folders WHERE workspace_id = ?').pluck().get(id) as number) ?? 0
+    db.prepare('INSERT OR IGNORE INTO project_folders (id, workspace_id, path, sort_order, created_at) VALUES (?, ?, ?, ?, ?)').run(
+      newId(),
+      id,
+      folderPath,
+      next,
+      nowIso()
+    )
+    return this.syncPrimary(id)
+  },
+
+  removeFolder(id: string, folderPath: string): Workspace {
+    getDb().prepare('DELETE FROM project_folders WHERE workspace_id = ? AND path = ?').run(id, folderPath)
+    return this.syncPrimary(id)
+  },
+
+  /** Legacy single-folder API: a path links it (alongside any others), null unlinks all. */
+  setFolder(id: string, folderPath: string | null): Workspace {
+    if (folderPath !== null) return this.addFolder(id, folderPath)
+    getDb().prepare('DELETE FROM project_folders WHERE workspace_id = ?').run(id)
+    return this.syncPrimary(id)
+  },
+
+  /** Keep workspaces.folder_path = the first linked folder (read by older code paths). */
+  syncPrimary(id: string): Workspace {
     getDb()
       .prepare('UPDATE workspaces SET folder_path = ?, updated_at = ? WHERE id = ?')
-      .run(folderPath, nowIso(), id)
-    return this.getById(id) as Workspace
+      .run(this.folders(id)[0] ?? null, nowIso(), id)
+    const desk = this.getById(id)
+    if (!desk) throw new Error(`Workspace not found: ${id}`)
+    return desk
   },
 
   /** Bulk reorder after a drag — integer reindex in one transaction. */

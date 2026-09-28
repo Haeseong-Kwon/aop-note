@@ -89,9 +89,15 @@ export type GraphMode = 'network' | 'tree'
 /** Containers the tree view can fold. */
 const FOLDABLE = new Set<GraphNode['kind']>(['desk', 'category', 'folder'])
 
-/** Start folded where a linked folder goes deep: its sub-folders (the overview first). */
-const defaultCollapsed = (g: PreparedGraph): ReadonlySet<number> =>
-  new Set(g.nodes.flatMap((n, i) => (n.kind === 'folder' && !n.id.endsWith(':') ? [i] : [])))
+/** Start folded where a linked folder goes deep: folders inside another folder (the
+ *  overview first). Linked folders themselves — one or several per desk — stay open. */
+function defaultCollapsed(g: PreparedGraph): ReadonlySet<number> {
+  const nested = new Set<number>()
+  g.edges.forEach(([p, c], e) => {
+    if (g.edgeKinds[e] === 'structure' && g.nodes[p].kind === 'folder' && g.nodes[c].kind === 'folder') nested.add(c)
+  })
+  return nested
+}
 
 /** Containment edges, children ordered containers first, then by title. */
 function structureEdges(g: PreparedGraph): [number, number][] {
