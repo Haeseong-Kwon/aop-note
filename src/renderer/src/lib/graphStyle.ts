@@ -42,6 +42,10 @@ export function labelAlpha(scale: number, threshold: number): number {
   return Math.min(1, Math.max(0, t))
 }
 
+/** Per node: well-connected nodes (hubs, course folders) are labelled at lower zoom than leaves. */
+export const labelAlphaFor = (scale: number, threshold: number, links: number): number =>
+  labelAlpha(scale * (1 + Math.sqrt(links) * 0.3), threshold)
+
 export function parseGraphSettings(raw: string | null): GraphSettings {
   let input: Record<string, unknown> = {}
   try {

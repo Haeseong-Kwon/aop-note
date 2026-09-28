@@ -37,10 +37,11 @@ export interface ProjectIndex {
   scannedAt: number
 }
 
-/** Text docs are read for titles and links; office / PDF / 한글 docs are graph nodes by file name. */
+/** Text docs are read for titles and links; office / PDF / 한글 docs are graph nodes by file name.
+ *  CSV is data, not a document: a dataset folder can hold thousands and would crowd everything out. */
 export const TEXT_DOC_EXT = /\.(md|mdx|markdown|txt)$/i
 export const DOC_EXT =
-  /\.(md|mdx|markdown|txt|pdf|docx?|hwpx?|pptx?|key|pages|xlsx?|xlsm|csv|numbers|rtf|odt|ods|odp)$/i
+  /\.(md|mdx|markdown|txt|pdf|docx?|hwpx?|pptx?|key|pages|xlsx?|xlsm|numbers|rtf|odt|ods|odp)$/i
 const EXT = /\.[^./]+$/
 /** macOS stores 한글 file names decomposed (NFD); compare everything composed. */
 const nfc = (s: string): string => s.normalize('NFC')

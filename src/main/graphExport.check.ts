@@ -4,7 +4,7 @@ import { graphArchive } from './graphArchive'
 import type { GraphData, GraphNode } from '@shared/types'
 
 const node = (id: string, title: string, links: number, kind: GraphNode['kind'] = 'note', extra: Partial<GraphNode> = {}): GraphNode => ({
-  id, title, color: '', kind, path: null, workspace_id: 'd1', workspace_name: '캠페인', category_id: 'c1', links, ...extra
+  id, title, color: '', kind, path: null, workspace_id: 'd1', workspace_name: '캠페인', category_id: 'c1', links, attachment_id: null, ...extra
 })
 const data: GraphData = {
   nodes: [
@@ -66,6 +66,31 @@ assert.equal(parsed.nodes[0].id, 'N1')
 assert.equal(parsed.nodes[0].key, 't-hub')
 assert.equal(parsed.edges.length, 3)
 assert.ok(parsed.nodes.find((n) => n.key === 't-a')?.body?.includes('응답자'))
+
+// ---- structure: containment shown as a tree, kept apart from the [[link]] list ----
+const structured: GraphData = {
+  nodes: [
+    node('desk:d1', '캠페인', 2, 'desk'),
+    node('category:c1', '기획', 3, 'category'),
+    node('m1', '예산안', 2),
+    node('m2', '세부 일정', 1),
+    node('m3', '회고', 1)
+  ],
+  edges: [
+    { source: 'm1', target: 'm3', kind: 'link' },
+    { source: 'desk:d1', target: 'category:c1', kind: 'structure' },
+    { source: 'category:c1', target: 'm1', kind: 'structure' },
+    { source: 'm1', target: 'm2', kind: 'structure' },
+    { source: 'category:c1', target: 'm3', kind: 'structure' }
+  ]
+}
+const tree = renderGraphExport(structured, ctx, { title: 's', format: 'md', filter: { scope: null, linkedOnly: true }, includeBodies: false, maxBodyChars: null })
+assert.match(tree.content, /## 구조\n\n- N\d+ 캠페인 \(데스크\)\n  - N\d+ 기획 \(카테고리\)\n    - N\d+ 예산안 \(메모\)\n      - N\d+ 세부 일정 \(메모\)/)
+const linkSection = tree.content.split('## 링크')[1].split('##')[0]
+assert.ok(linkSection.includes('예산안 → N') && !linkSection.includes('기획'), 'the link list is [[links]] only')
+assert.match(tree.content, /### N\d+ · 예산안\n- 종류: 메모.*\n- 언급함: N\d+ 회고/)
+const flat = renderGraphExport(structured, ctx, { title: 's', format: 'md', filter: { scope: null, linkedOnly: true, structure: false }, includeBodies: false, maxBodyChars: null })
+assert.ok(!flat.content.includes('## 구조') && !flat.content.includes('캠페인 (데스크)'), 'links-only export has no structure')
 
 // ---- archive: save / list / read / remove, newest first, names made safe ----
 const first = graphArchive.save({ title: '캠페인/지식?', format: 'md', content: md.content, stats: md.stats, scopeLabel: '전체' })

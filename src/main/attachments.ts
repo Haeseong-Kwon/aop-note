@@ -6,6 +6,7 @@ import mammoth from 'mammoth'
 import * as XLSX from 'xlsx'
 import { attachmentRepo } from './repositories/attachment.repo'
 import { docFolderRepo } from './repositories/docFolder.repo'
+import { readPptxSlides } from './pptx'
 import { pathForStored } from './attachmentPaths'
 import { nowIso } from './repositories/util'
 import type { Attachment, AttachmentRender } from '@shared/types'
@@ -132,6 +133,7 @@ export async function renderPath(abs: string, ext: string, url: string): Promise
     }
     if (TEXT_EXTS.has(ext)) return { kind: 'text', text: readFileSync(abs, 'utf8') }
     if (ext === 'docx') return { kind: 'html', html: (await mammoth.convertToHtml({ path: abs })).value }
+    if (ext === 'pptx') return { kind: 'slides', slides: await readPptxSlides(readFileSync(abs)) }
     return { kind: 'unsupported', reason: `미리보기를 지원하지 않는 형식입니다 (.${ext || '?'})` }
   } catch {
     return { kind: 'unsupported', reason: '문서를 여는 중 오류가 발생했습니다.' }

@@ -156,12 +156,24 @@ export interface AttachmentAddInput {
 }
 
 /** Result of rendering an attachment for the in-app viewer. */
+/** One slide of a .pptx as the in-app viewer shows it (content, not layout). */
+export interface PptxSlide {
+  index: number
+  title: string
+  paragraphs: string[]
+  /** data: URLs of the slide's pictures. */
+  images: string[]
+  /** Speaker notes. */
+  notes: string
+}
+
 export type AttachmentRender =
   | { kind: 'pdf'; url: string }
   | { kind: 'image'; url: string }
   | { kind: 'html'; html: string }
   | { kind: 'sheets'; sheets: { name: string; html: string }[] }
   | { kind: 'text'; text: string }
+  | { kind: 'slides'; slides: PptxSlide[] }
   | { kind: 'unsupported'; reason: string }
 
 /** A memo matching a graph search (title or body). */
@@ -356,12 +368,15 @@ export interface FileBacklinks {
 }
 
 export interface GraphNode {
-  /** Task id, "file:<desk id>:<path>" for a project document, or "ghost:<title>". */
+  /** Task id, "file:<desk id>:<path>" for a project document, "folder:<desk id>:<dir>"
+   *  for a folder of it ('' = the linked folder itself), or "ghost:<title>". */
   id: string
   title: string
   color: string
-  /** note = memo; file = document in a linked project folder; ghost = linked but not written yet. */
-  kind: 'note' | 'file' | 'ghost'
+  /** note = memo; file = document in a linked project folder; folder = a folder of it
+   *  (holds its documents together, links or not); ghost = linked but not written yet;
+   *  desk / category = the app's own structure (every memo hangs off it). */
+  kind: 'note' | 'file' | 'folder' | 'ghost' | 'desk' | 'category'
   /** Project-relative path for a file node. */
   path: string | null
   /** Where the note lives (null for a ghost). */
@@ -370,11 +385,16 @@ export interface GraphNode {
   category_id: string | null
   /** Number of distinct neighbours. */
   links: number
+  /** A 문서함 document / memo attachment (opens in the document viewer), else null. */
+  attachment_id: string | null
 }
+
+/** link = a [[wiki link]] / Markdown link; structure = containment (desk ⊃ category ⊃ memo, folder ⊃ file). */
+export type GraphEdgeKind = 'link' | 'structure'
 
 export interface GraphData {
   nodes: GraphNode[]
-  edges: { source: string; target: string }[]
+  edges: { source: string; target: string; kind?: GraphEdgeKind }[]
 }
 
 export type GraphExportFormat = 'md' | 'json'
@@ -393,6 +413,8 @@ export interface GraphExportRequest {
   format: GraphExportFormat
   scope: string | null
   linkedOnly: boolean
+  /** Include desks / categories / folders and containment (default true); false = [[links]] only. */
+  structure?: boolean
   /** Node ids (e.g. search hits) to centre on, with `hops` of neighbours. */
   focus: string[] | null
   hops: number

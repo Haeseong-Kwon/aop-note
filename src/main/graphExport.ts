@@ -41,7 +41,7 @@ export interface GraphExportResult {
 
 const HUB_COUNT = 10
 const MAX_FILE_BYTES = 256 * 1024
-const KIND_LABEL: Record<GraphNode['kind'], string> = { note: '메모', file: '문서', ghost: '미작성' }
+const KIND_LABEL: Record<GraphNode['kind'], string> = { note: '메모', file: '문서', folder: '폴더', ghost: '미작성', desk: '데스크', category: '카테고리' }
 const STATUS_LABEL: Record<TaskStatus, string> = { todo: '할 일', doing: '진행 중', done: '완료' }
 
 // Rough for Korean-heavy text (≈2 chars per token); shown as "약 N 토큰".
@@ -63,27 +63,39 @@ function clip(body: string, max: number | null): string {
 interface Prepared {
   nodes: GraphNode[]
   ids: Map<string, string>
+  /** [[link]] neighbours, by direction. */
   out: Map<string, string[]>
   into: Map<string, string[]>
+  /** All edges kept (links + structure). */
   edges: GraphData['edges']
+  links: GraphData['edges']
+  /** Containment: parent → children. */
+  children: Map<string, string[]>
 }
+
+// Containers before their contents when [[link]] counts tie.
+const KIND_RANK: Record<GraphNode['kind'], number> = { desk: 0, category: 1, folder: 2, note: 3, file: 4, ghost: 5 }
 
 /** Hubs first, so N1 is the most connected node — the pack's centre of gravity. */
 function prepare(data: GraphData, filter: GraphFilter): Prepared {
   const { nodes: kept, edges } = filterGraph(data, filter)
-  // Count links inside the exported part, so hubs and numbers match what the pack contains.
+  const links = edges.filter((e) => e.kind !== 'structure')
+  // [[link]] counts inside the exported part: hubs are what the notes talk about, not
+  // how big a folder is (containment is listed separately as a tree).
   const degree = new Map<string, number>()
-  for (const e of edges) for (const id of [e.source, e.target]) degree.set(id, (degree.get(id) ?? 0) + 1)
+  for (const e of links) for (const id of [e.source, e.target]) degree.set(id, (degree.get(id) ?? 0) + 1)
   const nodes = kept.map((n) => ({ ...n, links: degree.get(n.id) ?? 0 }))
-  const sorted = [...nodes].sort((a, b) => b.links - a.links || a.title.localeCompare(b.title))
+  const sorted = [...nodes].sort((a, b) => b.links - a.links || KIND_RANK[a.kind] - KIND_RANK[b.kind] || a.title.localeCompare(b.title))
   const ids = new Map(sorted.map((n, i) => [n.id, `N${i + 1}`]))
   const out = new Map<string, string[]>()
   const into = new Map<string, string[]>()
-  for (const e of edges) {
+  for (const e of links) {
     out.set(e.source, [...(out.get(e.source) ?? []), e.target])
     into.set(e.target, [...(into.get(e.target) ?? []), e.source])
   }
-  return { nodes: sorted, ids, out, into, edges }
+  const children = new Map<string, string[]>()
+  for (const e of edges) if (e.kind === 'structure') children.set(e.source, [...(children.get(e.source) ?? []), e.target])
+  return { nodes: sorted, ids, out, into, edges, links, children }
 }
 
 function bodyOf(n: GraphNode, ctx: RenderContext, opts: GraphExportOptions): string | null {
@@ -96,11 +108,32 @@ function bodyOf(n: GraphNode, ctx: RenderContext, opts: GraphExportOptions): str
   return null
 }
 
+/** Containment as an indented outline, from the top-level containers down. */
+function structureTree(p: Prepared, ref: (id: string) => string): string[] {
+  if (p.children.size === 0) return []
+  const kind = new Map(p.nodes.map((n) => [n.id, n.kind]))
+  const title = new Map(p.nodes.map((n) => [n.id, n.title]))
+  const hasParent = new Set([...p.children.values()].flat())
+  const roots = [...p.children.keys()].filter((id) => !hasParent.has(id))
+  const lines = ['## 구조', '']
+  const seen = new Set<string>()
+  const walk = (id: string, depth: number): void => {
+    if (seen.has(id)) return
+    seen.add(id)
+    lines.push(`${'  '.repeat(depth)}- ${ref(id)} (${KIND_LABEL[kind.get(id) ?? 'note']})`)
+    const kids = [...(p.children.get(id) ?? [])].sort((a, b) => (title.get(a) ?? '').localeCompare(title.get(b) ?? ''))
+    for (const c of kids) walk(c, depth + 1)
+  }
+  roots.sort((a, b) => KIND_RANK[kind.get(a) ?? 'note'] - KIND_RANK[kind.get(b) ?? 'note'] || (title.get(a) ?? '').localeCompare(title.get(b) ?? ''))
+  for (const r of roots) walk(r, 0)
+  return [...lines, '']
+}
+
 function renderMarkdown(p: Prepared, ctx: RenderContext, opts: GraphExportOptions, scopeLabel: string): string {
   const ref = (id: string): string => `${p.ids.get(id)} ${p.nodes.find((n) => n.id === id)?.title ?? ''}`
   const where = (n: GraphNode): string => {
     const info = n.kind === 'note' ? ctx.noteOf(n.id) : null
-    return [n.workspace_name, info?.category ?? (n.kind === 'file' ? n.path : null)].filter(Boolean).join(' / ') || '—'
+    return [n.workspace_name, info?.category ?? (n.kind === 'file' || n.kind === 'folder' ? n.path : null)].filter(Boolean).join(' / ') || '—'
   }
   const lines = [
     `# 세컨드브레인: ${opts.title}`,
@@ -109,8 +142,10 @@ function renderMarkdown(p: Prepared, ctx: RenderContext, opts: GraphExportOption
     '',
     '## 이 문서를 읽는 법',
     '',
-    '- 노드는 메모, 프로젝트 문서, 미작성(링크만 있고 아직 쓰이지 않은 메모) 세 종류이며 `N1` 같은 id로 가리킵니다.',
+    '- 노드는 메모, 프로젝트 문서, 폴더, 미작성(링크만 있고 아직 쓰이지 않은 메모)이며 `N1` 같은 id로 가리킵니다.',
+    '- 폴더 → 하위 폴더 → 문서 링크는 연결된 폴더의 구조입니다(어느 문서가 어느 과목·주제 폴더에 있는지).',
     '- 링크 `A → B`는 A의 본문이 B를 [[위키링크]]로 언급한다는 뜻입니다. 서로 언급하면 한 번만 적습니다.',
+    '- 구조는 데스크 ⊃ 카테고리 ⊃ 메모 ⊃ 하위 메모, 폴더 ⊃ 문서의 포함 관계입니다(들여쓰기가 한 단계 안쪽).',
     '- id는 연결이 많은 순서입니다. 앞쪽 노드(허브)가 이 지식의 중심 주제입니다.',
     '- 답할 때 근거가 된 노드를 `N12 제목`처럼 인용하세요.',
     '',
@@ -126,8 +161,9 @@ function renderMarkdown(p: Prepared, ctx: RenderContext, opts: GraphExportOption
     '',
     '## 링크',
     '',
-    ...(p.edges.length ? p.edges.map((e) => `- ${ref(e.source)} → ${ref(e.target)}`) : ['(링크 없음)']),
+    ...(p.links.length ? p.links.map((e) => `- ${ref(e.source)} → ${ref(e.target)}`) : ['(링크 없음)']),
     '',
+    ...structureTree(p, ref),
     '## 내용',
     ''
   ]
@@ -174,7 +210,7 @@ function renderJson(p: Prepared, ctx: RenderContext, opts: GraphExportOptions, s
           body: bodyOf(n, ctx, opts)
         }
       }),
-      edges: p.edges.map((e) => ({ from: p.ids.get(e.source), to: p.ids.get(e.target) }))
+      edges: p.edges.map((e) => ({ from: p.ids.get(e.source), to: p.ids.get(e.target), kind: e.kind ?? 'link' }))
     },
     null,
     2
@@ -190,7 +226,7 @@ export function renderGraphExport(data: GraphData, ctx: RenderContext, opts: Gra
 export const scopeLabelFor = (filter: GraphFilter): string =>
   (filter.scope ? `${workspaceRepo.getById(filter.scope)?.name ?? '데스크'} 데스크` : '전체') +
   (filter.focus ? ` · 검색 결과 ${filter.focus.length}개 + 이웃 ${filter.hops ?? 0}단계` : '') +
-  (filter.linkedOnly ? ' · 연결된 노드만' : '')
+  (filter.structure === false ? ' · 링크만' : '')
 
 const MAX_TITLE = 100
 const MAX_HOPS = 3
@@ -208,7 +244,8 @@ export function toExportOptions(req: GraphExportRequest): GraphExportOptions {
       scope: typeof r.scope === 'string' ? r.scope : null,
       linkedOnly: r.linkedOnly === true,
       focus,
-      hops: Math.min(MAX_HOPS, Math.max(0, Math.round(Number(r.hops) || 0)))
+      hops: Math.min(MAX_HOPS, Math.max(0, Math.round(Number(r.hops) || 0))),
+      structure: r.structure !== false
     },
     includeBodies: r.includeBodies !== false,
     maxBodyChars: cap

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileText, Search, X } from 'lucide-react'
+import { FileText, Folder, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { GraphNode } from '@shared/types'
 
@@ -92,6 +92,10 @@ export function GraphSearch({ query, onQuery, results, hiddenCount, onPick }: Gr
             >
               {r.kind === 'file' ? (
                 <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[hsl(36_85%_55%)]" />
+              ) : r.kind === 'folder' || r.kind === 'category' ? (
+                <Folder className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[hsl(150_55%_48%)]" />
+              ) : r.kind === 'desk' ? (
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[hsl(335_75%_60%)]" />
               ) : (
                 <span className={cn('mt-1 h-2 w-2 shrink-0 rounded-full', r.kind === 'ghost' ? 'border border-muted-foreground' : 'bg-primary')} />
               )}

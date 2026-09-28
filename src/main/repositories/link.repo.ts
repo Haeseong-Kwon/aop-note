@@ -1,10 +1,17 @@
-import { join } from 'path'
+import { join, posix } from 'path'
 import { readFileSync } from 'fs'
 import { taskRepo } from './task.repo'
 import { workspaceRepo } from './workspace.repo'
 import { getProjectIndex, resolveFile, type ProjectIndex } from '../projectIndex'
 import { getGitInfo } from '../git'
+import { addAppStructure } from './graphStructure'
 import { extractLinks, normalizeTitle } from '@shared/links'
+
+/** 'a/b/c.pdf' → 'a/b'; top-level → '' (the linked folder itself). */
+const parentDir = (path: string): string => {
+  const at = path.lastIndexOf('/')
+  return at < 0 ? '' : path.slice(0, at)
+}
 import type {
   Backlinks,
   BacklinkHit,
@@ -12,6 +19,7 @@ import type {
   FileBacklink,
   FileBacklinks,
   GraphData,
+  GraphEdgeKind,
   GraphNode,
   TaskWithContext,
   Workspace
@@ -165,7 +173,8 @@ export const linkRepo = {
     return { linked, files: filesLinkingTo(tasks, all, wanted) }
   },
 
-  /** Notes with content or links, every project document, and ghosts for unwritten links. */
+  /** Every memo, project document and 문서함 document, ghosts for unwritten links, and the
+   *  structure holding them (desks, categories, folders) — [[links]] first, then containment. */
   graph(): GraphData {
     const tasks = taskRepo.listAllWithContext()
     const all = projects()
@@ -173,7 +182,7 @@ export const linkRepo = {
     const neighbours = new Map<string, Set<string>>()
     const edges: GraphData['edges'] = []
 
-    const base = { workspace_id: null, workspace_name: null, category_id: null, path: null, links: 0 }
+    const base = { workspace_id: null, workspace_name: null, category_id: null, path: null, links: 0, attachment_id: null }
     const noteNode = (t: TaskWithContext): string => {
       if (!nodes.has(t.id)) {
         nodes.set(t.id, {
@@ -197,7 +206,7 @@ export const linkRepo = {
       if (!nodes.has(id)) nodes.set(id, { ...base, id, title, color, kind: 'ghost' })
       return id
     }
-    const connect = (source: string, target: string): void => {
+    const connect = (source: string, target: string, kind: GraphEdgeKind = 'link'): void => {
       if (source === target || neighbours.get(source)?.has(target)) return
       for (const [x, y] of [
         [source, target],
@@ -206,7 +215,7 @@ export const linkRepo = {
         if (!neighbours.has(x)) neighbours.set(x, new Set())
         neighbours.get(x)?.add(y)
       }
-      edges.push({ source, target })
+      edges.push({ source, target, kind })
     }
 
     for (const project of all) {
@@ -225,7 +234,7 @@ export const linkRepo = {
     }
 
     for (const t of tasks) {
-      if (t.note.trim()) noteNode(t)
+      noteNode(t) // every memo, body or not
       for (const l of extractLinks(t.note)) {
         const hit = resolveFromNote(tasks, all, l.target, t.workspace_id)
         connect(noteNode(t), hit ? nodeFor(hit) : ghost(l.target, t.workspace_color))
@@ -242,6 +251,42 @@ export const linkRepo = {
         for (const p of f.fileLinks) connect(from, fileId(project.desk.id, p))
       }
     }
+
+    // Folder structure: every document hangs off its folder, up to the linked folder itself,
+    // so a plain folder of PDFs / 한글 files (no [[links]] anywhere) is still a connected graph.
+    for (const project of all) {
+      const folderId = (dir: string): string => `folder:${project.desk.id}:${dir}`
+      const folderNode = (dir: string): string => {
+        const id = folderId(dir)
+        if (!nodes.has(id)) {
+          nodes.set(id, {
+            ...base,
+            id,
+            title: dir ? posix.basename(dir) : posix.basename(project.index.root.replace(/\\/g, '/')) || project.desk.name,
+            color: project.desk.color,
+            kind: 'folder',
+            path: dir,
+            workspace_id: project.desk.id,
+            workspace_name: project.desk.name
+          })
+          if (dir) connect(folderNode(parentDir(dir)), id, 'structure')
+        }
+        return id
+      }
+      for (const f of project.index.files) connect(folderNode(parentDir(f.path)), fileId(project.desk.id, f.path), 'structure')
+    }
+
+    addAppStructure(
+      {
+        add: (n) => {
+          if (!nodes.has(n.id)) nodes.set(n.id, n)
+          return n.id
+        },
+        has: (id) => nodes.has(id),
+        connect
+      },
+      tasks
+    )
 
     for (const n of nodes.values()) n.links = neighbours.get(n.id)?.size ?? 0
     return { nodes: [...nodes.values()], edges }

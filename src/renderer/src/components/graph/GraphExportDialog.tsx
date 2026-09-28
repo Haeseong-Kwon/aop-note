@@ -26,6 +26,8 @@ export interface GraphExportScope {
   /** Shown as the default name. */
   scopeName: string
   linkedOnly: boolean
+  /** Desks / categories / folders included (the graph's 구조 포함). */
+  structure: boolean
   /** Search hits in the graph (node ids), or null when not searching. */
   searchIds: string[] | null
 }
@@ -35,7 +37,7 @@ interface GraphExportDialogProps extends GraphExportScope {
 }
 
 /** Export the graph as an LLM context pack, and the 그래프 보관함 of saved packs. */
-export function GraphExportDialog({ scope, scopeName, linkedOnly, searchIds, onClose }: GraphExportDialogProps): JSX.Element {
+export function GraphExportDialog({ scope, scopeName, linkedOnly, structure, searchIds, onClose }: GraphExportDialogProps): JSX.Element {
   const showToast = useToast((s) => s.show)
   const [title, setTitle] = useState(scopeName)
   const [range, setRange] = useState<'view' | 'search'>(searchIds?.length ? 'search' : 'view')
@@ -51,6 +53,7 @@ export function GraphExportDialog({ scope, scopeName, linkedOnly, searchIds, onC
     format,
     scope,
     linkedOnly,
+    structure,
     focus: range === 'search' ? searchIds : null,
     hops,
     includeBodies: DETAIL[detail].includeBodies,

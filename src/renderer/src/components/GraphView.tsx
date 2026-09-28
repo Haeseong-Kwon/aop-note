@@ -14,6 +14,15 @@ import { ResizablePane } from '@/components/ui/ResizablePane'
 
 const SETTINGS_KEY = 'aop-graph-settings'
 const SEARCH_DEBOUNCE_MS = 150
+const STRUCTURE_KEY = 'aop-graph-structure'
+
+function loadStructurePref(): boolean {
+  try {
+    return localStorage.getItem(STRUCTURE_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
 
 function loadSettings(): GraphSettings {
   try {
@@ -35,7 +44,7 @@ interface ProjectEntry {
 function projectEntries(data: GraphData): ProjectEntry[] {
   const byDesk = new Map<string, ProjectEntry>()
   for (const n of data.nodes) {
-    if (!n.workspace_id || n.kind === 'ghost') continue
+    if (!n.workspace_id || (n.kind !== 'note' && n.kind !== 'file')) continue
     const entry = byDesk.get(n.workspace_id) ?? {
       id: n.workspace_id,
       name: n.workspace_name ?? '',
@@ -51,8 +60,8 @@ function projectEntries(data: GraphData): ProjectEntry[] {
 }
 
 /** The nodes to show (one project, or all), with edges re-indexed onto them. */
-function prepare(data: GraphData, linkedOnly: boolean, scope: string | null): PreparedGraph {
-  const { nodes, edges: kept } = filterGraph(data, { scope, linkedOnly })
+function prepare(data: GraphData, structure: boolean, scope: string | null): PreparedGraph {
+  const { nodes, edges: kept } = filterGraph(data, { scope, linkedOnly: true, structure })
   const index = new Map(nodes.map((n, i) => [n.id, i]))
   const edges: [number, number][] = kept.map((e) => [index.get(e.source) as number, index.get(e.target) as number])
   const neighbours = nodes.map(() => new Set<number>())
@@ -65,7 +74,17 @@ function prepare(data: GraphData, linkedOnly: boolean, scope: string | null): Pr
 
 export function GraphView(): JSX.Element {
   const [data, setData] = useState<GraphData | null>(null)
-  const [linkedOnly, setLinkedOnly] = useState(true)
+  // 구조 포함: every memo / document under its desk & category (default). Off = [[links]] only.
+  const [structure, setStructure] = useState(loadStructurePref)
+  const toggleStructure = (): void =>
+    setStructure((v) => {
+      try {
+        localStorage.setItem(STRUCTURE_KEY, v ? '0' : '1')
+      } catch {
+        /* not remembered, still applied */
+      }
+      return !v
+    })
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<string | null>(null)
   const [settings, setSettings] = useState(loadSettings)
@@ -85,7 +104,7 @@ export function GraphView(): JSX.Element {
     window.api.link.graph().then(setData, toastError)
   }, [projectVersion])
 
-  const graph = useMemo(() => (data ? prepare(data, linkedOnly, scope) : null), [data, linkedOnly, scope])
+  const graph = useMemo(() => (data ? prepare(data, structure, scope) : null), [data, structure, scope])
 
   // Search: memo titles and bodies come from the database (debounced); documents and
   // unwritten notes are matched by title here.
@@ -127,16 +146,22 @@ export function GraphView(): JSX.Element {
           hiddenCount={hiddenCount}
           onPick={(index) => setFocus((f) => ({ index, seq: (f?.seq ?? 0) + 1 }))}
         />
-        <button
-          onClick={() => setLinkedOnly((v) => !v)}
-          aria-pressed={linkedOnly}
-          className={cn(
-            'h-8 shrink-0 rounded-md px-2.5 text-xs transition-colors hover:bg-accent',
-            linkedOnly ? 'text-foreground' : 'text-muted-foreground'
-          )}
-        >
-          {linkedOnly ? '연결된 메모만' : '내용 있는 메모 모두'}
-        </button>
+        <div role="group" aria-label="그래프에 담을 연결" className="flex h-8 shrink-0 items-center rounded-md border border-border p-0.5 text-xs">
+          {([true, false] as const).map((on) => (
+            <button
+              key={String(on)}
+              onClick={() => structure !== on && toggleStructure()}
+              aria-pressed={structure === on}
+              title={on ? '모든 메모·문서를 데스크·카테고리·폴더 구조와 함께' : '[[링크]]로 이어진 것만 (옵시디언 방식)'}
+              className={cn(
+                'h-full rounded px-2 transition-colors',
+                structure === on ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {on ? '구조 포함' : '링크만'}
+            </button>
+          ))}
+        </div>
         <button
           onClick={() => setExporting(true)}
           disabled={!graph || graph.nodes.length === 0}
@@ -155,6 +180,14 @@ export function GraphView(): JSX.Element {
           <span className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-[hsl(36_85%_55%)]" />
             프로젝트 문서
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-[hsl(335_75%_60%)]" />
+            데스크
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-[hsl(150_55%_48%)]" />
+            카테고리·폴더
           </span>
           <span className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-full border border-muted-foreground" />
@@ -179,7 +212,7 @@ export function GraphView(): JSX.Element {
           <p className="px-2 pb-1 pt-1 text-xs font-medium text-muted-foreground">프로젝트</p>
           <ScopeItem
             label="전체"
-            detail={data ? `${data.nodes.filter((n) => n.kind !== 'ghost').length}개` : ''}
+            detail={data ? `${data.nodes.filter((n) => n.kind === 'note' || n.kind === 'file').length}개` : ''}
             active={scope === null}
             onClick={() => setScope(null)}
           />
@@ -200,8 +233,14 @@ export function GraphView(): JSX.Element {
           {graph && graph.nodes.length === 0 ? (
             <div className="m-auto max-w-sm px-6 text-center text-sm text-muted-foreground">
               <Waypoints className="mx-auto mb-3 h-8 w-8 opacity-40" />
-              아직 연결된 메모가 없습니다. 메모에서 <code className="rounded bg-muted px-1">[[</code>를 입력해
-              다른 메모를 링크하면 여기에 지식 그래프가 그려집니다.
+              {structure ? (
+                <>아직 메모가 없습니다. 메모나 문서를 만들면 자동으로 여기에 나타납니다.</>
+              ) : (
+                <>
+                  아직 <code className="rounded bg-muted px-1">[[링크]]</code>로 이어진 메모가 없습니다. ‘구조 포함’을 누르면 모든 메모와
+                  문서가 데스크·카테고리 구조와 함께 보입니다.
+                </>
+              )}
             </div>
           ) : (
             graph && (
@@ -214,7 +253,8 @@ export function GraphView(): JSX.Element {
         <GraphExportDialog
           scope={scope}
           scopeName={scope ? (entries.find((e) => e.id === scope)?.name ?? '데스크') : '전체 세컨드브레인'}
-          linkedOnly={linkedOnly}
+          linkedOnly
+          structure={structure}
           searchIds={results ? results.map((r) => graph.nodes[r.index].id) : null}
           onClose={() => setExporting(false)}
         />

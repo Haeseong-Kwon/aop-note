@@ -4,7 +4,7 @@ import { ExternalLink, Loader2, X, ZoomIn, ZoomOut, Maximize, FileText } from 'l
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { toastError } from '@/store/useToast'
-import type { AttachmentRender } from '@shared/types'
+import type { AttachmentRender, PptxSlide } from '@shared/types'
 
 interface DocumentViewerProps {
   /** A 문서함 / memo attachment … */
@@ -165,6 +165,22 @@ function Body({
     )
   }
 
+  // PowerPoint: one sheet per slide — title, text, pictures, speaker notes.
+  if (render.kind === 'slides') {
+    return (
+      <Canvas>
+        <div className="mx-auto flex max-w-3xl flex-col gap-5">
+          <p className="text-center text-xs text-muted-foreground">
+            슬라이드 {render.slides.length}장 · 내용 미리보기 (디자인·애니메이션은 “외부 앱으로 열기”에서)
+          </p>
+          {render.slides.map((s) => (
+            <SlideSheet key={s.index} slide={s} />
+          ))}
+        </div>
+      </Canvas>
+    )
+  }
+
   // HTML (Word) and text: a centered reading "sheet".
   if (render.kind === 'html') {
     return (
@@ -195,6 +211,37 @@ function Body({
       <p>{render.reason}</p>
       <p>오른쪽 위 “외부 앱으로 열기”로 확인하세요.</p>
     </div>
+  )
+}
+
+function SlideSheet({ slide }: { slide: PptxSlide }): JSX.Element {
+  const empty = !slide.title && slide.paragraphs.length === 0 && slide.images.length === 0
+  return (
+    <section aria-label={`슬라이드 ${slide.index}`} className="rounded-lg bg-white p-8 text-zinc-900 shadow-md ring-1 ring-black/5">
+      <p className="mb-3 text-[11px] font-medium tabular-nums text-zinc-400">{slide.index}</p>
+      {slide.title && <h3 className="mb-3 text-xl font-bold leading-snug">{slide.title}</h3>}
+      {slide.paragraphs.length > 0 && (
+        <ul className="list-disc space-y-1.5 pl-5 text-[15px] leading-relaxed">
+          {slide.paragraphs.map((p, i) => (
+            <li key={i}>{p}</li>
+          ))}
+        </ul>
+      )}
+      {slide.images.length > 0 && (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {slide.images.map((src, i) => (
+            <img key={i} src={src} alt="" className="max-h-72 w-full rounded object-contain ring-1 ring-black/5" />
+          ))}
+        </div>
+      )}
+      {empty && <p className="text-sm text-zinc-400">(텍스트 없음 — 도형·차트만 있는 슬라이드)</p>}
+      {slide.notes && (
+        <div className="mt-5 rounded-md bg-zinc-100 px-3 py-2 text-xs leading-relaxed text-zinc-600">
+          <span className="font-medium">발표자 노트 · </span>
+          <span className="whitespace-pre-wrap">{slide.notes}</span>
+        </div>
+      )}
+    </section>
   )
 }
 

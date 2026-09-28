@@ -66,6 +66,38 @@ assert.equal(g.edges.filter((e) => [e.source, e.target].sort().join() === [decis
 const readmeNote = taskRepo.create({ category_id: cat.id, title: 'README', note: '앱 안의 README 메모' })
 assert.equal(linkRepo.resolve('README', decision.id)?.id, readmeNote.id)
 
+// A plain (non-dev) folder: documents with no [[links]] at all still form a graph —
+// folder nodes tie them to their folders, so "linked only" keeps them — and bulk data
+// (CSV datasets) doesn't crowd the documents out.
+const plain = mkdtempSync(join(tmpdir(), 'aop-plain-'))
+const putPlain = (rel: string): void => {
+  mkdirSync(dirname(join(plain, rel)), { recursive: true })
+  writeFileSync(join(plain, rel), 'x')
+}
+putPlain('기계학습론/강의자료.pdf')
+for (let i = 0; i < 50; i++) putPlain(`기계학습론/데이터/sample-${i}.csv`)
+putPlain('창업실습2/사업계획서.hwp')
+putPlain('창업실습2/발표/최종발표.pptx')
+putPlain('요약.docx')
+const course = workspaceRepo.setFolder(workspaceRepo.create({ name: '4학년 2학기' }).id, plain)
+const pg = linkRepo.graph()
+const pid = (kind: string, p: string): string => `${kind}:${course.id}:${p}`
+const pkinds = new Map(pg.nodes.map((n) => [n.id, n.kind]))
+assert.ok(![...pkinds.keys()].some((id) => id.endsWith('.csv')), 'CSV data files are not documents')
+for (const f of ['기계학습론/강의자료.pdf', '창업실습2/사업계획서.hwp', '창업실습2/발표/최종발표.pptx', '요약.docx']) {
+  assert.equal(pkinds.get(pid('file', f)), 'file', f)
+}
+assert.equal(pkinds.get(pid('folder', '')), 'folder', 'the linked folder itself')
+assert.equal(pkinds.get(pid('folder', '창업실습2/발표')), 'folder')
+assert.ok(!pkinds.has(pid('folder', '기계학습론/데이터')), 'folders without documents are left out')
+const pedge = (a: string, b: string): boolean => pg.edges.some((e) => e.source === a && e.target === b)
+assert.ok(pedge(pid('folder', ''), pid('folder', '창업실습2')), 'root → course folder')
+assert.ok(pedge(pid('folder', '창업실습2'), pid('folder', '창업실습2/발표')), 'folder → sub-folder')
+assert.ok(pedge(pid('folder', '창업실습2/발표'), pid('file', '창업실습2/발표/최종발표.pptx')), 'folder → document')
+assert.ok(pedge(pid('folder', ''), pid('file', '요약.docx')), 'root-level document')
+assert.equal(pg.nodes.find((n) => n.id === pid('folder', '창업실습2'))?.title, '창업실습2')
+assert.ok(pg.nodes.every((n) => n.kind !== 'file' || n.workspace_id !== course.id || n.links > 0), 'every document is connected')
+
 console.log('brain: all assertions passed')
 
 // --- project list (sidebar 프로젝트 menu) ---

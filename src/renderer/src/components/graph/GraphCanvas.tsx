@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Maximize, SlidersHorizontal } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { createLayout, tickLayout, type Layout } from '@/lib/forceLayout'
-import { labelAlpha, nodeRadius, type GraphSettings } from '@/lib/graphStyle'
+import { labelAlphaFor, nodeRadius, type GraphSettings } from '@/lib/graphStyle'
 import { cn, MOD_CLICK } from '@/lib/utils'
 import type { GraphNode } from '@shared/types'
 import { GraphSettingsPanel } from './GraphSettingsPanel'
+import { DocumentViewer } from '../DocumentViewer'
 
 export interface PreparedGraph {
   nodes: GraphNode[]
@@ -21,6 +22,9 @@ const FIT_MARGIN = 0.8 // share of the canvas the graph fills after a fit
 const FADE_SPEED = 0.2 // share of the remaining highlight transition per frame
 const DIM = 0.1 // opacity of everything outside the highlighted neighbourhood
 const LABEL_PX = 12
+// Desks and categories anchor the picture: drawn larger, labelled at lower zoom.
+const KIND_SCALE: Partial<Record<GraphNode['kind'], number>> = { desk: 1.9, category: 1.3, ghost: 0.8 }
+const LABEL_BOOST: Partial<Record<GraphNode['kind'], number>> = { desk: 40, category: 8 }
 const FLY_SPEED = 0.18 // share of the remaining pan/zoom per frame when flying to a search hit
 const FOCUS_SCALE = 1.6
 
@@ -29,6 +33,8 @@ interface Palette {
   glow: boolean
   note: string
   file: string
+  folder: string
+  desk: string
   ghost: string
   link: string
   accent: string
@@ -46,6 +52,8 @@ function palette(): Palette {
     // Dark: phosphor tones that read as light sources; light: Obsidian's quiet neutrals.
     note: dark ? 'hsl(190 90% 72%)' : 'hsl(228 8% 46%)',
     file: dark ? 'hsl(40 100% 64%)' : 'hsl(32 85% 46%)',
+    folder: dark ? 'hsl(150 75% 60%)' : 'hsl(150 50% 36%)',
+    desk: dark ? 'hsl(335 90% 72%)' : 'hsl(335 70% 50%)',
     ghost: `hsl(${v('--muted-foreground')})`,
     link: dark ? 'hsl(195 80% 70% / 0.16)' : 'hsl(228 10% 40% / 0.22)',
     accent: dark ? 'hsl(275 95% 75%)' : `hsl(${v('--primary')})`,
@@ -67,6 +75,10 @@ interface GraphCanvasProps {
 export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onSettingsChange }: GraphCanvasProps): JSX.Element {
   const openNote = useStore((s) => s.openNote)
   const previewFile = useStore((s) => s.previewFile)
+  const selectWorkspace = useStore((s) => s.selectWorkspace)
+  const selectCategory = useStore((s) => s.selectCategory)
+  const setMainView = useStore((s) => s.setMainView)
+  const [viewing, setViewing] = useState<{ id: string; name: string } | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [hover, setHover] = useState<number | null>(null)
@@ -82,6 +94,8 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
   hoverRef.current = hover
   settingsRef.current = settings
 
+  // The user has panned / zoomed / dragged: stop auto-fitting the view.
+  const userMoved = useRef(false)
   // Where the view is easing to after a search pick (null = user in control).
   const viewTarget = useRef<{ scale: number; tx: number; ty: number } | null>(null)
   const matchesRef = useRef(matches)
@@ -94,6 +108,7 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
     if (!canvas || !wrap || !ctx) return
     let frame = 0
     let running = false
+    userMoved.current = false // a new graph (e.g. another desk) starts fitted
     // Highlight transition: 0 = everything at rest, 1 = focus neighbourhood lit, rest dimmed.
     let fade = 0
     let shownFocus: number | null = null
@@ -135,9 +150,19 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
       ctx.shadowBlur = 0
 
       const fillOf = (n: GraphNode, i: number, hot: boolean): string =>
-        hot || (inFocus(i) && fade > 0.5) ? p.accent : n.kind === 'file' ? p.file : s.deskColors ? n.color : p.note
+        hot || (inFocus(i) && fade > 0.5)
+          ? p.accent
+          : n.kind === 'file'
+            ? p.file
+            : n.kind === 'folder' || n.kind === 'category'
+              ? p.folder
+              : n.kind === 'desk'
+                ? p.desk
+              : s.deskColors
+                ? n.color
+                : p.note
       const radiusOf = (n: GraphNode, hot: boolean): number =>
-        nodeRadius(n.links, s.nodeSize) * (n.kind === 'ghost' ? 0.8 : 1) * (hot ? 1 + 0.25 * fade : 1)
+        nodeRadius(n.links, s.nodeSize) * (KIND_SCALE[n.kind] ?? 1) * (hot ? 1 + 0.25 * fade : 1)
       const isHot = (i: number): boolean => i === focus || Boolean(search?.has(i))
 
       // Dark: a coloured halo per node, added together so clusters bloom.
@@ -195,15 +220,14 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
 
       // Labels last, so no node paints over text. They fade in with zoom; the focused
       // neighbourhood always shows its labels.
-      const zoomAlpha = labelAlpha(scale, s.textFade)
       const fontSize = LABEL_PX * px
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
       ctx.lineJoin = 'round'
       graph.nodes.forEach((n, i) => {
-        const alpha = Math.max(zoomAlpha, inFocus(i) ? fade : 0, search?.has(i) ? 1 : 0) * rest(i)
+        const alpha = Math.max(labelAlphaFor(scale, s.textFade, n.links + (LABEL_BOOST[n.kind] ?? 0)), inFocus(i) ? fade : 0, search?.has(i) ? 1 : 0) * rest(i)
         if (alpha < 0.02) return
-        const r = nodeRadius(n.links, s.nodeSize)
+        const r = nodeRadius(n.links, s.nodeSize) * (KIND_SCALE[n.kind] ?? 1)
         const y = layout.y[i] + r + 4 * px
         ctx.font = `${i === focus ? 600 : 400} ${fontSize}px 'Pretendard Variable', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif`
         ctx.globalAlpha = alpha
@@ -219,8 +243,8 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
       ctx.globalAlpha = 1
     }
 
-    // Zoom so the whole graph fills the view.
-    let fitted = false
+    // Zoom so the whole graph fills the view — and keep doing so while a big layout is
+    // still spreading out, until the user pans, zooms or drags (then the view is theirs).
     const fit = (): void => {
       if (layout.x.length === 0) return
       const rect = wrap.getBoundingClientRect()
@@ -232,10 +256,7 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
 
     const loop = (): void => {
       const energy = tickLayout(layout, settingsRef.current)
-      if (!fitted && energy <= SETTLED * 5) {
-        fitted = true
-        fit()
-      }
+      if (!userMoved.current) fit()
       // Glide toward a searched node.
       const goal = viewTarget.current
       if (goal) {
@@ -263,6 +284,7 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
     }
     kickRef.current = kick
     fitRef.current = () => {
+      userMoved.current = false
       fit()
       kick()
     }
@@ -297,6 +319,7 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
     if (!focusRequest || focusRequest.index >= graph.nodes.length) return
     const i = focusRequest.index
     const scale = Math.max(view.current.scale, FOCUS_SCALE)
+    userMoved.current = true
     viewTarget.current = { scale, tx: -layout.x[i] * scale, ty: -layout.y[i] * scale }
     setHover(i)
     kickRef.current()
@@ -315,7 +338,7 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
     let bestD = Infinity
     graph.nodes.forEach((n, i) => {
       const d = Math.hypot(layout.x[i] - wx, layout.y[i] - wy)
-      if (d < nodeRadius(n.links, settings.nodeSize) + 5 / view.current.scale && d < bestD) {
+      if (d < nodeRadius(n.links, settings.nodeSize) * (KIND_SCALE[n.kind] ?? 1) + 5 / view.current.scale && d < bestD) {
         best = i
         bestD = d
       }
@@ -325,6 +348,7 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
 
   const onPointerDown = (e: React.PointerEvent): void => {
     viewTarget.current = null
+    userMoved.current = true
     e.currentTarget.setPointerCapture(e.pointerId)
     const node = nodeAt(...toWorld(e))
     if (node !== null) layout.pinned[node] = true
@@ -359,12 +383,22 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
     if (!d.moved && n?.kind === 'note' && n.workspace_id && n.category_id) {
       void openNote({ id: n.id, workspace_id: n.workspace_id, category_id: n.category_id })
     }
-    if (!d.moved && n?.kind === 'file' && n.workspace_id && n.path) previewFile(n.workspace_id, n.path)
+    if (!d.moved && n?.attachment_id) setViewing({ id: n.attachment_id, name: n.title })
+    else if (!d.moved && n?.kind === 'file' && n.workspace_id && n.path) previewFile(n.workspace_id, n.path)
+    if (!d.moved && n?.kind === 'desk' && n.workspace_id) void selectWorkspace(n.workspace_id)
+    if (!d.moved && n?.kind === 'category' && n.workspace_id && n.category_id) {
+      const categoryId = n.category_id
+      void selectWorkspace(n.workspace_id).then(() => {
+        setMainView('tasks')
+        selectCategory(categoryId)
+      })
+    }
     kickRef.current()
   }
 
   const onWheel = (e: React.WheelEvent): void => {
     viewTarget.current = null
+    userMoved.current = true
     const { scale, tx, ty } = view.current
     const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * Math.exp(-e.deltaY * 0.0015)))
     const [wx, wy] = toWorld(e)
@@ -386,8 +420,9 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
         onPointerUp={onPointerUp}
         onPointerLeave={() => !drag.current && setHover(null)}
         onWheel={onWheel}
-        className={cn('block touch-none', hovered && hovered.kind !== 'ghost' ? 'cursor-pointer' : 'cursor-grab')}
+        className={cn('block touch-none', hovered && hovered.kind !== 'ghost' && hovered.kind !== 'folder' ? 'cursor-pointer' : 'cursor-grab')}
       />
+      {viewing && <DocumentViewer attachmentId={viewing.id} fileName={viewing.name} onClose={() => setViewing(null)} />}
 
       <div className="absolute right-3 top-3 flex items-start gap-1.5">
         <ToolButton label="화면에 맞추기" onClick={() => fitRef.current()}>
@@ -407,6 +442,12 @@ export function GraphCanvas({ graph, matches, focus: focusRequest, settings, onS
               ? `아직 없는 메모 — 링크한 메모에서 ${MOD_CLICK}하면 만들어집니다`
               : hovered.kind === 'file'
                 ? `${hovered.workspace_name} 프로젝트 · ${hovered.path} · 연결 ${hovered.links}개`
+                : hovered.kind === 'folder'
+                  ? `${hovered.workspace_name} · 폴더${hovered.path ? ` ${hovered.path}` : ''} · 연결 ${hovered.links}개`
+                  : hovered.kind === 'desk'
+                    ? `데스크 · 연결 ${hovered.links}개 · 클릭하면 이동`
+                    : hovered.kind === 'category'
+                      ? `${hovered.workspace_name} · 카테고리 · 연결 ${hovered.links}개 · 클릭하면 작업 목록`
                 : `${hovered.workspace_name} · 연결 ${hovered.links}개`}
           </p>
         </div>

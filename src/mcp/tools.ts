@@ -250,6 +250,7 @@ export const TOOLS: Tool[] = [
         detail: { type: 'string', enum: ['titles', 'summary', 'normal', 'full'], description: 'Body size per node: titles only, 1,500 / 4,000 characters, or whole. Default normal.' },
         format: { type: 'string', enum: ['md', 'json'], description: 'Default md (best for reading); json for programmatic use.' },
         linked_only: { type: 'boolean', description: 'Skip notes without links. Default true.' },
+        structure: { type: 'boolean', description: 'Include desks, categories and folders with a containment tree (default true). false = only [[links]] between notes/documents.' },
         save: { type: 'boolean', description: 'Also keep a copy in the app\'s 그래프 보관함 (graph archive).' },
         title: { type: 'string', description: 'Name for the pack. Default: the desk name.' }
       }
@@ -270,6 +271,7 @@ export const TOOLS: Tool[] = [
         format: args.format === 'json' ? 'json' : 'md',
         scope: desk?.id ?? null,
         linkedOnly: query ? false : args.linked_only !== false,
+        structure: args.structure !== false,
         focus,
         hops: typeof args.hops === 'number' ? args.hops : 1,
         includeBodies: detail !== 'titles',

@@ -39,7 +39,8 @@ assert.ok(g.edges.some((e) => e.source === a.id && e.target === hub.id))
 const ghost = g.nodes.find((n) => n.kind === 'ghost')
 assert.equal(ghost?.title, '벡터 DB 선정')
 assert.ok(g.edges.some((e) => e.source === a.id && e.target === ghost?.id))
-assert.equal(g.nodes.find((n) => n.id === hub.id)?.links, 1)
+// One [[link]] neighbour (its category's containment edge is counted separately).
+assert.equal(g.edges.filter((e) => e.kind === 'link' && (e.source === hub.id || e.target === hub.id)).length, 1)
 
 // Renaming a note rewrites links pointing at it (Obsidian behaviour)…
 taskRepo.update({ id: hub.id, title: '검색 증강 파이프라인' })

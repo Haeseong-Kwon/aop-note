@@ -7,13 +7,31 @@ export interface GraphFilter {
   scope: string | null
   /** Drop nodes without links. */
   linkedOnly: boolean
+  /** Include the structure (desks, categories, folders and their containment edges).
+   *  false = a pure [[link]] graph, like Obsidian's. Default true. */
+  structure?: boolean
   /** Keep only these node ids and their neighbourhood… */
   focus?: string[] | null
   /** …up to this many links away (0 = just the focus). */
   hops?: number
 }
 
-export function filterGraph(data: GraphData, f: GraphFilter): GraphData {
+const STRUCTURAL = new Set(['desk', 'category', 'folder'])
+
+export function filterGraph(input: GraphData, f: GraphFilter): GraphData {
+  // Links only: drop containment edges and the container nodes, then recount links.
+  const data: GraphData =
+    f.structure === false
+      ? (() => {
+          const edges = input.edges.filter((e) => e.kind !== 'structure')
+          const degree = new Map<string, number>()
+          for (const e of edges) for (const id of [e.source, e.target]) degree.set(id, (degree.get(id) ?? 0) + 1)
+          return {
+            nodes: input.nodes.filter((n) => !STRUCTURAL.has(n.kind)).map((n) => ({ ...n, links: degree.get(n.id) ?? 0 })),
+            edges
+          }
+        })()
+      : input
   let keep = new Set(data.nodes.map((n) => n.id))
 
   if (f.scope) {
