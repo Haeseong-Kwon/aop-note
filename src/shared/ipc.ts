@@ -9,6 +9,9 @@ import type {
   GoalWithProgress,
   SearchHit,
   NoteSearchHit,
+  Schedule,
+  CreateScheduleInput,
+  UpdateScheduleInput,
   GraphExportRequest,
   GraphExportStats,
   GraphArchiveEntry,
@@ -140,6 +143,13 @@ export const IPC = {
     openFile: 'project:openFile',
     reveal: 'project:reveal',
     openInClaude: 'project:openInClaude'
+  },
+  schedule: {
+    list: 'schedule:list',
+    create: 'schedule:create',
+    update: 'schedule:update',
+    remove: 'schedule:remove',
+    restore: 'schedule:restore'
   },
   graph: {
     stats: 'graph:stats',
@@ -307,6 +317,15 @@ export interface Api {
     reveal(deskId: string, path?: string): Promise<void>
     /** Open a terminal in the folder running `claude`. */
     openInClaude(deskId: string, folder?: string): Promise<void>
+  }
+  /** 일정 (calendar schedules made in the app). */
+  schedule: {
+    /** Schedules touching [fromDay, toDay] ('YYYY-MM-DD'); deskId null = every desk. */
+    list(fromDay: string, toDay: string, deskId: string | null): Promise<Schedule[]>
+    create(input: CreateScheduleInput): Promise<Schedule>
+    update(input: UpdateScheduleInput): Promise<Schedule>
+    remove(id: string): Promise<void>
+    restore(id: string): Promise<void>
   }
   /** LLM context packs of the knowledge graph + the 그래프 보관함. */
   graph: {

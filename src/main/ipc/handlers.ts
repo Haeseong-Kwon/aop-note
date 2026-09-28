@@ -11,6 +11,7 @@ import { goalRepo } from '../repositories/goal.repo'
 import { searchRepo } from '../repositories/search.repo'
 import { attachmentRepo } from '../repositories/attachment.repo'
 import { docFolderRepo } from '../repositories/docFolder.repo'
+import { scheduleRepo } from '../repositories/schedule.repo'
 import {
   addAttachment,
   addDocument,
@@ -57,6 +58,8 @@ import type {
   CreateWorkspaceInput,
   CreateDocFolderInput,
   GraphExportRequest,
+  CreateScheduleInput,
+  UpdateScheduleInput,
   DocumentUploadInput,
   UpdateWorkspaceInput,
   CreateCategoryInput,
@@ -162,6 +165,15 @@ export function registerIpcHandlers(): void {
   handle(IPC.docFolder.rename, (id: string, name: string) => docFolderRepo.rename(id, name))
   handle(IPC.docFolder.move, (id: string, parentId: string | null) => docFolderRepo.move(id, parentId ?? null))
   handle(IPC.docFolder.remove, (id: string) => docFolderRepo.remove(id))
+
+  // ---- 일정 ----
+  handle(IPC.schedule.list, (fromDay: string, toDay: string, deskId: string | null) =>
+    scheduleRepo.listBetween(String(fromDay), String(toDay), typeof deskId === 'string' ? deskId : null)
+  )
+  handle(IPC.schedule.create, (input: CreateScheduleInput) => scheduleRepo.create(input))
+  handle(IPC.schedule.update, (input: UpdateScheduleInput) => scheduleRepo.update(input))
+  handle(IPC.schedule.remove, (id: string) => scheduleRepo.remove(id))
+  handle(IPC.schedule.restore, (id: string) => scheduleRepo.restore(id))
 
   // ---- Graph export (LLM context packs) + 그래프 보관함 ----
   handle(IPC.graph.stats, (req: GraphExportRequest) => buildGraphExport(toExportOptions(req)).stats)

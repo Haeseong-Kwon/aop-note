@@ -488,3 +488,26 @@ import { treeLayout } from './treeLayout'
   assert.ok(m < 0.02 && Math.abs(l.x[0] - 100) < 0.1 && Math.abs(l.y[1] - 80) < 0.1, 'eases onto the tree positions')
   console.log('tree easing: all assertions passed')
 }
+
+// --- calendar: multi-day items laid out as bars in week rows ---------------------------
+import { layoutWeek } from './calendarBars'
+{
+  // Week of Sun 2026-09-27 … Sat 2026-10-03
+  const week = ['2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03']
+  const bars = layoutWeek(week, [
+    { id: 'trip', startDay: '2026-09-30', endDay: '2026-10-05' }, // runs past the week
+    { id: 'conf', startDay: '2026-09-25', endDay: '2026-09-28' }, // started last week
+    { id: 'lunch', startDay: '2026-09-30', endDay: '2026-09-30' },
+    { id: 'gone', startDay: '2026-10-10', endDay: '2026-10-11' } // not this week
+  ])
+  const by = new Map(bars.map((b) => [b.id, b]))
+  assert.equal(bars.length, 3)
+  assert.deepEqual([by.get('conf')?.col, by.get('conf')?.span, by.get('conf')?.continuesLeft, by.get('conf')?.continuesRight], [0, 2, true, false])
+  assert.deepEqual([by.get('trip')?.col, by.get('trip')?.span, by.get('trip')?.continuesRight], [3, 4, true])
+  assert.notEqual(by.get('trip')?.lane, by.get('lunch')?.lane, 'overlapping bars get their own lanes')
+  assert.equal(by.get('conf')?.lane, 0, 'a lane is reused once free')
+  assert.ok(bars.every((b) => b.lane >= 0))
+  // Longer items take the upper lanes (Google-Calendar-like).
+  assert.ok((by.get('trip')?.lane ?? 9) < (by.get('lunch')?.lane ?? 0))
+  console.log('calendar bars: all assertions passed')
+}

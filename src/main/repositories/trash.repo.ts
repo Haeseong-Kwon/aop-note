@@ -118,6 +118,8 @@ const PURGE = [
   'DELETE FROM attachments WHERE task_id IN dt OR workspace_id IN dw OR deleted_at IS NOT NULL',
   'UPDATE attachments SET folder_id = NULL WHERE folder_id IN (SELECT id FROM doc_folders WHERE workspace_id IN dw)',
   'DELETE FROM doc_folders WHERE workspace_id IN dw',
+  'DELETE FROM schedules WHERE workspace_id IN dw OR deleted_at IS NOT NULL',
+  'DELETE FROM project_folders WHERE workspace_id IN dw',
   'UPDATE tasks SET goal_id = NULL WHERE goal_id IN dg',
   'DELETE FROM tasks WHERE id IN dt',
   'DELETE FROM categories WHERE id IN dc',

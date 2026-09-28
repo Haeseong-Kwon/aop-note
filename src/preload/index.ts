@@ -5,6 +5,8 @@ import type {
   CreateWorkspaceInput,
   CreateDocFolderInput,
   GraphExportRequest,
+  CreateScheduleInput,
+  UpdateScheduleInput,
   DocumentUploadInput,
   UpdateWorkspaceInput,
   CreateCategoryInput,
@@ -89,6 +91,13 @@ const api: Api = {
     rename: (id: string, name: string) => ipcRenderer.invoke(IPC.docFolder.rename, id, name),
     move: (id: string, parentId: string | null) => ipcRenderer.invoke(IPC.docFolder.move, id, parentId),
     remove: (id: string) => ipcRenderer.invoke(IPC.docFolder.remove, id)
+  },
+  schedule: {
+    list: (fromDay: string, toDay: string, deskId: string | null) => ipcRenderer.invoke(IPC.schedule.list, fromDay, toDay, deskId),
+    create: (input: CreateScheduleInput) => ipcRenderer.invoke(IPC.schedule.create, input),
+    update: (input: UpdateScheduleInput) => ipcRenderer.invoke(IPC.schedule.update, input),
+    remove: (id: string) => ipcRenderer.invoke(IPC.schedule.remove, id),
+    restore: (id: string) => ipcRenderer.invoke(IPC.schedule.restore, id)
   },
   graph: {
     stats: (req: GraphExportRequest) => ipcRenderer.invoke(IPC.graph.stats, req),

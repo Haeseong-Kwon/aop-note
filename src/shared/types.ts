@@ -518,6 +518,42 @@ export interface CalendarInfo {
 }
 
 /** One occurrence from a subscribed calendar (read-only). */
+/** 일정: a calendar item made in the app. All-day: start/end are 'YYYY-MM-DD' (end
+ *  inclusive); timed: ISO datetimes. start_day/end_day are the local days it covers. */
+export interface Schedule {
+  id: string
+  /** The desk it belongs to (null = not tied to a desk). */
+  workspace_id: string | null
+  title: string
+  note: string
+  location: string
+  color: string
+  all_day: boolean
+  start: string
+  end: string
+  start_day: string
+  end_day: string
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+export interface CreateScheduleInput {
+  workspace_id?: string | null
+  title: string
+  note?: string
+  location?: string
+  color?: string
+  all_day: boolean
+  start: string
+  end: string
+}
+
+export interface UpdateScheduleInput extends Partial<Omit<CreateScheduleInput, 'workspace_id'>> {
+  id: string
+  workspace_id?: string | null
+}
+
 export interface CalendarEvent {
   id: string
   calendar_id: string

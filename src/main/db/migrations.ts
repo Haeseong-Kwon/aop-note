@@ -256,6 +256,30 @@ const migrations: Migration[] = [
       INSERT INTO project_folders (id, workspace_id, path, sort_order, created_at)
         SELECT lower(hex(randomblob(16))), id, folder_path, 0, updated_at FROM workspaces WHERE folder_path IS NOT NULL;
     `)
+  },
+
+  // 0016 — 일정: calendar schedules, possibly spanning several days
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS schedules (
+        id            TEXT PRIMARY KEY,
+        workspace_id  TEXT REFERENCES workspaces(id),
+        title         TEXT NOT NULL,
+        note          TEXT NOT NULL DEFAULT '',
+        location      TEXT NOT NULL DEFAULT '',
+        color         TEXT NOT NULL DEFAULT '#6366f1',
+        all_day       INTEGER NOT NULL DEFAULT 1,
+        start         TEXT NOT NULL,
+        "end"         TEXT NOT NULL,
+        start_day     TEXT NOT NULL,
+        end_day       TEXT NOT NULL,
+        created_at    TEXT NOT NULL,
+        updated_at    TEXT NOT NULL,
+        deleted_at    TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_schedules_days ON schedules(start_day, end_day);
+      CREATE INDEX IF NOT EXISTS idx_schedules_workspace ON schedules(workspace_id);
+    `)
   }
 ]
 
