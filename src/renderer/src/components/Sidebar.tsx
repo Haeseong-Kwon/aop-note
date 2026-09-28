@@ -280,10 +280,9 @@ export function Sidebar(): JSX.Element {
     >
       {/* On macOS the traffic lights sit in the top-left, so the brand row starts below them. */}
       <div className={cn('drag-region flex shrink-0 items-center gap-2 px-3 pb-2', IS_MAC ? 'pt-9' : 'pt-3')}>
-        <div className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground">
-          A
-        </div>
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight">AOP Note</span>
+        {/* The app icon, trimmed of its dock padding so the tile fills the space. */}
+        <img src="./app-icon.png" alt="" draggable={false} className="h-7 w-7 shrink-0 rounded-[7px] shadow-sm ring-1 ring-black/10 dark:ring-white/10" />
+        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-tight">AOP Note</span>
         <button
           onClick={toggleSidebar}
           title={`사이드바 접기 (${shortcut('Mod', '\\')})`}
