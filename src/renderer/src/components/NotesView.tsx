@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { chartTitle, replaceChartFences } from '@shared/chart/html'
 import { Plus, Search, FileText, X, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,9 @@ const STATUS_DOT: Record<TaskStatus, string> = {
 
 /** First meaningful line of a memo, stripped of common Markdown noise; null when the memo is empty. */
 function memoPreview(note: string): string | null {
-  const line = note
+  // A chart is a JSON fence in the Markdown; preview it by its title.
+  const withCharts = replaceChartFences(note, (doc) => `📊 ${chartTitle(doc)}`)
+  const line = withCharts
     .split('\n')
     .map((l) =>
       l

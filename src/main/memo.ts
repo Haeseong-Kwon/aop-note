@@ -3,16 +3,19 @@ import { tmpdir } from 'os'
 import { writeFile, unlink } from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { dialog, BrowserWindow } from 'electron'
-import { marked } from 'marked'
+import { Marked } from 'marked'
 import { taskRepo } from './repositories/task.repo'
 import { markdownToDocx } from './docx'
+import { markdownToPptx } from './chartExport'
+import { chartExportMarkdown, chartFigureHtml, chartSummaryMarkdown, replaceChartFences } from '@shared/chart/html'
 import type { ExportFormat, ExportResult } from '@shared/types'
 
 const FILTERS: Record<ExportFormat, Electron.FileFilter> = {
   md: { name: 'Markdown', extensions: ['md'] },
   html: { name: 'HTML', extensions: ['html'] },
   pdf: { name: 'PDF', extensions: ['pdf'] },
-  docx: { name: 'Word', extensions: ['docx'] }
+  docx: { name: 'Word', extensions: ['docx'] },
+  pptx: { name: 'PowerPoint', extensions: ['pptx'] }
 }
 
 const sanitize = (s: string): string =>
@@ -42,7 +45,7 @@ function htmlDocument(title: string, bodyHtml: string): string {
 <body>${bodyHtml}</body></html>`
 }
 
-async function renderPdf(html: string): Promise<Buffer> {
+export async function renderPdf(html: string): Promise<Buffer> {
   const tmp = join(tmpdir(), `aop-memo-${randomUUID()}.html`)
   await writeFile(tmp, html, 'utf8')
   const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
@@ -55,7 +58,8 @@ async function renderPdf(html: string): Promise<Buffer> {
   }
 }
 
-export async function exportMemo(taskId: string, format: ExportFormat): Promise<ExportResult> {
+/** `images`: PNGs of the memo's charts in document order (drawn by the renderer), for .pptx. */
+export async function exportMemo(taskId: string, format: ExportFormat, images: (Buffer | null)[] = []): Promise<ExportResult> {
   const task = taskRepo.getById(taskId)
   if (!task) return { canceled: true }
 
@@ -66,12 +70,16 @@ export async function exportMemo(taskId: string, format: ExportFormat): Promise<
   })
   if (canceled || !filePath) return { canceled: true }
 
+  const note = task.note ?? ''
   if (format === 'md') {
-    await writeFile(filePath, markdown, 'utf8')
+    await writeFile(filePath, replaceChartFences(markdown, (doc) => chartExportMarkdown(doc, (svg) => Buffer.from(svg).toString('base64'))), 'utf8')
   } else if (format === 'docx') {
-    await writeFile(filePath, await markdownToDocx(task.title, task.note ?? ''))
+    await writeFile(filePath, await markdownToDocx(task.title, replaceChartFences(note, (doc) => chartSummaryMarkdown(doc))))
+  } else if (format === 'pptx') {
+    await writeFile(filePath, await markdownToPptx(task.title, note, images))
   } else {
-    const body = await marked.parse(markdown)
+    // Charts become self-contained figures (inline SVG); marked passes the HTML block through.
+    const body = await new Marked().parse(replaceChartFences(markdown, (doc) => `\n\n${chartFigureHtml(doc)}\n\n`))
     const html = htmlDocument(task.title, body)
     if (format === 'html') await writeFile(filePath, html, 'utf8')
     else await writeFile(filePath, await renderPdf(html))

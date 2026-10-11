@@ -812,3 +812,263 @@ body.is-resizing * {
     animation: none;
   }
 }
+
+/* 통계·그래프: the chart card sits on the chart palette's own surface (dot rings and
+   bar gaps are drawn in that colour), with a hairline ring and a quiet lift. */
+.chart-card {
+  --chart-surface: #fcfcfb;
+  --chart-hair: rgba(11, 11, 11, 0.09);
+  background: var(--chart-surface);
+  box-shadow:
+    0 0 0 1px var(--chart-hair),
+    0 1px 2px rgba(11, 11, 11, 0.04),
+    0 8px 24px -12px rgba(11, 11, 11, 0.1);
+  color: #0b0b0b;
+}
+.dark .chart-card {
+  --chart-surface: #1a1a19;
+  --chart-hair: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 0 1px var(--chart-hair);
+  color: #f0efec;
+}
+.chart-card .text-muted-foreground {
+  color: #6f6d68;
+}
+.dark .chart-card .text-muted-foreground {
+  color: #a3a29b;
+}
+.chart-svg svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.chart-svg svg :is(rect, path, circle)[fill]:not([fill='none']):not([fill='transparent']) {
+  transition: opacity 120ms ease;
+}
+.chart-svg svg :is(rect, path, circle):hover {
+  opacity: 0.82;
+}
+.chart-empty {
+  background:
+    linear-gradient(var(--chart-hair) 1px, transparent 1px) 0 0 / 100% 25%,
+    color-mix(in srgb, var(--chart-surface) 60%, transparent);
+  border: 1px dashed var(--chart-hair);
+}
+.chart-insight {
+  background: color-mix(in srgb, var(--tool) 7%, var(--chart-surface));
+}
+.chart-stats {
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  background: var(--chart-hair);
+  box-shadow: 0 0 0 1px var(--chart-hair);
+}
+.chart-stats > div {
+  background: var(--chart-surface);
+}
+.chart-table th {
+  padding: 0.35rem 0.6rem;
+  font-weight: 600;
+  font-size: 11.5px;
+  color: #6f6d68;
+  border-bottom: 1px solid var(--chart-hair);
+  white-space: nowrap;
+}
+.chart-table td {
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--chart-hair);
+  white-space: nowrap;
+}
+.chart-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Editor + preview side by side once there's room; the preview stays in view. */
+.chart-tool-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 56rem) {
+  .chart-tool-grid {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.3fr);
+  }
+  .chart-tool-grid > :last-child {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+/* The data grid: a quiet spreadsheet. Header row tinted, label column muted. */
+.chart-grid td {
+  border: 1px solid hsl(var(--border));
+  padding: 0;
+  background: hsl(var(--background) / 0.6);
+}
+.chart-grid td.chart-grid-gutter {
+  border: 0;
+  background: transparent;
+}
+.chart-grid tr:first-child td {
+  border-top: 0;
+}
+.chart-grid td:first-child {
+  border-left: 0;
+}
+.chart-grid-head td {
+  background: color-mix(in srgb, var(--tool) 6%, hsl(var(--background)));
+}
+.chart-grid-label {
+  background: hsl(var(--muted) / 0.45) !important;
+}
+.chart-grid td:focus-within {
+  box-shadow: inset 0 0 0 2px var(--tool);
+  background: hsl(var(--background));
+}
+.chart-grid-x {
+  display: inline-flex;
+  height: 1.25rem;
+  width: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: hsl(var(--muted-foreground) / 0.7);
+}
+.chart-grid-x:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+}
+.chart-grid-head .chart-grid-x {
+  opacity: 0;
+}
+.chart-grid-head td:hover .chart-grid-x,
+.chart-grid-head .chart-grid-x:focus-visible {
+  opacity: 1;
+}
+.chart-grid-add {
+  display: inline-flex;
+  height: 1.875rem;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 0.5rem;
+  border: 1px dashed hsl(var(--border));
+  padding: 0 0.625rem;
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  transition: all 140ms ease;
+}
+.chart-grid-add:hover {
+  border-color: var(--tool);
+  background: var(--tool-soft);
+  color: var(--tool);
+}
+
+/* Buttons: one filled primary, chips, and a segmented export group. */
+.chart-primary {
+  display: inline-flex;
+  height: 2.25rem;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 0.625rem;
+  padding: 0 0.95rem;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  background: var(--tool);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 2px rgba(11, 11, 11, 0.12);
+  transition:
+    filter 140ms ease,
+    transform 140ms ease;
+}
+.chart-primary:hover {
+  filter: brightness(1.07);
+}
+.chart-primary:active {
+  transform: translateY(0.5px);
+}
+.chart-primary:disabled {
+  opacity: 0.6;
+}
+.chart-primary--sm {
+  height: 1.875rem;
+  padding: 0 0.7rem;
+  font-size: 12.5px;
+}
+.chart-chip {
+  display: inline-flex;
+  height: 1.875rem;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background) / 0.7);
+  padding: 0 0.65rem;
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  transition: all 140ms ease;
+}
+.chart-chip:hover {
+  border-color: var(--tool-line);
+  background: var(--tool-soft);
+  color: var(--tool);
+}
+.chart-seg {
+  border-radius: 0.625rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background) / 0.7);
+  padding: 2px;
+}
+.chart-seg-btn {
+  display: inline-flex;
+  height: 1.875rem;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.45rem;
+  padding: 0 0.6rem;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  transition: all 140ms ease;
+}
+.chart-seg-btn:hover:not(:disabled) {
+  background: var(--tool-soft);
+  color: var(--tool);
+}
+.chart-seg-btn:disabled {
+  opacity: 0.5;
+}
+.chart-seg-btn--compact {
+  height: 1.625rem;
+  padding: 0 0.5rem;
+  font-size: 12px;
+}
+
+/* In a memo: the toolbar appears on hover/focus; the editor opens in a tinted panel. */
+.bn-memo .bn-chart {
+  position: relative;
+  margin-block: 0.5rem;
+  container-type: inline-size;
+}
+.bn-chart-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  margin-bottom: 0.4rem;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+.bn-chart:hover .bn-chart-bar,
+.bn-chart:focus-within .bn-chart-bar,
+.bn-chart[data-editing] .bn-chart-bar {
+  opacity: 1;
+}
+.bn-chart-edit {
+  border-radius: 1rem;
+  border: 1px solid var(--tool-line);
+  background: color-mix(in srgb, var(--tool) 3%, hsl(var(--background)));
+  padding: 1rem;
+}
+@container (min-width: 52rem) {
+  .bn-chart-edit {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  }
+}

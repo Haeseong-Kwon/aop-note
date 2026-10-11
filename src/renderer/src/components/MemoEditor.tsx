@@ -3,7 +3,7 @@ import { Maximize2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { BlockNoteEditor } from './BlockNoteEditor'
-import { MemoExportMenu, EXPORTS } from './MemoExportMenu'
+import { MemoExportMenu, EXPORTS, exportMemoFile } from './MemoExportMenu'
 import { DocumentViewer } from './DocumentViewer'
 import { useMemoPersist } from '@/hooks/useMemoPersist'
 import { useStore } from '@/store/useStore'
@@ -17,8 +17,7 @@ export function MemoEditor({ task }: { task: Task }): JSX.Element {
   const [viewing, setViewing] = useState<Attachment | null>(null)
 
   const exportAs = async (fmt: ExportFormat): Promise<void> => {
-    await persistNow()
-    await window.api.memo.export(task.id, fmt)
+    await exportMemoFile(task.id, fmt, persistNow)
   }
 
   const closeFullscreen = (): void => {

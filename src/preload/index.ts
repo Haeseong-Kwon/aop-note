@@ -69,8 +69,11 @@ const api: Api = {
     notes: (text: string) => ipcRenderer.invoke(IPC.search.notes, text)
   },
   memo: {
-    export: (taskId: string, format: ExportFormat) =>
-      ipcRenderer.invoke(IPC.memo.export, taskId, format)
+    export: (taskId: string, format: ExportFormat, images?: ArrayBuffer[]) =>
+      ipcRenderer.invoke(IPC.memo.export, taskId, format, images)
+  },
+  chart: {
+    export: (docJson: string, format: 'pdf' | 'pptx' | 'png', png?: ArrayBuffer | null) => ipcRenderer.invoke(IPC.chart.export, docJson, format, png)
   },
   attachment: {
     listByTask: (taskId: string) => ipcRenderer.invoke(IPC.attachment.listByTask, taskId),

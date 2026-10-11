@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"SP=/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6/scratchpad; mkdir -p $SP/deck && cp /var/folders/rc/k__fv01d6_n08srbwx91gz5h0000gn...",
+  "error": "Exit code 127\n.rw-r--r--@  78k haeseong 11 Oct 23:53 memo.pdf\n.rw-r--r--@ 115k haeseong 11 Oct 23:53 memo.pptx",
+  "timestamp": "2026-10-11T14:53:15.399Z",
+  "retry_count": 1
+}

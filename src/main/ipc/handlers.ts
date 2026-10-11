@@ -22,7 +22,8 @@ import {
   openAttachmentExternal,
   removeAttachment
 } from '../attachments'
-import { exportMemo } from '../memo'
+import { exportMemo, renderPdf } from '../memo'
+import { exportChart, type ChartExportFormat } from '../chartExport'
 import { trashRepo } from '../repositories/trash.repo'
 import { linkRepo } from '../repositories/link.repo'
 import { fetchLinkPreview } from '../linkPreview'
@@ -109,6 +110,19 @@ function handle<T>(channel: string, fn: (...args: never[]) => T): void {
   })
 }
 
+const MAX_CHART_PNG_BYTES = 20 * 1024 * 1024
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47])
+
+/** Chart images from the renderer: only real PNGs of sane size; anything else becomes a gap. */
+function pngList(raw: unknown): (Buffer | null)[] {
+  if (!Array.isArray(raw)) return []
+  return raw.slice(0, 500).map((b) => {
+    if (!(b instanceof ArrayBuffer || ArrayBuffer.isView(b)) || b.byteLength > MAX_CHART_PNG_BYTES) return null
+    const buf = Buffer.from(b instanceof ArrayBuffer ? b : b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength))
+    return buf.subarray(0, 4).equals(PNG_MAGIC) ? buf : null
+  })
+}
+
 export function registerIpcHandlers(): void {
   // ---- Workspace ----
   handle(IPC.workspace.list, () => workspaceRepo.list())
@@ -151,7 +165,8 @@ export function registerIpcHandlers(): void {
   handle(IPC.search.notes, (text: string) => searchRepo.notes(String(text ?? '')))
 
   // ---- Memo export ----
-  handle(IPC.memo.export, (taskId: string, format: ExportFormat) => exportMemo(taskId, format))
+  handle(IPC.memo.export, (taskId: string, format: ExportFormat, images?: unknown) => exportMemo(taskId, format, pngList(images)))
+  handle(IPC.chart.export, (docJson: string, format: ChartExportFormat, png?: unknown) => exportChart(String(docJson ?? ''), format, pngList([png])[0] ?? null, renderPdf))
 
   // ---- Attachments ----
   handle(IPC.attachment.listByTask, (taskId: string) => attachmentRepo.listByTask(taskId))

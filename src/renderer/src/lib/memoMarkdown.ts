@@ -42,3 +42,30 @@ export function restoreFileBlocks<T>(blocks: T[], files: FileRef[]): T[] {
     return file ? ({ type: 'file', props: { url: file.url, name: file.name } } as T) : block
   })
 }
+
+const CHART_FENCE_RE = /^```aop-chart[^\n]*\n([\s\S]*?)\n```[ \t]*$/gm
+const CHART_MARK = '@@aop-chart-'
+
+/**
+ * Chart blocks serialise to a ```aop-chart fence (JSON). The parser would make that a
+ * code block, so — like files — swap each fence for a marker and restore a chart block.
+ */
+export function extractCharts(markdown: string): { markdown: string; charts: string[] } {
+  const charts: string[] = []
+  const text = markdown.replace(CHART_FENCE_RE, (_m, json: string) => {
+    charts.push(json.trim())
+    return `${CHART_MARK}${charts.length - 1}@@`
+  })
+  return { markdown: text, charts }
+}
+
+export function restoreChartBlocks<T>(blocks: T[], charts: string[]): T[] {
+  if (charts.length === 0) return blocks
+  return blocks.map((block) => {
+    const { type, content } = block as LooseBlock
+    const marker = type === 'paragraph' && content?.length === 1 ? (content[0]?.text?.trim() ?? '') : ''
+    if (!marker.startsWith(CHART_MARK) || !marker.endsWith('@@')) return block
+    const json = charts[Number(marker.slice(CHART_MARK.length, -2))]
+    return json === undefined ? block : ({ type: 'chart', props: { doc: json } } as T)
+  })
+}

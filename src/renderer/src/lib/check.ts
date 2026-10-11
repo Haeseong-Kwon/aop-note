@@ -741,3 +741,16 @@ import * as tm from './toolMath'
   near(tm.entropyBits(10, 32), 50)
   console.log('toolMath (payroll, wording): all assertions passed')
 }
+import '@shared/chart/stats.check'
+
+// --- memoMarkdown: chart fences become chart blocks again ------------------------
+import { extractCharts, restoreChartBlocks } from './memoMarkdown'
+{
+  const md = 'before\n\n```aop-chart\n{"kind":"bar"}\n```\n\nafter'
+  const ex = extractCharts(md)
+  assert.equal(ex.markdown, 'before\n\n@@aop-chart-0@@\n\nafter')
+  assert.deepEqual(ex.charts, ['{"kind":"bar"}'])
+  const blocks = restoreChartBlocks([{ type: 'paragraph', content: [{ type: 'text', text: '@@aop-chart-0@@' }] }, { type: 'paragraph', content: [{ type: 'text', text: 'after' }] }], ex.charts)
+  assert.deepEqual(blocks[0], { type: 'chart', props: { doc: '{"kind":"bar"}' } })
+  console.log('memoMarkdown charts: all assertions passed')
+}

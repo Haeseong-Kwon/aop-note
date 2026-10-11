@@ -142,7 +142,7 @@ export interface DocumentUploadInput {
   file_name: string
 }
 
-export type ExportFormat = 'md' | 'html' | 'pdf' | 'docx'
+export type ExportFormat = 'md' | 'html' | 'pdf' | 'docx' | 'pptx'
 
 export interface ExportResult {
   canceled: boolean

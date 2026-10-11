@@ -16,12 +16,15 @@ import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu, SuggestionMenu 
 import { Lightbulb, Bookmark, ListTree, Link2, Table2, RefreshCcw, Sparkles } from 'lucide-react'
 import { defaultViewConfig } from '@/lib/database'
 import { memoSchema } from './memo/schema'
+import { KINDS, emptyDoc } from '@shared/chart/kinds'
+import { KIND_ICONS } from './chart/kindIcons'
+import { chartBlock } from './chart/chartActions'
 import { resolveInitial } from '@shared/noteDoc'
 import { BlockNoteView } from '@blocknote/mantine'
 import { ko as koLocale } from '@blocknote/core/locales'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
-import { extractFiles, restoreFileBlocks } from '@/lib/memoMarkdown'
+import { extractCharts, extractFiles, restoreChartBlocks, restoreFileBlocks } from '@/lib/memoMarkdown'
 import { SmartTypography } from '@/lib/smartTypography'
 import { WikiLinks } from '@/lib/wikiLinks'
 import { useStore } from '@/store/useStore'
@@ -170,8 +173,9 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
         if (loaded.current) return
         loaded.current = true
         const parseMarkdown = async (md: string): Promise<typeof editor.document> => {
-          const { markdown, files } = extractFiles(md)
-          return restoreFileBlocks(await editor.tryParseMarkdownToBlocks(markdown), files)
+          const { markdown: withoutCharts, charts } = extractCharts(md)
+          const { markdown, files } = extractFiles(withoutCharts)
+          return restoreChartBlocks(restoreFileBlocks(await editor.tryParseMarkdownToBlocks(markdown), files), charts)
         }
         // Lossless path first: the blocks saved with this exact Markdown (plus anything
         // appended outside the editor). Fall back to parsing Markdown if they don't fit.
@@ -210,6 +214,9 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
 
     const handleChange = async (): Promise<void> => {
       try {
+        // onChange can fire inside a React commit (hydration, a block's own update); React
+        // blocks can't render their export HTML then, so serialise on the next tick.
+        await new Promise((resolve) => setTimeout(resolve, 0))
         const markdown = await editor.blocksToMarkdownLossy(editor.document)
         onMarkdownChange(markdown, editor.document)
       } catch (error) {
@@ -357,7 +364,19 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
           }
         }
       ]
-      return filterSuggestionItems([...getDefaultReactSlashMenuItems(editor), ...extra], query)
+      // Every 통계·그래프 tool, as a live chart block that opens in its editor.
+      const charts: DefaultReactSuggestionItem[] = KINDS.map((def) => {
+        const Icon = KIND_ICONS[def.kind]
+        return {
+          title: def.name,
+          subtext: def.blurb,
+          aliases: [def.kind, 'chart', 'graph', 'stats', '차트', '그래프', '통계', '도표', def.section === 'stats' ? '분석' : '시각화'],
+          group: '통계·그래프',
+          icon: <Icon size={18} />,
+          onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, chartBlock(emptyDoc(def.kind)))
+        }
+      })
+      return filterSuggestionItems([...getDefaultReactSlashMenuItems(editor), ...extra, ...charts], query)
     }
 
     // ArrowUp on the first block hands focus back to the title above.

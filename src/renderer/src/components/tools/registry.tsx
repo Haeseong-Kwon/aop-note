@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import {
   Briefcase,
   Calculator,
+  ChartNoAxesCombined,
   CalendarClock,
   CalendarRange,
   Clock,
@@ -42,13 +43,17 @@ import { DecisionMatrixTool, PertTool, RiceTool } from './PlanTools'
 import { DateTool, MeetingCostTool, TimerTool, TimezoneTool } from './TimeTools'
 import { CalculatorTool, PercentTool, PickerTool, TextCountTool, UnitTool } from './GeneralTools'
 import { ListCleanTool, PasswordTool } from './TextTools'
+import { KINDS } from '@shared/chart/kinds'
+import { ChartTool } from '../chart/ChartTool'
+import { KIND_ICONS, STATS_COLOR } from '../chart/kindIcons'
 
 /** The tool catalogue, shared by the 도구 page and the floating tools button. */
 
-export type GroupId = 'general' | 'finance' | 'people' | 'growth' | 'plan' | 'time'
+export type GroupId = 'general' | 'stats' | 'finance' | 'people' | 'growth' | 'plan' | 'time'
 
 export const GROUPS: Record<GroupId, { name: string; blurb: string; color: string; icon: LucideIcon }> = {
   general: { name: '일상 업무', blurb: '계산, 변환, 텍스트 정리', color: '#0284c7', icon: Briefcase },
+  stats: { name: '통계·그래프', blurb: '차트와 분석을 메모로 저장, PDF·PPTX로 내보내기', color: STATS_COLOR, icon: ChartNoAxesCombined },
   finance: { name: '재무·세무', blurb: '견적, 세금, 가격, 투자 판단', color: '#059669', icon: Coins },
   people: { name: '인사·급여', blurb: '급여 환산, 연차, 퇴직금, 근무시간', color: '#e11d48', icon: Users },
   growth: { name: '마케팅·성장', blurb: '광고 성과, 전환, 고객 가치', color: '#c026d3', icon: Megaphone },
@@ -97,7 +102,9 @@ export const TOOLS: Tool[] = [
   { id: 'dates', group: 'time', name: '날짜 계산', blurb: 'D-day, 기간, 영업일 더하기', icon: CalendarRange, Component: DateTool },
   { id: 'timezone', group: 'time', name: '세계 시간', blurb: '해외 미팅 시간 맞추기', icon: Globe, Component: TimezoneTool },
   { id: 'timer', group: 'time', name: '집중 타이머', blurb: '포모도로, 집중·휴식 알림', icon: Timer, Component: TimerTool },
-  { id: 'meeting', group: 'time', name: '회의 비용', blurb: '지금 이 회의가 얼마인지 실시간으로', icon: Clock, Component: MeetingCostTool }
+  { id: 'meeting', group: 'time', name: '회의 비용', blurb: '지금 이 회의가 얼마인지 실시간으로', icon: Clock, Component: MeetingCostTool },
+  // 통계·그래프: one ChartTool per kind; the id is also the kind (saved inputs live under '<kind>.doc').
+  ...KINDS.map((def): Tool => ({ id: def.kind, group: 'stats', name: def.name, blurb: def.blurb, icon: KIND_ICONS[def.kind], Component: () => <ChartTool kind={def.kind} /> }))
 ]
 
 export const findTool = (id: string | null): Tool | null => TOOLS.find((t) => t.id === id) ?? null

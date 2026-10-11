@@ -108,6 +108,9 @@ export const IPC = {
   memo: {
     export: 'memo:export'
   },
+  chart: {
+    export: 'chart:export'
+  },
   attachment: {
     listByTask: 'attachment:listByTask',
     listByWorkspace: 'attachment:listByWorkspace',
@@ -289,7 +292,11 @@ export interface Api {
   }
   memo: {
     /** Export a task's memo (title + note) to a file the user picks. */
-    export(taskId: string, format: ExportFormat): Promise<ExportResult>
+    export(taskId: string, format: ExportFormat, images?: ArrayBuffer[]): Promise<ExportResult>
+  }
+  chart: {
+    /** Save one chart (a ChartDoc as JSON) as a PDF, PowerPoint deck or PNG the user picks; `png` is its picture. */
+    export(docJson: string, format: 'pdf' | 'pptx' | 'png', png?: ArrayBuffer | null): Promise<ExportResult>
   }
   attachment: {
     listByTask(taskId: string): Promise<Attachment[]>
