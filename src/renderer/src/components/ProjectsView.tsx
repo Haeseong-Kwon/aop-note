@@ -96,7 +96,7 @@ export function ProjectsView(): JSX.Element {
                     </span>
                   </span>
                 </button>
-                <div className="flex shrink-0 gap-1 opacity-70 transition-opacity group-hover:opacity-100">
+                <div className="flex shrink-0 gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
                   <Button
                     variant="ghost"
                     size="sm"

@@ -23,6 +23,20 @@ function withProgress(row: GoalRow): GoalWithProgress {
 }
 
 export const goalRepo = {
+  /** Open goals (any live desk) due on or before endIso — for deadline notifications. */
+  listOpenDueBy(endIso: string): (GoalWithProgress & { workspace_name: string })[] {
+    const rows = getDb()
+      .prepare(
+        `SELECT q.*, w.name AS workspace_name FROM (${SELECT_WITH_PROGRESS}) q
+         JOIN workspaces w ON w.id = q.workspace_id
+         WHERE q.deleted_at IS NULL AND w.deleted_at IS NULL AND q.status != 'done'
+           AND q.due_date IS NOT NULL AND q.due_date <= ?
+         ORDER BY q.due_date ASC`
+      )
+      .all(endIso) as (GoalRow & { workspace_name: string })[]
+    return rows.map((r) => ({ ...withProgress(r), workspace_name: r.workspace_name }))
+  },
+
   listByWorkspace(workspaceId: string): GoalWithProgress[] {
     const rows = getDb()
       .prepare(

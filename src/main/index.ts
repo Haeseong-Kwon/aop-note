@@ -1,9 +1,11 @@
 import { join, basename } from 'path'
 import { pathToFileURL } from 'url'
 import { existsSync } from 'fs'
-import { app, shell, BrowserWindow, Menu, protocol, net } from 'electron'
+import { app, dialog, shell, BrowserWindow, Menu, protocol, net } from 'electron'
 import { getDb, closeDb } from './db'
-import { registerIpcHandlers } from './ipc/handlers'
+import { registerIpcHandlers, notifyMerged } from './ipc/handlers'
+import { startSyncLoop } from './sync'
+import { startAutoUpdate } from './updater'
 import { startDueNotifier } from './notifications'
 import { pathForStored } from './attachments'
 import { autoBackup } from './backup'
@@ -14,12 +16,19 @@ import { projectFilePath, startProjectWatching } from './projects'
 import { syncAllCalendars } from './calendars'
 import { IPC } from '@shared/ipc'
 import { applyBackdrop, solidBackdrop } from './backdrop'
+import { isSafeExternalUrl } from './safeUrl'
+import { backfillDocumentIndex } from './docText'
 
 let stopNotifier: (() => void) | null = null
 let stopQuickCapture: (() => void) | null = null
 let stopProjectWatching: (() => void) | null = null
+let stopSync: (() => void) | null = null
+let stopUpdates: (() => void) | null = null
 let calendarTimer: ReturnType<typeof setInterval> | null = null
 const CALENDAR_SYNC_MS = 30 * 60_000
+
+// E2E tests run the built app against a throwaway data folder (never the user's).
+if (process.env.AOP_NOTE_USER_DATA) app.setPath('userData', process.env.AOP_NOTE_USER_DATA)
 
 // Windows: toasts only show for an app with an AppUserModelID (must match the installer's appId).
 if (process.platform === 'win32') app.setAppUserModelId('com.aop.note')
@@ -65,8 +74,8 @@ function createWindow(): BrowserWindow {
       : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
-      // Security: renderer has no Node access; only window.api via contextBridge.
+      // Security: renderer has no Node access; only window.api via contextBridge (preload is bundled → sandbox-safe).
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
       // Chromium has no Korean dictionary, so it red-underlines most of a memo.
@@ -78,9 +87,27 @@ function createWindow(): BrowserWindow {
   win.on('enter-full-screen', () => applyBackdrop(win))
   win.on('leave-full-screen', () => applyBackdrop(win))
 
+  // Chromium in Electron has no right-click menu of its own: give text a native Cut/Copy/Paste menu.
+  win.webContents.on('context-menu', (_e, { editFlags, isEditable, selectionText }) => {
+    if (!isEditable && !selectionText.trim()) return
+    Menu.buildFromTemplate([
+      { label: '잘라내기', role: 'cut', enabled: editFlags.canCut },
+      { label: '복사', role: 'copy', enabled: editFlags.canCopy },
+      { label: '붙여넣기', role: 'paste', enabled: editFlags.canPaste },
+      { type: 'separator' },
+      { label: '모두 선택', role: 'selectAll', enabled: editFlags.canSelectAll }
+    ]).popup({ window: win })
+  })
+
   win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    if (isSafeExternalUrl(details.url)) void shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+  // The app is one page: a link that would navigate the window away opens in the browser instead.
+  win.webContents.on('will-navigate', (e, url) => {
+    if (url === win.webContents.getURL()) return
+    e.preventDefault()
+    if (isSafeExternalUrl(url)) void shell.openExternal(url)
   })
 
   // electron-vite injects ELECTRON_RENDERER_URL in dev; load the file in prod.
@@ -118,8 +145,14 @@ app.whenReady().then(() => {
     return net.fetch(pathToFileURL(abs).toString())
   })
 
-  // Open DB + run migrations before the UI asks for data.
-  getDb()
+  // Open DB + run migrations before the UI asks for data. A DB from a newer build can't be opened safely.
+  try {
+    getDb()
+  } catch (error) {
+    dialog.showErrorBox('AOP Note를 열 수 없습니다', error instanceof Error ? error.message : String(error))
+    app.exit(1)
+    return
+  }
   registerIpcHandlers()
   const win = createWindow()
   stopNotifier = startDueNotifier(win)
@@ -135,6 +168,12 @@ app.whenReady().then(() => {
   }
   syncCalendars()
   calendarTimer = setInterval(syncCalendars, CALENDAR_SYNC_MS)
+  // Search: extract text from documents uploaded before full-text search existed (background, logged).
+  backfillDocumentIndex().catch((error) => console.error('[search] document backfill failed:', error))
+  // Device sync through a shared folder (off unless a folder is chosen in Settings).
+  stopSync = startSyncLoop(() => loadSettings().syncPath, notifyMerged)
+  // New versions from GitHub Releases (packaged builds only).
+  stopUpdates = startAutoUpdate()
   // Bring the Markdown mirror up to date (e.g. after an app update changed its format).
   scheduleVaultSync(() => loadSettings().vaultPath)
 
@@ -165,6 +204,8 @@ app.on('will-quit', () => {
   stopNotifier?.()
   stopQuickCapture?.()
   stopProjectWatching?.()
+  stopSync?.()
+  stopUpdates?.()
   if (calendarTimer) clearInterval(calendarTimer)
   closeDb()
 })

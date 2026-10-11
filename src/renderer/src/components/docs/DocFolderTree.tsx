@@ -79,7 +79,7 @@ export function DocFolderTree(props: DocFolderTreeProps): JSX.Element {
   const rowClass = (active: boolean): string =>
     cn(
       'group flex h-[30px] items-center gap-1 rounded-md pr-1 text-sm transition-colors',
-      active ? 'bg-accent font-medium text-foreground' : 'text-foreground/80 hover:bg-accent/60'
+      active ? 'bg-desk/[0.11] font-medium text-foreground' : 'text-foreground/80 hover:bg-accent/60'
     )
 
   return (
@@ -136,7 +136,7 @@ export function DocFolderTree(props: DocFolderTreeProps): JSX.Element {
               <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="truncate">{f.name}</span>
             </button>
-            <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
               <IconButton title="하위 폴더" onClick={() => props.onAddFolder(f.id)}>
                 <FolderPlus className="h-3.5 w-3.5" />
               </IconButton>

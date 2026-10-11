@@ -6,7 +6,8 @@ import type { ExportFormat } from '@shared/types'
 export const EXPORTS: { fmt: ExportFormat; label: string; icon: typeof FileText }[] = [
   { fmt: 'md', label: 'Markdown (.md)', icon: FileText },
   { fmt: 'html', label: 'HTML (.html)', icon: FileCode },
-  { fmt: 'pdf', label: 'PDF (.pdf)', icon: FileType }
+  { fmt: 'pdf', label: 'PDF (.pdf)', icon: FileType },
+  { fmt: 'docx', label: 'Word (.docx)', icon: FileText }
 ]
 
 /**
@@ -46,7 +47,7 @@ export function MemoExportMenu({
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-md border border-border bg-popover py-1 shadow-lg">
+          <div className="absolute right-0 z-20 mt-1 w-44 origin-top-right animate-pop-in overflow-hidden rounded-lg border border-border bg-popover py-1 shadow-lg">
             {EXPORTS.map(({ fmt, label, icon: Icon }) => (
               <button
                 key={fmt}

@@ -142,7 +142,7 @@ export interface DocumentUploadInput {
   file_name: string
 }
 
-export type ExportFormat = 'md' | 'html' | 'pdf'
+export type ExportFormat = 'md' | 'html' | 'pdf' | 'docx'
 
 export interface ExportResult {
   canceled: boolean
@@ -185,8 +185,24 @@ export interface NoteSearchHit {
 }
 
 /** A hit in the command palette / quick switcher. */
+/** A document whose name or extracted text matches a search. */
+export interface DocumentSearchHit {
+  id: string
+  file_name: string
+  /** Text around the first body match; '' when only the name matched. */
+  snippet: string
+  workspace_id: string
+  workspace_name: string
+  color: string
+}
+
+/** A note or document an "ask" answer was based on. */
+export type AiSource =
+  | { kind: 'note'; id: string; title: string; workspace_id: string; category_id: string }
+  | { kind: 'document'; id: string; title: string; workspace_id: string; category_id: null }
+
 export interface SearchHit {
-  type: 'task' | 'category' | 'workspace'
+  type: 'task' | 'category' | 'workspace' | 'document'
   id: string
   title: string
   subtitle: string
@@ -209,6 +225,8 @@ export interface UpdateWorkspaceInput {
   name?: string
   color?: string
   icon?: string
+  /** Move under another desk; null = top level, omitted = unchanged. */
+  parent_id?: string | null
   sort_order?: number
 }
 
@@ -307,6 +325,33 @@ export interface AppSettings {
   /** How the in-app AI reaches Claude. */
   aiProvider: 'claude-code' | 'api'
   aiModel: string
+  /** Shared folder (iCloud Drive, Dropbox…) used to sync with other devices ('' = off). */
+  syncPath: string
+}
+
+/** One sync round: rows merged from other devices, devices read, attachment files copied. */
+export interface SyncResult {
+  exported: boolean
+  merged: number
+  devices: number
+  files: number
+}
+
+/** App update state (Settings → 업데이트). */
+export interface UpdateStatus {
+  current: string
+  state: 'idle' | 'checking' | 'latest' | 'available' | 'downloading' | 'ready' | 'error' | 'unsupported'
+  latest: string | null
+  error: string | null
+}
+
+/** A Markdown folder imported as a new desk. */
+export interface ImportSummary {
+  deskId: string
+  deskName: string
+  notes: number
+  folders: number
+  skipped: number
 }
 
 /** How to register the bundled MCP server with Claude Code. */
@@ -659,5 +704,5 @@ export interface AiRequest {
 export interface AiResult {
   text: string
   /** For "ask": notes the answer was based on. */
-  sources?: { id: string; title: string; workspace_id: string; category_id: string }[]
+  sources?: AiSource[]
 }

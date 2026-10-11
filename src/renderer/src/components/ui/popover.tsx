@@ -34,7 +34,7 @@ export function Popover({ anchorEl, onClose, width, align = 'left', className, c
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div
         role="dialog"
-        className={cn('glass-overlay fixed z-50 rounded-lg p-2.5', className)}
+        className={cn('glass-overlay fixed z-50 origin-top animate-pop-in rounded-lg p-2.5', className)}
         style={{ top: pos.top, left: pos.left, width }}
       >
         {children}

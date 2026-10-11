@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Maximize2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { BlockNoteEditor } from './BlockNoteEditor'
 import { MemoExportMenu, EXPORTS } from './MemoExportMenu'
 import { DocumentViewer } from './DocumentViewer'
@@ -68,6 +68,7 @@ export function MemoEditor({ task }: { task: Task }): JSX.Element {
 
       <Dialog open={fullscreen} onOpenChange={(o) => !o && closeFullscreen()}>
         <DialogContent className="flex h-[90vh] w-[95vw] max-w-5xl flex-col gap-0 p-0" hideClose>
+          <DialogTitle className="sr-only">메모 편집</DialogTitle>
           <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
             <FileText className="h-4 w-4 text-primary" />
             <span className="min-w-0 flex-1 truncate text-sm font-medium">{task.title}</span>

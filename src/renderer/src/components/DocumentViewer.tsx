@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import DOMPurify from 'dompurify'
 import { ExternalLink, Loader2, X, ZoomIn, ZoomOut, Maximize, FileText } from 'lucide-react'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { toastError } from '@/store/useToast'
 import type { AttachmentRender, PptxSlide } from '@shared/types'
@@ -51,6 +51,7 @@ export function DocumentViewer({ attachmentId, projectFile, fileName, onClose }:
         className="flex h-[88vh] w-[92vw] max-w-5xl flex-col gap-0 overflow-hidden rounded-xl p-0"
         hideClose
       >
+        <DialogTitle className="sr-only">문서 보기</DialogTitle>
         {/* Toolbar — translucent, Preview-style */}
         <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border bg-card/80 px-3 backdrop-blur">
           <FileText className="ml-1 h-4 w-4 shrink-0 text-muted-foreground" />

@@ -5,8 +5,9 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 
 const userData = mkdtempSync(join(tmpdir(), 'aop-note-check-'))
+const home = mkdtempSync(join(tmpdir(), 'aop-note-home-'))
 
-export const app = { getPath: (): string => userData }
+export const app = { getPath: (name: string): string => (name === 'home' ? home : userData) }
 
 // UI-bound APIs must not be reached from checks; fail loudly if they are.
 const unavailable = (name: string): never => {

@@ -108,6 +108,49 @@
     overflow: hidden;
   }
 
+  /* Headings: Korean set solid reads tighter than Latin defaults assume. */
+  h1, h2, h3 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  /* Dates, counts and times line up in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* An empty native date field shows its "연도. 월. 일." mask faintly, not as content. */
+  input[type='date'][value='']::-webkit-datetime-edit,
+  input[type='datetime-local'][value='']::-webkit-datetime-edit {
+    color: hsl(var(--muted-foreground) / 0.55);
+  }
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    opacity: 0.45;
+    cursor: pointer;
+  }
+  .dark input[type='date']::-webkit-calendar-picker-indicator,
+  .dark input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+
+  /* Text selection carries the desk colour. */
+  ::selection {
+    background: hsl(var(--desk, var(--primary)) / 0.22);
+  }
+
+  /* Respect "reduce motion": keep state changes, drop the movement. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   /* Drag region for the frameless title bar (macOS hiddenInset). */
   .drag-region {
     -webkit-app-region: drag;
@@ -603,4 +646,169 @@ body.is-resizing * {
 }
 .field:focus {
   box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+/* 도구 (tools) view: inputs | readout, stacking in a narrow pane. --tool is set per tool group. */
+.tool-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.tool-gallery {
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 50rem) {
+  .tool-grid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+  .tool-grid-wide {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  }
+  .tool-grid > :last-child {
+    position: sticky;
+    top: 1rem;
+  }
+}
+@container (min-width: 36rem) {
+  .tool-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (min-width: 62rem) {
+  .tool-gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* The headline figure: scales with the pane so long amounts never overflow. */
+.tool-figure {
+  font-size: clamp(1.75rem, 3.4cqi, 2.6rem);
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The readout plate: a quiet tinted card with a hairline in the tool colour. No glow. */
+.tool-plate {
+  position: relative;
+  border: 1px solid var(--tool-line);
+  background-color: color-mix(in srgb, var(--tool) 4%, hsl(var(--background) / 0.92));
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.5),
+    0 1px 2px hsl(var(--foreground) / 0.04);
+}
+.dark .tool-plate {
+  background-color: color-mix(in srgb, var(--tool) 7%, hsl(var(--background) / 0.6));
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04);
+}
+
+/* Tool badge: the group colour as a soft tile, not a lit gradient. */
+.tool-badge {
+  background-color: var(--tool-soft);
+  color: var(--tool);
+  box-shadow: inset 0 0 0 1px var(--tool-line);
+}
+
+/* Gallery tiles: a tint on hover, the icon fills with the group colour. */
+.tool-tile {
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+.tool-tile:hover {
+  background-color: var(--tool-soft);
+  border-color: var(--tool-line);
+}
+.tool-tile:focus-visible {
+  border-color: var(--tool);
+}
+.tool-tile-icon {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+.tool-tile:hover .tool-tile-icon,
+.tool-tile:focus-visible .tool-tile-icon {
+  background-color: var(--tool);
+  color: white;
+}
+
+/* Floating tools: the corner button and the surfaces it opens. Neutral shadows only. */
+.tool-fab {
+  background: var(--glass-overlay);
+  backdrop-filter: blur(24px) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(24px) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    0 1px 2px rgb(0 0 0 / 0.08),
+    0 6px 16px -8px rgb(0 0 0 / 0.18);
+  opacity: 0.6;
+  transition:
+    opacity 160ms ease,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 160ms ease;
+}
+.tool-fab:hover,
+.tool-fab:focus-visible,
+.tool-fab.is-active {
+  opacity: 1;
+  color: hsl(var(--foreground));
+}
+.tool-fab:hover {
+  transform: translateY(-1px);
+}
+.tool-fab:active {
+  transform: scale(0.95);
+}
+.tool-fab:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+.tool-float-surface {
+  background: var(--glass-overlay);
+  backdrop-filter: blur(40px) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(40px) saturate(var(--glass-sat));
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    0 2px 6px rgb(0 0 0 / 0.06),
+    0 18px 44px -14px rgb(0 0 0 / 0.24);
+}
+@keyframes tool-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes tool-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-tool-menu-in {
+  animation: tool-menu-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.animate-tool-panel-in {
+  transform-origin: bottom right;
+  animation: tool-panel-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-fab,
+  .tool-tile,
+  .tool-tile-icon {
+    transition: none;
+  }
+  .animate-tool-menu-in,
+  .animate-tool-panel-in {
+    animation: none;
+  }
 }

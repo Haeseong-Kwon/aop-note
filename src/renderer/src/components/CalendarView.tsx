@@ -7,7 +7,7 @@ import { eventDayKeys, formatEventTime } from '@/lib/format'
 import { useCalendarEvents } from '@/hooks/useCalendarEvents'
 import { dayKeyOf } from '@/lib/calendarBars'
 import { cn } from '@/lib/utils'
-import type { Schedule } from '@shared/types'
+import type { Schedule, Task, TaskWithContext } from '@shared/types'
 import { MonthGrid } from './calendar/MonthGrid'
 import { ScheduleDialog, type ScheduleDraft } from './calendar/ScheduleDialog'
 import { dayRange, type CalItem } from './calendar/types'
@@ -15,6 +15,9 @@ import { dayRange, type CalItem } from './calendar/types'
 type CalendarMode = 'month' | 'agenda'
 const AGENDA_DAYS = 60
 const MODE_KEY = 'aop-calendar-mode'
+const HIDDEN_KEY = 'aop-calendar-hidden-desks'
+/** Filter key for schedules not tied to any desk. */
+const NO_DESK = '__none'
 // Task dots by priority (none / low / medium / high), matching PRIORITY_META's dots.
 const PRIORITY_COLOR = ['#94a3b8', '#38bdf8', '#fbbf24', '#fb7185'] as const
 
@@ -23,10 +26,25 @@ const hhmm = (iso: string): string => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-/** The desk's calendar: its 일정 (multi-day as bars), task due dates and subscribed calendars. */
-export function CalendarView(): JSX.Element {
-  const tasks = useStore((s) => s.tasks)
-  const deskId = useStore((s) => s.activeWorkspaceId)
+const readHidden = (): string[] => {
+  try {
+    const v: unknown = JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? '[]')
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * The desk's calendar: its 일정 (multi-day as bars), task due dates and subscribed calendars.
+ * `unified`: every desk at once, coloured by desk, with a per-desk filter.
+ */
+export function CalendarView({ unified = false }: { unified?: boolean }): JSX.Element {
+  const deskTasks = useStore((s) => s.tasks)
+  const activeDeskId = useStore((s) => s.activeWorkspaceId)
+  const deskId = unified ? null : activeDeskId
+  const workspaces = useStore((s) => s.workspaces)
+  const navigateToTask = useStore((s) => s.navigateToTask)
   const calYear = useStore((s) => s.calYear)
   const calMonth = useStore((s) => s.calMonth)
   const shiftMonth = useStore((s) => s.shiftMonth)
@@ -50,7 +68,18 @@ export function CalendarView(): JSX.Element {
   }
   const [draft, setDraft] = useState<ScheduleDraft | null>(null)
   const [schedules, setSchedules] = useState<Schedule[]>([])
+  const [allTasks, setAllTasks] = useState<TaskWithContext[]>([])
   const [version, setVersion] = useState(0)
+  const [hidden, setHiddenState] = useState<string[]>(readHidden)
+  const setHidden = (next: string[]): void => {
+    setHiddenState(next)
+    try {
+      localStorage.setItem(HIDDEN_KEY, JSON.stringify(next))
+    } catch {
+      /* not remembered */
+    }
+  }
+  const toggleDesk = (id: string): void => setHidden(hidden.includes(id) ? hidden.filter((h) => h !== id) : [...hidden, id])
 
   // 6-week grid from the Sunday on/before the 1st; the agenda looks ahead from today.
   const days = useMemo(() => {
@@ -68,10 +97,15 @@ export function CalendarView(): JSX.Element {
   useEffect(() => {
     let current = true
     window.api.schedule.list(fromDay, toDay, deskId).then((s) => current && setSchedules(s), toastError)
+    if (unified) {
+      const [y, m, d] = toDay.split('-').map(Number)
+      const start = new Date(fromDay.replace(/-/g, '/')).toISOString()
+      window.api.task.listDueBetween(start, new Date(y, m - 1, d + 1).toISOString()).then((t) => current && setAllTasks(t), toastError)
+    }
     return () => {
       current = false
     }
-  }, [fromDay, toDay, deskId, version])
+  }, [fromDay, toDay, deskId, unified, version])
   const { events } = useCalendarEvents(from, new Date(to.getTime() + 86_400_000))
 
   const changed = useCallback(
@@ -91,12 +125,20 @@ export function CalendarView(): JSX.Element {
     [showToast]
   )
 
+  const deskById = useMemo(() => new Map(workspaces.map((w) => [w.id, w])), [workspaces])
+  const tasks: (Task & { workspace_id?: string })[] = unified ? allTasks : deskTasks
+
   const items = useMemo<CalItem[]>(() => {
-    const out: CalItem[] = schedules.map((s) => ({
+    const visible = (id: string | null | undefined): boolean => !unified || !hidden.includes(id ?? NO_DESK)
+    // Unified: a desk's colour says whose it is; inside a desk, the item's own colour.
+    const tint = (id: string | null | undefined, own: string): string => (unified ? (deskById.get(id ?? '')?.color ?? own) : own)
+    const deskName = (id: string | null | undefined): string | undefined => (unified ? (deskById.get(id ?? '')?.name ?? '데스크 없음') : undefined)
+    const out: CalItem[] = schedules.filter((s) => visible(s.workspace_id)).map((s) => ({
       id: `s:${s.id}`,
       kind: 'schedule',
       title: s.title,
-      color: s.color,
+      color: tint(s.workspace_id, s.color),
+      desk: deskName(s.workspace_id),
       startDay: s.start_day,
       endDay: s.end_day,
       time: s.all_day ? '' : hhmm(s.start),
@@ -117,23 +159,27 @@ export function CalendarView(): JSX.Element {
       })
     }
     for (const t of tasks) {
-      if (!t.due_date) continue
+      if (!t.due_date || !visible(t.workspace_id)) continue
       const day = dayKeyOf(new Date(t.due_date))
       if (day < fromDay || day > toDay) continue
       out.push({
         id: `t:${t.id}`,
         kind: 'task',
         title: t.title,
-        color: PRIORITY_COLOR[t.priority],
+        color: tint(t.workspace_id, PRIORITY_COLOR[t.priority]),
+        desk: deskName(t.workspace_id),
         startDay: day,
         endDay: day,
         time: '',
         done: t.status === 'done',
-        open: () => focusTask(t)
+        open: () =>
+          unified && t.workspace_id
+            ? void navigateToTask({ workspace_id: t.workspace_id, category_id: t.category_id, task_id: t.id })
+            : focusTask(t)
       })
     }
     return out
-  }, [schedules, events, tasks, fromDay, toDay, focusTask, showToast])
+  }, [schedules, events, tasks, fromDay, toDay, focusTask, showToast, unified, hidden, deskById, navigateToTask])
 
   const newToday = (): void => {
     const d = dayKeyOf(new Date())
@@ -186,6 +232,8 @@ export function CalendarView(): JSX.Element {
         </div>
       </div>
 
+      {unified && <DeskFilter hidden={hidden} onToggle={toggleDesk} onShowAll={() => setHidden([])} />}
+
       {mode === 'month' ? (
         <MonthGrid days={days} month={calMonth} items={items} onPickRange={(a, b) => setDraft({ mode: 'new', fromDay: a, toDay: b })} />
       ) : (
@@ -229,6 +277,7 @@ function Agenda({ items, fromDay }: { items: CalItem[]; fromDay: string }): JSX.
                     <span className={cn('block truncate text-sm font-medium', it.done && 'line-through opacity-50')}>{it.title}</span>
                     <span className="block text-xs text-muted-foreground">
                       {it.startDay !== it.endDay ? dayRange(it.startDay, it.endDay) : it.time || '종일'}
+                      {it.desk && ` · ${it.desk}`}
                       {it.kind === 'task' && ' · 작업 마감'}
                       {it.kind === 'event' && ' · 구독 캘린더'}
                     </span>
@@ -239,6 +288,40 @@ function Agenda({ items, fromDay }: { items: CalItem[]; fromDay: string }): JSX.
           </ul>
         </section>
       ))}
+    </div>
+  )
+}
+
+/** Unified calendar: one chip per desk (its colour) to show / hide its items. */
+function DeskFilter({ hidden, onToggle, onShowAll }: { hidden: string[]; onToggle: (id: string) => void; onShowAll: () => void }): JSX.Element {
+  const workspaces = useStore((s) => s.workspaces)
+  const chips = [...workspaces.map((w) => ({ id: w.id, name: w.name, color: w.color, icon: w.icon })), { id: NO_DESK, name: '데스크 없음', color: '#94a3b8', icon: '' }]
+  return (
+    <div role="group" aria-label="데스크 필터" className="-mt-1 mb-3 flex flex-wrap items-center gap-1.5">
+      {chips.map((c) => {
+        const on = !hidden.includes(c.id)
+        return (
+          <button
+            key={c.id}
+            onClick={() => onToggle(c.id)}
+            aria-pressed={on}
+            className={cn(
+              'flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-all duration-fast',
+              on ? 'border-transparent text-foreground shadow-sm' : 'border-dashed border-border text-muted-foreground opacity-60 hover:opacity-100'
+            )}
+            style={on ? { backgroundColor: `${c.color}22`, boxShadow: `inset 0 0 0 1px ${c.color}55` } : undefined}
+          >
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: on ? c.color : 'transparent', boxShadow: `inset 0 0 0 1.5px ${c.color}` }} />
+            {c.icon && <span className="text-[13px] leading-none">{c.icon}</span>}
+            <span className="max-w-[9rem] truncate">{c.name}</span>
+          </button>
+        )
+      })}
+      {hidden.length > 0 && (
+        <button onClick={onShowAll} className="ml-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+          모두 보기
+        </button>
+      )}
     </div>
   )
 }

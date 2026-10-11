@@ -19,6 +19,8 @@ import {
   Settings,
   Waypoints,
   FolderGit2,
+  CalendarDays,
+  Wrench,
   type LucideIcon,
   Sparkles
 } from 'lucide-react'
@@ -28,14 +30,10 @@ import {
   useSensor,
   useSensors,
   closestCenter,
-  type DragEndEvent
+  type DragEndEvent,
+  type DragMoveEvent
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove
-} from '@dnd-kit/sortable'
+import { SortableContext, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
@@ -43,11 +41,16 @@ import { DeskIcon } from './DeskIcon'
 import { StylePicker } from './StylePicker'
 import { cn, IS_MAC, shortcut } from '@/lib/utils'
 import type { Theme } from '@/store/useStore'
-import { flattenTree } from '@shared/tree'
-import type { Workspace, UpdateWorkspaceInput } from '@shared/types'
+import { flattenTree, planTreeDrop, type DropMode } from '@shared/tree'
+import type { Workspace } from '@shared/types'
 import { ResizablePane } from '@/components/ui/ResizablePane'
 
 const INDENT_PX = 14
+/** Top/bottom share of a row that means "drop beside"; the middle means "drop inside". */
+const EDGE_ZONE = 0.25
+/** Rows stay put while dragging; the drop indicator shows where the desk will land. */
+const noShift = (): null => null
+const KEY_MOVES: Partial<Record<string, 'up' | 'down' | 'in' | 'out'>> = { ArrowUp: 'up', ArrowDown: 'down', ArrowRight: 'in', ArrowLeft: 'out' }
 
 const THEMES: { value: Theme; icon: typeof Sun; label: string }[] = [
   { value: 'light', icon: Sun, label: '라이트' },
@@ -60,6 +63,10 @@ interface DeskRowProps {
   depth: number
   /** undefined = no sub-desks (no chevron) */
   collapsed?: boolean
+  /** Where the dragged desk would land relative to this row. */
+  drop?: DropMode
+  /** Keyboard move from the grip: Alt+↑/↓ reorder, Alt+→ into the desk above, Alt+← out one level. */
+  onKeyMove: (key: 'up' | 'down' | 'in' | 'out') => void
   onToggle: () => void
   onAddChild: () => void
   active: boolean
@@ -77,6 +84,8 @@ function DeskRow({
   ws,
   depth,
   collapsed,
+  drop,
+  onKeyMove,
   onToggle,
   onAddChild,
   active,
@@ -128,17 +137,34 @@ function DeskRow({
       className={cn(
         'group relative flex h-[30px] items-center gap-1.5 rounded-md pr-2 text-sm transition-colors',
         active
-          ? 'bg-accent font-medium text-foreground'
+          ? 'bg-desk/[0.11] font-medium text-foreground'
           : 'text-foreground/80 hover:bg-accent/60 hover:text-foreground',
-        isDragging && 'z-10 opacity-80'
+        isDragging && 'z-10 opacity-80',
+        drop === 'inside' && 'bg-primary/10 ring-1 ring-inset ring-primary/60'
       )}
       style={{ transform: CSS.Transform.toString(transform), transition, paddingLeft: 8 + depth * INDENT_PX }}
     >
+      {(drop === 'before' || drop === 'after') && (
+        <span
+          aria-hidden
+          className={cn('pointer-events-none absolute right-1 h-0.5 rounded bg-primary', drop === 'before' ? '-top-px' : '-bottom-px')}
+          style={{ left: 8 + depth * INDENT_PX }}
+        />
+      )}
       <button
         {...attributes}
+        data-desk-grip={ws.id}
         {...listeners}
-        title="드래그하여 순서 변경"
-        className="no-drag -ml-0.5 cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
+        title="드래그: 위·아래 가장자리 = 순서 변경, 가운데 = 하위로 넣기 · 키보드: Alt + 화살표"
+        aria-label={`'${ws.name}' 이동 (Alt+위/아래: 순서, Alt+오른쪽: 위 데스크 안으로, Alt+왼쪽: 한 단계 밖으로)`}
+        onKeyDown={(e) => {
+          const key = e.altKey ? KEY_MOVES[e.key] : undefined
+          if (!key) return
+          e.preventDefault()
+          e.stopPropagation()
+          onKeyMove(key)
+        }}
+        className="no-drag -ml-0.5 cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 active:cursor-grabbing"
       >
         <GripVertical className="h-3.5 w-3.5" />
       </button>
@@ -172,7 +198,7 @@ function DeskRow({
       <button onClick={onSelect} className="no-drag min-w-0 flex-1 truncate text-left">
         {ws.name}
       </button>
-      <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onAddChild} title="하위 데스크 추가">
           <Plus className="h-3.5 w-3.5" />
         </Button>
@@ -218,6 +244,7 @@ export function Sidebar(): JSX.Element {
   const [name, setName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [dropTarget, setDropTarget] = useState<{ id: string; mode: DropMode } | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const submit = async (): Promise<void> => {
@@ -252,18 +279,41 @@ export function Sidebar(): JSX.Element {
     setAdding(parentId)
   }
 
-  // Reorder a desk among its siblings (same parent).
-  const onDragEnd = (e: DragEndEvent): void => {
+  // Drag a desk: near a row's top/bottom edge = place beside it, middle = nest inside it.
+  const dropOf = (e: DragMoveEvent | DragEndEvent): { id: string; mode: DropMode } | null => {
     const { active, over } = e
-    if (!over || active.id === over.id) return
-    const parentOf = (id: unknown): string | null => workspaces.find((w) => w.id === id)?.parent_id ?? null
-    if (parentOf(active.id) !== parentOf(over.id)) return
-    const siblings = workspaces.filter((w) => (w.parent_id ?? null) === parentOf(active.id))
-    const from = siblings.findIndex((w) => w.id === active.id)
-    const to = siblings.findIndex((w) => w.id === over.id)
-    if (from < 0 || to < 0) return
-    const reordered = arrayMove(siblings, from, to)
-    const updates: UpdateWorkspaceInput[] = reordered.map((w, i) => ({ id: w.id, sort_order: i }))
+    const box = active.rect.current.translated
+    if (!over || !box) return null
+    const ratio = (box.top + box.height / 2 - over.rect.top) / over.rect.height
+    const mode: DropMode = ratio < EDGE_ZONE ? 'before' : ratio > 1 - EDGE_ZONE ? 'after' : 'inside'
+    const id = String(over.id)
+    return planTreeDrop(workspaces, String(active.id), id, mode) ? { id, mode } : null
+  }
+  const moveByKey = (id: string, key: 'up' | 'down' | 'in' | 'out'): void => {
+    const desk = workspaces.find((w) => w.id === id)
+    if (!desk) return
+    const siblings = workspaces.filter((w) => (w.parent_id ?? null) === (desk.parent_id ?? null))
+    const at = siblings.findIndex((w) => w.id === id)
+    const target =
+      key === 'up' ? siblings[at - 1] && { id: siblings[at - 1].id, mode: 'before' as const }
+      : key === 'down' ? siblings[at + 1] && { id: siblings[at + 1].id, mode: 'after' as const }
+      : key === 'in' ? siblings[at - 1] && { id: siblings[at - 1].id, mode: 'inside' as const }
+      : desk.parent_id ? { id: desk.parent_id, mode: 'after' as const } : undefined
+    const updates = target && planTreeDrop(workspaces, id, target.id, target.mode)
+    if (!target || !updates) return
+    if (target.mode === 'inside') setCollapsed((prev) => new Set([...prev].filter((c) => c !== target.id)))
+    void reorderWorkspaces(updates).then(() => {
+      // Keep keyboard focus on the moved desk's handle after the list re-renders.
+      requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-desk-grip="${id}"]`)?.focus())
+    })
+  }
+
+  const onDragEnd = (e: DragEndEvent): void => {
+    setDropTarget(null)
+    const target = dropOf(e)
+    const updates = target && planTreeDrop(workspaces, String(e.active.id), target.id, target.mode)
+    if (!updates || !target) return
+    if (target.mode === 'inside') setCollapsed((prev) => new Set([...prev].filter((id) => id !== target.id)))
     reorderWorkspaces(updates)
   }
 
@@ -309,6 +359,12 @@ export function Sidebar(): JSX.Element {
           onClick={() => selectSmartView('week')}
         />
         <NavItem
+          icon={CalendarDays}
+          label="통합 달력"
+          active={utilityView === 'calendar'}
+          onClick={() => openUtility('calendar')}
+        />
+        <NavItem
           icon={Waypoints}
           label="그래프"
           active={utilityView === 'graph'}
@@ -326,6 +382,12 @@ export function Sidebar(): JSX.Element {
           active={utilityView === 'ask'}
           onClick={() => openUtility('ask')}
         />
+        <NavItem
+          icon={Wrench}
+          label="도구"
+          active={utilityView === 'tools'}
+          onClick={() => openUtility('tools')}
+        />
       </nav>
 
       <div className="group/section mt-5 flex items-center justify-between px-4 pb-1">
@@ -341,14 +403,22 @@ export function Sidebar(): JSX.Element {
       </div>
 
       <nav className="flex-1 space-y-px overflow-y-auto px-2 pb-2">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-          <SortableContext items={rows.map((r) => r.item.id)} strategy={verticalListSortingStrategy}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragMove={(e) => setDropTarget(dropOf(e))}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => setDropTarget(null)}
+        >
+          <SortableContext items={rows.map((r) => r.item.id)} strategy={noShift}>
             {rows.map(({ item: ws, depth, hasChildren }) => (
               <div key={ws.id}>
               <DeskRow
                 ws={ws}
                 depth={depth}
                 collapsed={hasChildren ? collapsed.has(ws.id) : undefined}
+                drop={dropTarget?.id === ws.id ? dropTarget.mode : undefined}
+                onKeyMove={(key) => moveByKey(ws.id, key)}
                 onToggle={() => toggle(ws.id)}
                 onAddChild={() => startAddChild(ws.id)}
                 active={ws.id === activeId && smartView === null && !utilityView}
@@ -458,7 +528,7 @@ function NavItem({ icon: Icon, label, active = false, hint, muted = false, onCli
       <Icon className="h-4 w-4 shrink-0 opacity-80" />
       <span className="flex-1 truncate">{label}</span>
       {hint && (
-        <kbd className="font-sans text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+        <kbd className="font-sans text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
           {hint}
         </kbd>
       )}

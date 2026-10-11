@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { endOfTodayIso, endOfWeekIso, type TaskSort } from '@/lib/format'
 import { useToast, toastError } from './useToast'
+import { pushUndo, snapshot, changedKeys } from './undo'
 import type {
   Workspace,
   Category,
@@ -24,7 +25,7 @@ export type ViewMode = 'list' | 'kanban'
 export type MainView = 'tasks' | 'notes' | 'database' | 'calendar' | 'goals' | 'documents' | 'project'
 export type SmartView = 'today' | 'week'
 export type Theme = 'light' | 'dark' | 'system'
-export type UtilityView = 'trash' | 'settings' | 'graph' | 'projects' | 'ask'
+export type UtilityView = 'trash' | 'settings' | 'graph' | 'projects' | 'ask' | 'calendar' | 'tools'
 
 /** Enough to open a note from anywhere (graph, backlinks, links). */
 export interface NoteRef {
@@ -50,6 +51,9 @@ const savedListPrefs = ((): ListPrefs => {
     return fallback // corrupt value: start from defaults
   }
 })()
+
+/** Memo text is undone by the editor itself; app-level undo covers everything else. */
+const EDITOR_FIELDS: ReadonlySet<string> = new Set(['note', 'note_doc', 'page_meta'])
 
 const undoToast = (message: string, undo: () => void): void =>
   useToast.getState().show({ message, actionLabel: '실행 취소', onAction: undo })
@@ -90,6 +94,8 @@ interface AppState {
   selectedNoteId: string | null
   /** Project document shown in the preview dialog. */
   openFile: { deskId: string; path: string } | null
+  /** A stored document open in the viewer (from search), or null. */
+  openDocument: { id: string; fileName: string } | null
   /** Bumped when a linked folder changes on disk, so project views reload. */
   projectVersion: number
   /** Bumped when subscribed calendars are re-fetched or changed. */
@@ -125,6 +131,8 @@ interface AppState {
   selectNote: (id: string | null) => void
   previewFile: (deskId: string, path: string) => void
   closeFile: () => void
+  previewDocument: (id: string, fileName: string) => void
+  closeDocument: () => void
   bumpProjectVersion: () => void
   bumpCalendarVersion: () => void
   /** Re-read the desk list (e.g. after a project folder was linked). */
@@ -201,6 +209,10 @@ const loadSmart = (view: SmartView): Promise<TaskWithContext[]> =>
 
 const now = new Date()
 
+/** A task from the open desk or the smart views (wherever the user just acted on it). */
+const findTask = (s: AppState, id: string): Task | undefined =>
+  s.tasks.find((t) => t.id === id) ?? s.smartTasks.find((t) => t.id === id)
+
 export const useStore = create<AppState>((set, get) => ({
   workspaces: [],
   categories: [],
@@ -214,6 +226,7 @@ export const useStore = create<AppState>((set, get) => ({
   utilityView: null,
   selectedNoteId: null,
   openFile: null,
+  openDocument: null,
   projectVersion: 0,
   calendarVersion: 0,
   view: 'list',
@@ -287,6 +300,8 @@ export const useStore = create<AppState>((set, get) => ({
   selectNote: (selectedNoteId) => set({ selectedNoteId }),
   previewFile: (deskId, path) => set({ openFile: { deskId, path } }),
   closeFile: () => set({ openFile: null }),
+  previewDocument: (id, fileName) => set({ openDocument: { id, fileName } }),
+  closeDocument: () => set({ openDocument: null }),
   bumpProjectVersion: () => set((s) => ({ projectVersion: s.projectVersion + 1 })),
   bumpCalendarVersion: () => set((s) => ({ calendarVersion: s.calendarVersion + 1 })),
   refreshWorkspaces: async () => set({ workspaces: await window.api.workspace.list() }),
@@ -375,6 +390,12 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateWorkspace: async (input) => {
+    const prevDesk = get().workspaces.find((w) => w.id === input.id)
+    const deskKeys = changedKeys(input)
+    if (prevDesk && deskKeys.length) {
+      const before = { ...snapshot(prevDesk, deskKeys as (keyof Workspace)[]), id: input.id }
+      pushUndo({ label: '데스크 변경', undo: () => get().updateWorkspace(before) })
+    }
     // optimistic style change (color/icon) so the picker feels instant
     set((s) => ({
       workspaces: s.workspaces.map((w) =>
@@ -393,11 +414,22 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   reorderWorkspaces: async (updates) => {
+    const prevDesks = get().workspaces
+    const before = updates.flatMap((u) => {
+      const w = prevDesks.find((x) => x.id === u.id)
+      return w ? [{ id: w.id, sort_order: w.sort_order, ...(u.parent_id !== undefined ? { parent_id: w.parent_id } : {}) }] : []
+    })
+    pushUndo({ label: '데스크 이동', undo: () => get().reorderWorkspaces(before) })
     set((s) => ({
       workspaces: [...s.workspaces]
         .map((w) => {
           const u = updates.find((x) => x.id === w.id)
-          return u && u.sort_order !== undefined ? { ...w, sort_order: u.sort_order } : w
+          if (!u) return w
+          return {
+            ...w,
+            sort_order: u.sort_order ?? w.sort_order,
+            parent_id: u.parent_id === undefined ? w.parent_id : u.parent_id
+          }
         })
         .sort((a, b) => a.sort_order - b.sort_order)
     }))
@@ -441,6 +473,12 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateCategory: async (input) => {
+    const prevCat = get().categories.find((c) => c.id === input.id)
+    const catKeys = changedKeys(input)
+    if (prevCat && catKeys.length) {
+      const before = { ...snapshot(prevCat, catKeys as (keyof Category)[]), id: input.id }
+      pushUndo({ label: '폴더 변경', undo: () => get().updateCategory(before) })
+    }
     set((s) => ({
       categories: s.categories.map((c) =>
         c.id === input.id
@@ -453,6 +491,12 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   reorderCategories: async (updates) => {
+    const prevCats = get().categories
+    const beforeCats = updates.flatMap((u) => {
+      const c = prevCats.find((x) => x.id === u.id)
+      return c ? [{ ...snapshot(c, changedKeys(u) as (keyof Category)[]), id: c.id }] : []
+    })
+    pushUndo({ label: '폴더 이동', undo: () => get().reorderCategories(beforeCats) })
     // optimistic
     set((s) => ({
       categories: s.categories.map((c) => {
@@ -481,6 +525,12 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateTask: async (input) => {
+    const prev = findTask(get(), input.id)
+    const keys = changedKeys(input, EDITOR_FIELDS)
+    if (prev && keys.length) {
+      const before = { ...snapshot(prev, keys as (keyof Task)[]), id: input.id }
+      pushUndo({ label: '작업 변경', undo: () => get().updateTask(before) })
+    }
     await window.api.task.update(input)
     await get().refresh()
   },
@@ -497,6 +547,8 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   moveTask: async (id, status, sortOrder) => {
+    const prev = findTask(get(), id)
+    if (prev) pushUndo({ label: '작업 이동', undo: () => get().moveTask(id, prev.status, prev.sort_order) })
     set((s) => ({
       tasks: s.tasks.map((t) => (t.id === id ? { ...t, status, sort_order: sortOrder } : t))
     }))
@@ -505,6 +557,11 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   reorderTasks: async (updates) => {
+    const beforeTasks = updates.flatMap((u) => {
+      const t = findTask(get(), u.id)
+      return t ? [{ ...snapshot(t, changedKeys(u, EDITOR_FIELDS) as (keyof Task)[]), id: t.id }] : []
+    })
+    pushUndo({ label: '작업 순서 변경', undo: () => get().reorderTasks(beforeTasks) })
     // optimistic: apply new sort_order/status locally so the list doesn't flicker
     const apply = <T extends Task>(t: T): T => {
       const u = updates.find((x) => x.id === t.id)

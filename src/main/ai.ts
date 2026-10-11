@@ -6,13 +6,14 @@ import { app, safeStorage } from 'electron'
 import Anthropic from '@anthropic-ai/sdk'
 import { loadSettings } from './settings'
 import { taskRepo } from './repositories/task.repo'
-import { buildAiPrompt, parseCliLine, rankNotes } from './aiPrompts'
-import type { AiRequest, AiResult, AiStatus } from '@shared/types'
+import { buildAiPrompt, parseCliLine, rankNotes, questionTerms } from './aiPrompts'
+import { hasServerFallback } from '@shared/aiModels'
+import { searchRepo } from './repositories/search.repo'
+import type { AiRequest, AiResult, AiStatus, TaskWithContext } from '@shared/types'
 
 // In-app AI: either the user's logged-in Claude Code CLI (their subscription, no key)
 // or the Anthropic API with a key kept in the OS keychain. The key never leaves main.
 
-export const AI_MODELS = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'] as const
 const MAX_TOKENS = 16_000
 const CLI_TIMEOUT_MS = 180_000
 const SOURCE_CHARS = 2_500
@@ -81,6 +82,41 @@ export function aiStatus(): AiStatus {
 
 const running = new Map<string, { cancel: () => void }>()
 
+const MAX_NOTE_SOURCES = 8
+const MAX_DOC_SOURCES = 3
+
+/**
+ * Notes + documents for "ask": each question term goes through full-text search (ranked,
+ * Korean particles stripped); notes matching more terms rank first. Falls back to the
+ * keyword scan when search finds nothing (e.g. only 1-character terms).
+ */
+function retrieve(question: string): {
+  notes: TaskWithContext[]
+  documents: { id: string; file_name: string; workspace_id: string; workspace_name: string; text: string }[]
+} {
+  const terms = questionTerms(question)
+  const score = new Map<string, number>()
+  for (const term of terms) {
+    searchRepo.notes(term).slice(0, 30).forEach((hit, rank) => score.set(hit.id, (score.get(hit.id) ?? 0) + 10 - Math.min(rank, 9) / 10))
+  }
+  const all = taskRepo.listAllWithContext()
+  const byId = new Map(all.map((t) => [t.id, t]))
+  const ranked = [...score.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .flatMap(([id]) => byId.get(id) ?? [])
+    .filter((t) => t.note.trim())
+    .slice(0, MAX_NOTE_SOURCES)
+  const notes = ranked.length ? ranked : rankNotes(question, all)
+
+  const docs = new Map<string, { id: string; file_name: string; workspace_id: string; workspace_name: string; text: string }>()
+  for (const term of terms) {
+    for (const d of searchRepo.documents(term, MAX_DOC_SOURCES)) {
+      if (!docs.has(d.id)) docs.set(d.id, { ...d, text: searchRepo.documentText(d.id).slice(0, SOURCE_CHARS) })
+    }
+  }
+  return { notes, documents: [...docs.values()].slice(0, MAX_DOC_SOURCES) }
+}
+
 export function cancelAi(id: string): void {
   running.get(id)?.cancel()
   running.delete(id)
@@ -91,12 +127,18 @@ export async function runAi(req: AiRequest, onDelta: (text: string) => void): Pr
   let sources: AiResult['sources']
   let prompt: { system: string; user: string }
   if (req.action === 'ask') {
-    const hits = rankNotes(req.instruction ?? '', taskRepo.listAllWithContext())
-    sources = hits.map((t) => ({ id: t.id, title: t.title, workspace_id: t.workspace_id, category_id: t.category_id }))
+    const { notes, documents } = retrieve(req.instruction ?? '')
+    sources = [
+      ...notes.map((t) => ({ kind: 'note' as const, id: t.id, title: t.title, workspace_id: t.workspace_id, category_id: t.category_id })),
+      ...documents.map((d) => ({ kind: 'document' as const, id: d.id, title: d.file_name, workspace_id: d.workspace_id, category_id: null }))
+    ]
     prompt = buildAiPrompt({
       action: 'ask',
       instruction: req.instruction,
-      sources: hits.map((t) => ({ title: t.title, where: `${t.workspace_name} / ${t.category_name}`, text: t.note.slice(0, SOURCE_CHARS) }))
+      sources: [
+        ...notes.map((t) => ({ title: t.title, where: `${t.workspace_name} / ${t.category_name}`, text: t.note.slice(0, SOURCE_CHARS) })),
+        ...documents.map((d) => ({ title: d.file_name, where: `${d.workspace_name} / 문서`, text: d.text }))
+      ]
     })
   } else {
     prompt = buildAiPrompt({ action: req.action, text: req.text, instruction: req.instruction })
@@ -125,9 +167,9 @@ async function viaApi(id: string, model: string, prompt: { system: string; user:
     return content.map((c) => (c.type === 'text' ? (c.text ?? '') : '')).join('')
   }
   try {
-    if (model === 'claude-opus-5') {
-      // Medium effort suits short writing tasks; server-side fallbacks retry a policy
-      // decline on a fallback model inside the same call.
+    // Short writing tasks: medium effort (set explicitly — defaults differ per model).
+    if (hasServerFallback(model)) {
+      // A policy decline is retried server-side on a fallback model inside the same call.
       const stream = client.beta.messages.stream({
         ...base,
         output_config: { effort: 'medium' },
@@ -139,7 +181,7 @@ async function viaApi(id: string, model: string, prompt: { system: string; user:
       const message = await stream.finalMessage()
       return finish(message.stop_reason, message.content)
     }
-    const stream = client.messages.stream(model === 'claude-haiku-4-5' ? base : { ...base, output_config: { effort: 'medium' } })
+    const stream = client.messages.stream({ ...base, output_config: { effort: 'medium' } })
     running.set(id, { cancel: () => stream.abort() })
     stream.on('text', onDelta)
     const message = await stream.finalMessage()

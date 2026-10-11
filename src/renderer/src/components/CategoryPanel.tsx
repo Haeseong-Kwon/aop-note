@@ -59,7 +59,7 @@ function CategoryRow({
       className={cn(
         'group relative flex h-[30px] items-center gap-1 rounded-md pl-1.5 pr-1 text-sm transition-colors',
         active
-          ? 'bg-accent font-medium text-foreground'
+          ? 'bg-desk/[0.11] font-medium text-foreground'
           : 'text-foreground/80 hover:bg-accent/60 hover:text-foreground'
       )}
       style={{ paddingLeft: 6 + depth * INDENT_PX }}
@@ -97,7 +97,7 @@ function CategoryRow({
           {openCount}
         </span>
       )}
-      <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100">
         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onAddChild} title="하위 카테고리 추가">
           <Plus className="h-3.5 w-3.5" />
         </Button>
@@ -118,7 +118,7 @@ function dragHandle(
       {...attributes}
       {...listeners}
       title="드래그하여 순서 변경"
-      className="no-drag cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
+      className="no-drag cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 active:cursor-grabbing"
     >
       <GripVertical className="h-3.5 w-3.5" />
     </button>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { FileText, FolderOpen, Link2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { toastError } from '@/store/useToast'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { MarkdownView } from './MarkdownView'
 import { DocumentViewer } from './DocumentViewer'
@@ -65,6 +65,7 @@ export function FilePreview(): JSX.Element | null {
   return (
     <Dialog open onOpenChange={(o) => (o ? null : close())}>
       <DialogContent className="flex h-[85vh] max-w-3xl flex-col gap-0 p-0">
+        <DialogTitle className="sr-only">파일 미리보기</DialogTitle>
         <header className="flex shrink-0 items-center gap-2.5 border-b border-border px-5 py-3 pr-12">
           <FileText className="h-4 w-4 shrink-0 text-primary" />
           <div className="min-w-0 flex-1">

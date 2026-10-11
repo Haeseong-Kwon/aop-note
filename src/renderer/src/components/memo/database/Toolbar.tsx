@@ -296,7 +296,7 @@ export function Toolbar({ cfg, data, categories, onConfig, onChanged, onNew }: T
                       type="button"
                       aria-label={`${prop.name} 삭제`}
                       onClick={() => window.api.database.removeProperty(prop.id).then(onChanged, toastError)}
-                      className="rounded p-0.5 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
+                      className="rounded p-0.5 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

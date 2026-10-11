@@ -5,12 +5,14 @@ import { randomUUID } from 'crypto'
 import { dialog, BrowserWindow } from 'electron'
 import { marked } from 'marked'
 import { taskRepo } from './repositories/task.repo'
+import { markdownToDocx } from './docx'
 import type { ExportFormat, ExportResult } from '@shared/types'
 
 const FILTERS: Record<ExportFormat, Electron.FileFilter> = {
   md: { name: 'Markdown', extensions: ['md'] },
   html: { name: 'HTML', extensions: ['html'] },
-  pdf: { name: 'PDF', extensions: ['pdf'] }
+  pdf: { name: 'PDF', extensions: ['pdf'] },
+  docx: { name: 'Word', extensions: ['docx'] }
 }
 
 const sanitize = (s: string): string =>
@@ -66,6 +68,8 @@ export async function exportMemo(taskId: string, format: ExportFormat): Promise<
 
   if (format === 'md') {
     await writeFile(filePath, markdown, 'utf8')
+  } else if (format === 'docx') {
+    await writeFile(filePath, await markdownToDocx(task.title, task.note ?? ''))
   } else {
     const body = await marked.parse(markdown)
     const html = htmlDocument(task.title, body)

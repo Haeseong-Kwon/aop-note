@@ -32,7 +32,7 @@ function SortableTaskRow({ task, reorderable }: { task: Task; reorderable: boole
       {...listeners}
       onClick={(e) => e.stopPropagation()}
       title="드래그하여 순서 변경"
-      className="no-drag cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 active:cursor-grabbing"
+      className="no-drag cursor-grab touch-none text-muted-foreground/30 opacity-0 transition hover:text-foreground group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 active:cursor-grabbing"
     >
       <GripVertical className="h-4 w-4" />
     </button>

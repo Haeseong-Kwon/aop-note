@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { PageHeader } from './PageHeader'
 import { CalendarSubscriptions } from './CalendarSubscriptions'
 import { AiSettings } from './AiSettings'
+import { DataTransferSettings } from './DataTransferSettings'
+import { UpdateRow } from './UpdateRow'
 import { cn } from '@/lib/utils'
 import type { AppSettings, BackupInfo, McpInfo } from '@shared/types'
 import { IS_MAC, shortcut } from '@/lib/utils'
@@ -197,7 +199,12 @@ export function SettingsView(): JSX.Element {
             </SettingRow>
           </Section>
 
+          <Section title="가져오기 · 내보내기 · 동기화">
+            <DataTransferSettings settings={settings} onSettings={setSettings} />
+          </Section>
+
           <Section title="데이터">
+            <UpdateRow />
             <SettingRow
               label="백업 내보내기"
               description="모든 데스크, 작업, 메모, 첨부 파일과 그래프 보관함을 선택한 폴더에 저장합니다."

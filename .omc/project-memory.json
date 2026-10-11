@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1790463957711,
+  "lastScanned": 1791701290446,
   "projectRoot": "/Users/haeseong/Desktop/Products/aop-note",
   "techStack": {
     "languages": [
@@ -22,6 +22,11 @@
       }
     ],
     "frameworks": [
+      {
+        "name": "@playwright/test",
+        "version": "1.63.0",
+        "category": "testing"
+      },
       {
         "name": "react",
         "version": "18.3.1",
@@ -55,9 +60,11 @@
       "start": "electron-vite preview",
       "package": "npm run build && electron-builder",
       "package:mac": "npm run build && electron-builder --mac",
+      "package:win": "node scripts/package-win.mjs",
       "install:mac": "bash scripts/install-mac.sh",
       "postinstall": "electron-builder install-app-deps",
       "test": "npm run test:renderer && npm run test:main",
+      "e2e": "npm run build && playwright test",
       "test:renderer": "esbuild src/renderer/src/lib/check.ts --bundle --platform=node --format=esm --alias:@shared=./src/shared --outfile=node_modules/.cache/memo-check.mjs --log-level=error && node node_modules/.cache/memo-check.mjs",
       "test:main": "esbuild src/main/check.ts --bundle --platform=node --format=cjs --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=node_modules/.cache/main-check.cjs --log-level=error && ELECTRON_RUN_AS_NODE=1 electron node_modules/.cache/main-check.cjs",
       "build:mcp": "esbuild src/mcp/server.ts --bundle --platform=node --format=cjs --target=node20 --alias:electron=./src/mcp/electron-shim.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=out/mcp/server.js --log-level=warning"
@@ -88,7 +95,7 @@
       "path": "build",
       "purpose": "Build output",
       "fileCount": 2,
-      "lastAccessed": 1790463957704,
+      "lastAccessed": 1791701290438,
       "keyFiles": [
         "icon.icns",
         "icon.png"
@@ -97,20 +104,33 @@
     "dist": {
       "path": "dist",
       "purpose": "Distribution/build output",
-      "fileCount": 4,
-      "lastAccessed": 1790463957706,
+      "fileCount": 9,
+      "lastAccessed": 1791701290438,
       "keyFiles": [
         "aop-note-0.1.0-arm64.dmg",
         "aop-note-0.1.0-arm64.dmg.blockmap",
-        "builder-debug.yml",
-        "latest-mac.yml"
+        "aop-note-Setup-0.1.0.exe",
+        "aop-note-Setup-0.1.0.exe.blockmap",
+        "aop-note-Setup-0.1.0.exe.zip"
+      ]
+    },
+    "e2e": {
+      "path": "e2e",
+      "purpose": null,
+      "fileCount": 5,
+      "lastAccessed": 1791701290441,
+      "keyFiles": [
+        "app.ts",
+        "audit.mjs",
+        "desks.spec.ts",
+        "search.spec.ts"
       ]
     },
     "image": {
       "path": "image",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1790463957706,
+      "lastAccessed": 1791701290442,
       "keyFiles": [
         "logo image.png"
       ]
@@ -119,335 +139,178 @@
       "path": "out",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1790463957707,
+      "lastAccessed": 1791701290442,
       "keyFiles": []
+    },
+    "resources": {
+      "path": "resources",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1791701290443,
+      "keyFiles": [
+        "tray.png"
+      ]
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
-      "fileCount": 2,
-      "lastAccessed": 1790463957707,
+      "fileCount": 3,
+      "lastAccessed": 1791701290443,
       "keyFiles": [
         "install-mac.sh",
-        "make-icon.py"
+        "make-icon.py",
+        "package-win.mjs"
       ]
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1790463957707,
+      "lastAccessed": 1791701290443,
       "keyFiles": []
     },
     "test": {
       "path": "test",
       "purpose": "Test files",
       "fileCount": 1,
-      "lastAccessed": 1790463957707,
+      "lastAccessed": 1791701290443,
       "keyFiles": [
         "electron-stub.ts"
       ]
+    },
+    "test-results": {
+      "path": "test-results",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1791701290444,
+      "keyFiles": []
     }
   },
   "hotPaths": [
     {
-      "path": "src/renderer/src/index.css",
-      "accessCount": 35,
-      "lastAccessed": 1790333410759,
+      "path": "src/renderer/src/components/tools/PlanTools.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1791703031434,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/BlockNoteEditor.tsx",
-      "accessCount": 21,
-      "lastAccessed": 1784495543128,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/MainArea.tsx",
-      "accessCount": 10,
-      "lastAccessed": 1790333351240,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/NotePage.tsx",
-      "accessCount": 9,
-      "lastAccessed": 1790462290927,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/MemoEditor.tsx",
-      "accessCount": 7,
-      "lastAccessed": 1784407910822,
-      "type": "file"
-    },
-    {
-      "path": "src/main/ipc/handlers.ts",
-      "accessCount": 7,
-      "lastAccessed": 1784410276945,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/App.tsx",
-      "accessCount": 7,
-      "lastAccessed": 1790333352612,
-      "type": "file"
-    },
-    {
-      "path": "src/shared/ipc.ts",
-      "accessCount": 6,
-      "lastAccessed": 1784410253272,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/store/useStore.ts",
-      "accessCount": 6,
-      "lastAccessed": 1790333241033,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/Sidebar.tsx",
-      "accessCount": 6,
-      "lastAccessed": 1790333290796,
-      "type": "file"
-    },
-    {
-      "path": "src/main/attachments.ts",
-      "accessCount": 4,
-      "lastAccessed": 1784407835669,
+      "path": "src/renderer/src/components/tools/ToolsView.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1791703603965,
       "type": "file"
     },
     {
       "path": "src/main/index.ts",
-      "accessCount": 4,
-      "lastAccessed": 1790539638434,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/lib/smartTypography.ts",
-      "accessCount": 3,
-      "lastAccessed": 1784405372734,
-      "type": "file"
-    },
-    {
-      "path": "src/preload/index.ts",
-      "accessCount": 3,
-      "lastAccessed": 1784410258194,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/ui/dialog.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1784410545180,
-      "type": "file"
-    },
-    {
-      "path": "scripts/install-mac.sh",
-      "accessCount": 3,
-      "lastAccessed": 1790330435358,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/CategoryPanel.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1790333503300,
-      "type": "file"
-    },
-    {
-      "path": "README.md",
-      "accessCount": 3,
-      "lastAccessed": 1790459294514,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/NotesView.tsx",
       "accessCount": 2,
-      "lastAccessed": 1784406801500,
+      "lastAccessed": 1791593932632,
       "type": "file"
     },
     {
-      "path": "tailwind.config.js",
+      "path": "src/renderer/src/components/tools/ui.tsx",
       "accessCount": 2,
-      "lastAccessed": 1784410306310,
+      "lastAccessed": 1791702740380,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/docs/DocGrid.tsx",
+      "path": "src/renderer/src/components/tools/FinanceTools.tsx",
       "accessCount": 2,
-      "lastAccessed": 1790538531039,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/graph/GraphCanvas.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1790556814284,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/hooks/useMemoPersist.ts",
-      "accessCount": 1,
-      "lastAccessed": 1784404905723,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/StylePicker.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1784406822064,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/DocumentViewer.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1784407517320,
+      "lastAccessed": 1791702803155,
       "type": "file"
     },
     {
       "path": "src/renderer/src/lib/palette.ts",
       "accessCount": 1,
-      "lastAccessed": 1784407808960,
+      "lastAccessed": 1791593964247,
       "type": "file"
     },
     {
-      "path": "src/main/db/migrations.ts",
+      "path": "src/main/docx.ts",
       "accessCount": 1,
-      "lastAccessed": 1784407817315,
+      "lastAccessed": 1791595156130,
       "type": "file"
     },
     {
-      "path": "src/main/repositories/workspace.repo.ts",
+      "path": "src/main/sync.ts",
       "accessCount": 1,
-      "lastAccessed": 1784407822904,
+      "lastAccessed": 1791595265622,
       "type": "file"
     },
     {
-      "path": "src/main/repositories/attachment.repo.ts",
+      "path": "src/main/mdImport.ts",
       "accessCount": 1,
-      "lastAccessed": 1784407829092,
+      "lastAccessed": 1791595335322,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/SmartView.tsx",
+      "path": "src/main/icsExport.check.ts",
       "accessCount": 1,
-      "lastAccessed": 1790333351596,
+      "lastAccessed": 1791596261636,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/shortcuts.ts",
+      "path": "src/main/icsExport.ts",
       "accessCount": 1,
-      "lastAccessed": 1790333352930,
+      "lastAccessed": 1791596262077,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/TaskInlineEditor.tsx",
+      "path": "src/renderer/src/lib/toolMath.ts",
       "accessCount": 1,
-      "lastAccessed": 1790368126519,
+      "lastAccessed": 1791701698590,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/GraphView.tsx",
+      "path": "src/renderer/src/components/tools/TimeTools.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790369254046,
+      "lastAccessed": 1791701943582,
       "type": "file"
     },
     {
-      "path": "src/main/repositories/link.repo.ts",
+      "path": "src/renderer/src/components/tools/GeneralTools.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790458785145,
+      "lastAccessed": 1791702010984,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/AskView.tsx",
+      "path": "e2e/tools.spec.ts",
       "accessCount": 1,
-      "lastAccessed": 1790464042417,
+      "lastAccessed": 1791702118901,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/AiSettings.tsx",
+      "path": "src/renderer/src/components/tools/TaxTools.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790464042861,
+      "lastAccessed": 1791702868672,
       "type": "file"
     },
     {
-      "path": "src/main/repositories/hierarchy.check.ts",
+      "path": "src/renderer/src/components/tools/PeopleTools.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790537927597,
+      "lastAccessed": 1791702869013,
       "type": "file"
     },
     {
-      "path": "src/shared/tree.ts",
+      "path": "src/renderer/src/components/tools/GrowthTools.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790537999659,
+      "lastAccessed": 1791702930278,
       "type": "file"
     },
     {
-      "path": "src/main/repositories/docs.check.ts",
+      "path": "src/renderer/src/components/tools/TextTools.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790538341326,
+      "lastAccessed": 1791702930605,
       "type": "file"
     },
     {
-      "path": "src/main/repositories/docFolder.repo.ts",
+      "path": "src/renderer/src/components/tools/registry.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790538368104,
+      "lastAccessed": 1791703603589,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/docs/dnd.ts",
+      "path": "src/renderer/src/components/tools/FloatingTools.tsx",
       "accessCount": 1,
-      "lastAccessed": 1790538460802,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/docs/DocFolderTree.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1790538461149,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/DocumentsView.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1790538520265,
-      "type": "file"
-    },
-    {
-      "path": "src/main/claudeCommands.ts",
-      "accessCount": 1,
-      "lastAccessed": 1790542571793,
-      "type": "file"
-    },
-    {
-      "path": "scripts/package-win.mjs",
-      "accessCount": 1,
-      "lastAccessed": 1790542683909,
-      "type": "file"
-    },
-    {
-      "path": "src/main/backdrop.ts",
-      "accessCount": 1,
-      "lastAccessed": 1790542935520,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/lib/paneWidth.ts",
-      "accessCount": 1,
-      "lastAccessed": 1790542995077,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/ui/ResizablePane.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1790543008201,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/graph/GraphSettingsPanel.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1790543995631,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/graph/GraphSearch.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1790544611717,
+      "lastAccessed": 1791703669112,
       "type": "file"
     }
   ],

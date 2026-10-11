@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
-import { Bell, Check, ChevronRight, CalendarPlus, StickyNote, Repeat, ListChecks } from 'lucide-react'
+import { Bell, ChevronRight, CalendarPlus, StickyNote, Repeat, ListChecks } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { DueBadge } from './TaskBadges'
+import { DueBadge, PriorityGlyph, TaskCheck } from './TaskBadges'
 import { MarkdownView } from './MarkdownView'
 import { TaskInlineEditor } from './TaskInlineEditor'
 import {
@@ -63,40 +63,28 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-lg border transition-colors',
-        expanded ? 'border-border bg-card' : 'border-transparent',
-        selected && !expanded && 'bg-accent/60 ring-1 ring-inset ring-primary/40'
+        'overflow-hidden rounded-lg border transition-colors duration-base',
+        expanded ? 'border-border bg-card shadow-sm' : 'border-transparent',
+        selected && !expanded && 'bg-desk/[0.07] ring-1 ring-inset ring-desk/30'
       )}
     >
       <div
         className={cn(
-          'group flex cursor-pointer items-center gap-2 px-2 py-2 transition-colors hover:bg-accent/50',
-          done && 'opacity-55'
+          'group flex cursor-pointer items-center gap-2.5 px-2.5 py-[7px] transition-[background-color,opacity] duration-base hover:bg-accent/50',
+          done && 'opacity-50'
         )}
         onClick={onRowClick}
       >
         {handle}
 
-        <button
-          onClick={(e) => {
-            stop(e)
-            toggleDone(task)
-          }}
-          className={cn(
-            'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors',
-            done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-input hover:border-primary'
-          )}
-          title={done ? '완료 취소' : '완료'}
-        >
-          {done && <Check className="h-3.5 w-3.5" />}
-        </button>
+        <TaskCheck done={done} onToggle={() => void toggleDone(task)} label={`'${task.title}' 완료`} />
 
         {mode === 'smart' && hasContext(task) && (
           <span
-            className="flex shrink-0 items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
+            className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground"
             title={`${task.workspace_name} · ${task.category_name}`}
           >
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: task.workspace_color }} />
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: task.workspace_color }} />
             <span className="max-w-[120px] truncate">
               {task.workspace_name} / {task.category_name}
             </span>
@@ -118,7 +106,10 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
           />
         ) : (
           <button
-            className={cn('min-w-0 flex-1 truncate text-left text-sm', done && 'line-through')}
+            className={cn(
+              'min-w-0 flex-1 truncate text-left text-sm decoration-muted-foreground/60 transition-colors duration-base',
+              done && 'text-muted-foreground line-through'
+            )}
             onClick={(e) => {
               if (mode === 'smart') {
                 stop(e)
@@ -177,16 +168,15 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
           )}
           <button
             onClick={cyclePriority}
-            title="우선순위 (클릭하여 변경 / 숫자키 0–3)"
+            title={`우선순위: ${PRIORITY_META[task.priority].label} (클릭하여 변경 / 숫자키 0–3)`}
+            aria-label={`우선순위 ${PRIORITY_META[task.priority].label}, 바꾸기`}
             className={cn(
-              'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors',
-              PRIORITY_META[task.priority].className,
+              'inline-flex h-6 w-6 items-center justify-center rounded-md transition-[background-color,opacity] duration-base hover:bg-accent',
               // Like an empty Notion property: hidden until the row is hovered or selected.
-              task.priority === 0 && !selected && 'opacity-0 focus-visible:opacity-100 group-hover:opacity-100'
+              task.priority === 0 && !selected && 'opacity-0 focus-visible:opacity-100 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100'
             )}
           >
-            <span className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_META[task.priority].dot)} />
-            {PRIORITY_META[task.priority].label}
+            <PriorityGlyph priority={task.priority} />
           </button>
 
           {editingDue ? (
@@ -209,7 +199,7 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
             <button
               onClick={() => setEditingDue(true)}
               title="기한 추가"
-              className="rounded p-0.5 text-muted-foreground/50 opacity-0 transition hover:text-foreground group-hover:opacity-100"
+              className="rounded p-0.5 text-muted-foreground/50 opacity-0 transition hover:text-foreground group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
             >
               <CalendarPlus className="h-3.5 w-3.5" />
             </button>
@@ -218,8 +208,8 @@ export function TaskRow({ task, mode, handle }: TaskRowProps): JSX.Element {
           {mode === 'list' && (
             <ChevronRight
               className={cn(
-                'h-4 w-4 text-muted-foreground transition-transform',
-                expanded && 'rotate-90'
+                'h-4 w-4 text-muted-foreground/70 transition-[transform,opacity] duration-base ease-out',
+                expanded ? 'rotate-90 opacity-100' : 'opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100'
               )}
             />
           )}

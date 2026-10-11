@@ -1,6 +1,7 @@
 import { basename, join } from 'path'
 import { app, clipboard, dialog, ipcMain, nativeTheme, shell, BrowserWindow } from 'electron'
 import { copyFileSync } from 'fs'
+import { readFile, writeFile } from 'fs/promises'
 import { buildGraphExport, scopeLabelFor, toExportOptions } from '../graphExport'
 import { graphArchive } from '../graphArchive'
 import { IPC } from '@shared/ipc'
@@ -43,6 +44,10 @@ import {
   syncCalendar
 } from '../calendars'
 import { writeVault, scheduleVaultSync, vaultBase } from '../vault'
+import { deviceId, mergeSnapshot, scheduleSync, syncNow, takeSnapshot, type Snapshot } from '../sync'
+import { importMarkdownFolder } from '../mdImport'
+import { buildIcs } from '../icsExport'
+import { checkForUpdates, updateStatus } from '../updater'
 import {
   chooseFolder,
   listProjects,
@@ -78,7 +83,12 @@ import type {
   AiRequest
 } from '@shared/types'
 
-// Channels that change notes; each one nudges the (debounced) vault mirror.
+/** Tell every window that rows from another device landed, so it reloads. */
+export const notifyMerged = (): void => {
+  for (const w of BrowserWindow.getAllWindows()) w.webContents.send(IPC.events.dataMerged)
+}
+
+// Channels that change notes; each one nudges the (debounced) vault mirror and device sync.
 const WRITES = /:(create|update|reorder|remove|setStatus|add|addBytes|restore)$/
 
 // Wraps a handler so any thrown error is logged in main and surfaced to the
@@ -87,7 +97,10 @@ function handle<T>(channel: string, fn: (...args: never[]) => T): void {
   ipcMain.handle(channel, async (_event, ...args) => {
     try {
       const result = await fn(...(args as never[]))
-      if (WRITES.test(channel)) scheduleVaultSync(() => loadSettings().vaultPath)
+      if (WRITES.test(channel)) {
+        scheduleVaultSync(() => loadSettings().vaultPath)
+        scheduleSync(() => loadSettings().syncPath, notifyMerged)
+      }
       return result
     } catch (error) {
       console.error(`[ipc] ${channel} failed:`, error)
@@ -117,6 +130,7 @@ export function registerIpcHandlers(): void {
   handle(IPC.task.listByCategory, (categoryId: string) => taskRepo.listByCategory(categoryId))
   handle(IPC.task.listByWorkspace, (workspaceId: string) => taskRepo.listByWorkspace(workspaceId))
   handle(IPC.task.listUpcoming, (endIso: string) => taskRepo.listUpcoming(endIso))
+  handle(IPC.task.listDueBetween, (startIso: string, endIso: string) => taskRepo.listDueBetween(String(startIso), String(endIso)))
   handle(IPC.task.create, (input: CreateTaskInput) => taskRepo.create(input))
   handle(IPC.task.update, (input: UpdateTaskInput) => taskRepo.update(input))
   handle(IPC.task.setStatus, (id: string, status: TaskStatus, sortOrder?: number) =>
@@ -278,7 +292,7 @@ export function registerIpcHandlers(): void {
 
   // ---- Databases (custom properties on a desk's tasks) ----
   handle(IPC.database.get, (workspaceId: string) => ({
-    tasks: taskRepo.listAllWithContext().filter((t) => t.workspace_id === workspaceId),
+    tasks: taskRepo.listWorkspaceWithContext(workspaceId),
     properties: propertyRepo.listByWorkspace(workspaceId),
     values: propertyRepo.valuesForWorkspace(workspaceId)
   }))
@@ -350,6 +364,76 @@ export function registerIpcHandlers(): void {
     if (error) throw new Error(error)
   })
 
+  // ---- Data: export / import / device sync ----
+  const pickFolder = async (title: string, buttonLabel: string): Promise<string | null> => {
+    const res = await dialog.showOpenDialog({ title, buttonLabel, properties: ['openDirectory', 'createDirectory'] })
+    return res.canceled ? null : (res.filePaths[0] ?? null)
+  }
+  handle(IPC.data.exportMarkdown, async () => {
+    const root = await pickFolder('Markdown으로 내보낼 위치 선택', '여기에 내보내기')
+    if (!root) return null
+    writeVault(root)
+    return vaultBase(root)
+  })
+  handle(IPC.data.exportJson, async () => {
+    const res = await dialog.showSaveDialog({
+      title: '전체 데이터 JSON으로 내보내기',
+      defaultPath: `AOP Note ${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (res.canceled || !res.filePath) return null
+    await writeFile(res.filePath, JSON.stringify(takeSnapshot(deviceId()), null, 1), 'utf8')
+    return res.filePath
+  })
+  handle(IPC.data.importJson, async () => {
+    const res = await dialog.showOpenDialog({ title: 'JSON 내보내기 파일 가져오기', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] })
+    const file = res.filePaths[0]
+    if (res.canceled || !file) return null
+    let snap: Snapshot
+    try {
+      snap = JSON.parse(await readFile(file, 'utf8')) as Snapshot
+    } catch {
+      throw new Error('AOP Note JSON 내보내기 파일이 아닙니다.')
+    }
+    if (!snap || typeof snap !== 'object' || !snap.tables) throw new Error('AOP Note JSON 내보내기 파일이 아닙니다.')
+    return mergeSnapshot(snap)
+  })
+  handle(IPC.data.importMarkdown, async () => {
+    const root = await pickFolder('가져올 Markdown 폴더 선택 (Obsidian 볼트, Notion 내보내기 등)', '가져오기')
+    if (!root) return null
+    const r = importMarkdownFolder(root)
+    return { deskId: r.desk.id, deskName: r.desk.name, notes: r.notes, folders: r.folders, skipped: r.skipped }
+  })
+  handle(IPC.data.syncChoose, async () => {
+    const root = await pickFolder('기기 간 동기화에 쓸 공유 폴더 선택 (iCloud Drive, Dropbox 등)', '이 폴더로 동기화')
+    if (!root) return null
+    const result = syncNow(root)
+    if (result.merged > 0) notifyMerged()
+    return saveSettings({ syncPath: root })
+  })
+  handle(IPC.data.syncNow, () => {
+    const root = loadSettings().syncPath
+    if (!root) throw new Error('동기화 폴더가 설정되지 않았습니다.')
+    const result = syncNow(root)
+    if (result.merged > 0) notifyMerged()
+    return result
+  })
+  handle(IPC.data.syncDisable, () => saveSettings({ syncPath: '' }))
+  handle(IPC.data.exportIcs, async () => {
+    const res = await dialog.showSaveDialog({
+      title: '캘린더 내보내기 (.ics)',
+      defaultPath: 'AOP Note 일정.ics',
+      filters: [{ name: 'iCalendar', extensions: ['ics'] }]
+    })
+    if (res.canceled || !res.filePath) return null
+    const schedules = scheduleRepo.listBetween('0000-01-01', '9999-12-31', null)
+    await writeFile(res.filePath, buildIcs(schedules, taskRepo.listAllWithContext()), 'utf8')
+    return res.filePath
+  })
+
+  handle(IPC.update.status, () => updateStatus())
+  handle(IPC.update.check, () => checkForUpdates())
+
   // ---- Backup ----
   const focused = (): BrowserWindow | null => BrowserWindow.getFocusedWindow()
   handle(IPC.backup.info, () => backupInfo())
@@ -365,5 +449,9 @@ export function registerIpcHandlers(): void {
   handle(IPC.theme.set, (theme: 'light' | 'dark') => {
     nativeTheme.themeSource = theme
     for (const win of BrowserWindow.getAllWindows()) applyBackdrop(win)
+  })
+
+  handle(IPC.emoji.showPanel, () => {
+    if (app.isEmojiPanelSupported()) app.showEmojiPanel()
   })
 }

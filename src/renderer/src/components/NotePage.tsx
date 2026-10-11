@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Trash2, CalendarDays, Hash, Smile, ImagePlus, FilePlus2, FileText, ChevronRight } from 'lucide-react'
+import { Trash2, Smile, ImagePlus, FilePlus2, FileText, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { BlockNoteEditor, type MemoEditorHandle } from './BlockNoteEditor'
 import { MemoExportMenu } from './MemoExportMenu'
@@ -8,16 +8,16 @@ import { Backlinks } from './Backlinks'
 import { NoteCover, CoverPicker } from './memo/NoteCover'
 import { NotePageMenu, PageIconPicker } from './memo/NotePageMenu'
 import { useMemoPersist } from '@/hooks/useMemoPersist'
-import { toDateInput, fromDateInput } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { DueField } from './DueField'
 import { parsePageMeta, type PageMeta } from '@shared/pageMeta'
 import { ancestorsOf } from '@shared/tree'
 import type { Attachment, Category, Task, TaskStatus } from '@shared/types'
 
 const STATUSES: { value: TaskStatus; label: string; active: string }[] = [
-  { value: 'todo', label: '할 일', active: 'bg-slate-500/15 text-slate-500 dark:text-slate-300' },
-  { value: 'doing', label: '진행 중', active: 'bg-blue-500/15 text-blue-600 dark:text-blue-300' },
-  { value: 'done', label: '완료', active: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300' }
+  { value: 'todo', label: '할 일', active: 'text-foreground' },
+  { value: 'doing', label: '진행 중', active: 'text-desk' },
+  { value: 'done', label: '완료', active: 'text-emerald-600 dark:text-emerald-400' }
 ]
 
 const FONT_CLASS: Record<string, string> = { serif: 'font-note-serif', mono: 'font-note-mono' }
@@ -176,35 +176,31 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
             onBlur={commitTitle}
             onKeyDown={handleTitleKeyDown}
             placeholder="제목 없음"
-            className="mt-1 w-full bg-transparent text-[2.5rem] font-bold leading-tight tracking-tight outline-none placeholder:text-muted-foreground/30"
+            className="mt-1 w-full bg-transparent text-[2.5rem] font-bold leading-[1.15] tracking-[-0.03em] outline-none placeholder:text-muted-foreground/30"
           />
 
           {/* Wraps as whole chips on a narrow page (Korean keep-all would otherwise stack letters). */}
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 whitespace-nowrap text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Hash className="h-3.5 w-3.5" />
+            <div role="radiogroup" aria-label="상태" className="flex items-center rounded-lg bg-muted/70 p-0.5">
               {STATUSES.map((s) => (
                 <button
                   key={s.value}
+                  role="radio"
+                  aria-checked={task.status === s.value}
                   onClick={() => void updateTask({ id: task.id, status: s.value })}
-                  className={cn('rounded px-2 py-0.5 transition-colors', task.status === s.value ? s.active : 'hover:bg-accent')}
+                  className={cn(
+                    'rounded-md px-2.5 py-1 transition-[background-color,color,box-shadow] duration-base',
+                    task.status === s.value ? cn('bg-background shadow-sm', s.active) : 'hover:text-foreground'
+                  )}
                 >
                   {s.label}
                 </button>
               ))}
             </div>
-            <label className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 hover:bg-accent">
-              <CalendarDays className="h-3.5 w-3.5" />
-              <input
-                type="date"
-                value={toDateInput(task.due_date)}
-                onChange={(e) => void updateTask({ id: task.id, due_date: fromDateInput(e.target.value) })}
-                className="cursor-pointer bg-transparent text-xs outline-none"
-              />
-            </label>
+            <DueField value={task.due_date} onChange={(due) => void updateTask({ id: task.id, due_date: due })} />
             <button
               onClick={() => void addSubNote()}
-              className="flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-accent hover:text-foreground"
+              className="flex h-7 items-center gap-1.5 rounded-md px-2 transition-colors duration-fast hover:bg-accent hover:text-foreground"
             >
               <FilePlus2 className="h-3.5 w-3.5" />
               하위 메모

@@ -92,8 +92,30 @@ assert.equal(subDesk.parent_id, parentDesk.id)
 assert.equal(workspaceRepo.getById(subSub.id)?.parent_id, subDesk.id)
 assert.equal(workspaceRepo.create({ name: '최상위' }).parent_id, null)
 assert.throws(() => workspaceRepo.create({ name: 'x', parent_id: 'nope' }), /상위 데스크/)
+// A desk can be moved under another desk (drag in the sidebar), but never into its own subtree.
+const loose = workspaceRepo.create({ name: '독립 데스크' })
+assert.equal(workspaceRepo.update({ id: loose.id, parent_id: subSub.id }).parent_id, subSub.id)
+assert.equal(workspaceRepo.update({ id: loose.id, name: '이름만' }).parent_id, subSub.id, 'omitted parent_id keeps it')
+assert.equal(workspaceRepo.update({ id: loose.id, parent_id: null }).parent_id, null, 'null → top level')
+assert.throws(() => workspaceRepo.update({ id: parentDesk.id, parent_id: subSub.id }), /하위/, 'no desk cycles')
+assert.throws(() => workspaceRepo.update({ id: parentDesk.id, parent_id: parentDesk.id }), /하위/)
+assert.throws(() => workspaceRepo.update({ id: loose.id, parent_id: 'nope' }), /상위 데스크/)
 // Deleting a desk never takes its sub-desks along: they move up one level.
 workspaceRepo.remove(subDesk.id)
 assert.equal(workspaceRepo.getById(subSub.id)?.parent_id, parentDesk.id)
 
 console.log('hierarchy: all assertions passed')
+
+// ---- Goals due soon (deadline notifications) ------------------------------------
+import { goalRepo } from './goal.repo'
+{
+  const desk = workspaceRepo.create({ name: '목표 데스크' })
+  const soon = goalRepo.create({ workspace_id: desk.id, title: '이번 주 출시', due_date: '2026-10-11T23:59:00.000Z' })
+  goalRepo.create({ workspace_id: desk.id, title: '먼 목표', due_date: '2027-01-01T00:00:00.000Z' })
+  const achieved = goalRepo.create({ workspace_id: desk.id, title: '끝난 목표', due_date: '2026-10-01T00:00:00.000Z', status: 'done' })
+  const due = goalRepo.listOpenDueBy('2026-10-12T00:00:00.000Z').filter((g) => g.workspace_id === desk.id)
+  assert.deepEqual(due.map((g) => g.id), [soon.id], 'only open goals due by the cutoff')
+  assert.equal(due[0].workspace_name, '목표 데스크')
+  assert.ok(!due.some((g) => g.id === achieved.id))
+  console.log('goals due soon: all assertions passed')
+}

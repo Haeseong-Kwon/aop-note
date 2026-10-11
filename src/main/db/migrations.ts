@@ -280,11 +280,51 @@ const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_schedules_days ON schedules(start_day, end_day);
       CREATE INDEX IF NOT EXISTS idx_schedules_workspace ON schedules(workspace_id);
     `)
+  },
+
+  // 0017 — full-text search. Trigram tokenizer = substring matching that works for Korean
+  // (no word-boundary assumptions); queries under 3 characters fall back to LIKE.
+  // notes_fts mirrors live memos via triggers; docs_fts holds text extracted from documents.
+  (db) => {
+    db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(task_id UNINDEXED, title, note, tokenize = 'trigram');
+      CREATE TRIGGER IF NOT EXISTS notes_fts_ai AFTER INSERT ON tasks WHEN new.deleted_at IS NULL BEGIN
+        INSERT INTO notes_fts (task_id, title, note) VALUES (new.id, new.title, new.note);
+      END;
+      CREATE TRIGGER IF NOT EXISTS notes_fts_au AFTER UPDATE OF title, note, deleted_at ON tasks BEGIN
+        DELETE FROM notes_fts WHERE task_id = old.id;
+        INSERT INTO notes_fts (task_id, title, note) SELECT new.id, new.title, new.note WHERE new.deleted_at IS NULL;
+      END;
+      CREATE TRIGGER IF NOT EXISTS notes_fts_ad AFTER DELETE ON tasks BEGIN
+        DELETE FROM notes_fts WHERE task_id = old.id;
+      END;
+      INSERT INTO notes_fts (task_id, title, note) SELECT id, title, note FROM tasks WHERE deleted_at IS NULL;
+
+      CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(attachment_id UNINDEXED, name, body, tokenize = 'trigram');
+      INSERT INTO docs_fts (attachment_id, name, body) SELECT id, file_name, '' FROM attachments WHERE deleted_at IS NULL;
+      ALTER TABLE attachments ADD COLUMN text_indexed INTEGER NOT NULL DEFAULT 0;
+    `)
+  },
+
+  // 0018 — custom-field definitions get updated_at so device sync can merge their edits (newest wins).
+  (db) => {
+    db.exec(`
+      ALTER TABLE properties ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+      UPDATE properties SET updated_at = COALESCE(deleted_at, created_at);
+    `)
   }
 ]
 
+/** The schema version this build writes; a DB above it came from a newer app. */
+export const SCHEMA_VERSION = migrations.length
+
 export function runMigrations(db: Database.Database): void {
   const current = db.pragma('user_version', { simple: true }) as number
+  if (current > SCHEMA_VERSION) {
+    throw new Error(
+      `이 데이터는 더 새 버전의 AOP Note에서 만들어졌습니다 (스키마 ${current} > ${SCHEMA_VERSION}). 앱을 최신 버전으로 업데이트하세요.`
+    )
+  }
   for (let version = current; version < migrations.length; version++) {
     const migrate = migrations[version]
     const tx = db.transaction(() => {

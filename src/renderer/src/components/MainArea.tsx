@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   ListTodo,
   NotebookPen,
@@ -12,7 +12,6 @@ import {
 import { useStore } from '@/store/useStore'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { DeskIcon } from './DeskIcon'
 import { SidebarExpandButton } from './Sidebar'
 import { TaskPanel } from './TaskPanel'
 import { NotesView } from './NotesView'
@@ -27,7 +26,12 @@ import { ProjectView } from './ProjectView'
 import { ProjectsView } from './ProjectsView'
 import { AskView } from './AskView'
 import { DeskDatabase } from './DeskDatabase'
+import { ToolsView } from './tools/ToolsView'
+import { PageHeader } from './PageHeader'
 import type { MainView } from '@/store/useStore'
+import { applyDeskAccent } from '@/lib/deskAccent'
+import { ancestorsOf } from '@shared/tree'
+import type { Workspace } from '@shared/types'
 
 const VIEWS: { value: MainView; label: string; icon: LucideIcon }[] = [
   { value: 'tasks', label: '작업', icon: ListTodo },
@@ -47,6 +51,11 @@ export function MainArea(): JSX.Element {
   const setMainView = useStore((s) => s.setMainView)
   const loading = useStore((s) => s.loading)
   const utilityView = useStore((s) => s.utilityView)
+  const theme = useStore((s) => s.theme)
+
+  // Inside a desk, its colour is the accent; global views keep the app's own.
+  const accent = utilityView || smartView ? null : (workspaces.find((w) => w.id === activeWorkspaceId)?.color ?? null)
+  useEffect(() => applyDeskAccent(accent), [accent, theme])
 
   if (utilityView) {
     return (
@@ -56,6 +65,15 @@ export function MainArea(): JSX.Element {
         {utilityView === 'graph' && <GraphView />}
         {utilityView === 'projects' && <ProjectsView />}
         {utilityView === 'ask' && <AskView />}
+        {utilityView === 'calendar' && (
+          <div className="flex h-full flex-col">
+            <PageHeader icon={CalendarDays} title="통합 달력" />
+            <div className="min-h-0 flex-1">
+              <CalendarView unified />
+            </div>
+          </div>
+        )}
+        {utilityView === 'tools' && <ToolsView />}
       </main>
     )
   }
@@ -88,37 +106,15 @@ export function MainArea(): JSX.Element {
 
   return (
     <main className="glass-pane flex min-w-0 flex-1 flex-col">
-      {/* items-stretch so the tab underline sits exactly on the header's bottom border */}
+      {/* items-stretch so the tab indicator sits exactly on the header's bottom border */}
       <header className="cq glass-chrome drag-region flex h-12 shrink-0 items-stretch gap-3 overflow-hidden border-b border-border px-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <SidebarExpandButton />
-          <DeskIcon color={desk.color} icon={desk.icon} />
-          <h1 className="max-w-[16rem] truncate text-sm font-semibold tracking-tight" title={desk.name}>
-            {desk.name}
-          </h1>
-        </div>
-
+        <DeskTitle desk={desk} workspaces={workspaces} />
         <span aria-hidden className="my-auto h-4 w-px bg-border" />
-
-        <Tabs value={mainView} onValueChange={(v) => setMainView(v as MainView)} className="flex">
-          <TabsList className="no-drag h-full gap-0.5 rounded-none bg-transparent p-0">
-            {VIEWS.map(({ value, label, icon: Icon }) => (
-              <TabsTrigger
-                key={value}
-                value={value}
-                title={label}
-                aria-label={label}
-                className="relative h-full gap-1.5 rounded-none px-2.5 text-muted-foreground hover:text-foreground focus-visible:bg-accent/60 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-full after:bg-transparent data-[state=active]:after:bg-foreground"
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="cq-hide-md">{label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <ViewTabs value={mainView} onChange={setMainView} />
       </header>
 
-      <div className="glass-panel flex-1 overflow-hidden">
+      {/* Keyed on view + desk: switching either fades the new content in instead of snapping. */}
+      <div key={`${desk.id}:${mainView}`} className="glass-panel flex-1 animate-view-in overflow-hidden">
         {mainView === 'tasks' && <TaskPanel />}
         {mainView === 'notes' && <NotesView key={desk.id} />}
         {mainView === 'database' && <DeskDatabase key={desk.id} deskId={desk.id} />}
@@ -128,6 +124,82 @@ export function MainArea(): JSX.Element {
         {mainView === 'project' && <ProjectView desk={desk} />}
       </div>
     </main>
+  )
+}
+
+/** The desk's identity: a tile in its colour (emoji or initial), sub-desk path, name. */
+function DeskTitle({ desk, workspaces }: { desk: Workspace; workspaces: Workspace[] }): JSX.Element {
+  const path = ancestorsOf(workspaces, desk.id)
+  const selectWorkspace = useStore((s) => s.selectWorkspace)
+  return (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <SidebarExpandButton />
+      <span
+        key={desk.id}
+        aria-hidden
+        className="flex h-7 w-7 shrink-0 animate-pop-in items-center justify-center rounded-lg bg-desk/15 text-[15px] font-semibold leading-none text-desk ring-1 ring-inset ring-desk/20"
+      >
+        {desk.icon || [...desk.name][0]}
+      </span>
+      <div className="flex min-w-0 items-baseline gap-1">
+        {path.map((p) => (
+          <span key={p.id} className="no-drag flex shrink-0 items-baseline gap-1 text-[13px] text-muted-foreground">
+            <button onClick={() => void selectWorkspace(p.id)} className="max-w-[8rem] truncate hover:text-foreground">
+              {p.name}
+            </button>
+            <span aria-hidden className="text-muted-foreground/50">/</span>
+          </span>
+        ))}
+        <h1 className="max-w-[16rem] truncate text-[15px] font-semibold tracking-[-0.02em]" title={desk.name}>
+          {desk.name}
+        </h1>
+      </div>
+    </div>
+  )
+}
+
+/** View tabs with one indicator that slides to the active tab, in the desk's colour. */
+function ViewTabs({ value, onChange }: { value: MainView; onChange: (v: MainView) => void }): JSX.Element {
+  const listRef = useRef<HTMLDivElement>(null)
+  const [bar, setBar] = useState<{ x: number; w: number } | null>(null)
+
+  useLayoutEffect(() => {
+    const list = listRef.current
+    if (!list) return
+    const measure = (): void => {
+      const el = list.querySelector<HTMLElement>('[data-state="active"]')
+      if (el) setBar({ x: el.offsetLeft + 8, w: el.offsetWidth - 16 })
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(list)
+    return () => ro.disconnect()
+  }, [value])
+
+  return (
+    <Tabs value={value} onValueChange={(v) => onChange(v as MainView)} className="flex">
+      <TabsList ref={listRef} className="no-drag relative h-full gap-0.5 rounded-none bg-transparent p-0">
+        {VIEWS.map(({ value: v, label, icon: Icon }) => (
+          <TabsTrigger
+            key={v}
+            value={v}
+            title={label}
+            aria-label={label}
+            className="h-full gap-1.5 rounded-none px-2.5 text-muted-foreground transition-colors duration-fast hover:text-foreground focus-visible:bg-accent/60 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="cq-hide-md">{label}</span>
+          </TabsTrigger>
+        ))}
+        {bar && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -bottom-px left-0 h-0.5 rounded-full bg-desk transition-[transform,width] duration-slow ease-out"
+            style={{ width: bar.w, transform: `translateX(${bar.x}px)` }}
+          />
+        )}
+      </TabsList>
+    </Tabs>
   )
 }
 

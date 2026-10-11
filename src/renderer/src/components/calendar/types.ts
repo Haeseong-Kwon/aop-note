@@ -10,6 +10,8 @@ export interface CalItem {
   /** "14:00" for timed items, '' for all-day. */
   time: string
   done?: boolean
+  /** Unified calendar: the desk it belongs to. */
+  desk?: string
   /** Opens / edits it. */
   open: () => void
 }

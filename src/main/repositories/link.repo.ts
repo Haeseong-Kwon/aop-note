@@ -26,9 +26,36 @@ import type {
   Workspace
 } from '@shared/types'
 
-// ponytail: links are derived by scanning every live note (and each linked project's
-// docs) on each call — fine for thousands of notes; add a links table maintained on
-// save if it ever shows up in a profile.
+// Links are derived from live notes on each call. Two caches keep that cheap: parsed
+// links per note (keyed by id + updated_at) and a title index per task snapshot.
+// ponytail: still walks every note per call; a links table maintained on save if it profiles hot.
+
+const parsedLinks = new Map<string, { updated_at: string; links: ReturnType<typeof extractLinks> }>()
+
+/** extractLinks(note), reparsed only when the note changed. */
+function linksOf(t: Pick<TaskWithContext, 'id' | 'updated_at' | 'note'>): ReturnType<typeof extractLinks> {
+  const hit = parsedLinks.get(t.id)
+  if (hit && hit.updated_at === t.updated_at) return hit.links
+  const links = extractLinks(t.note)
+  parsedLinks.set(t.id, { updated_at: t.updated_at, links })
+  return links
+}
+
+const titleIndexes = new WeakMap<readonly TaskWithContext[], Map<string, TaskWithContext[]>>()
+
+/** normalized title → notes, built once per tasks array (resolveIn runs once per link). */
+function byTitle(tasks: readonly TaskWithContext[]): Map<string, TaskWithContext[]> {
+  let index = titleIndexes.get(tasks)
+  if (!index) {
+    index = new Map()
+    for (const t of tasks) {
+      const key = normalizeTitle(t.title)
+      index.set(key, [...(index.get(key) ?? []), t])
+    }
+    titleIndexes.set(tasks, index)
+  }
+  return index
+}
 
 const SNIPPET_MAX = 160
 
@@ -38,8 +65,7 @@ export function resolveIn(
   title: string,
   fromWorkspaceId: string | null
 ): TaskWithContext | null {
-  const key = normalizeTitle(title)
-  const candidates = tasks.filter((t) => normalizeTitle(t.title) === key)
+  const candidates = byTitle(tasks).get(normalizeTitle(title)) ?? []
   if (candidates.length === 0) return null
   return (
     candidates.find((t) => t.workspace_id === fromWorkspaceId) ??
@@ -140,7 +166,7 @@ export const linkRepo = {
     const mentions: BacklinkHit[] = []
     for (const t of tasks) {
       if (t.id === target.id || !t.note) continue
-      const link = extractLinks(t.note).find((l) => sameTarget(resolveFromNote(tasks, all, l.target, t.workspace_id), wanted))
+      const link = linksOf(t).find((l) => sameTarget(resolveFromNote(tasks, all, l.target, t.workspace_id), wanted))
       if (link) {
         linked.push({ task: t, snippet: lineAt(t.note, link.index) })
         continue
@@ -170,7 +196,7 @@ export const linkRepo = {
     const wanted: Target = { kind: 'file', deskId, path }
     const linked: BacklinkHit[] = []
     for (const t of tasks) {
-      const link = extractLinks(t.note).find((l) => sameTarget(resolveFromNote(tasks, all, l.target, t.workspace_id), wanted))
+      const link = linksOf(t).find((l) => sameTarget(resolveFromNote(tasks, all, l.target, t.workspace_id), wanted))
       if (link) linked.push({ task: t, snippet: lineAt(t.note, link.index) })
     }
     return { linked, files: filesLinkingTo(tasks, all, wanted) }
@@ -238,7 +264,7 @@ export const linkRepo = {
 
     for (const t of tasks) {
       noteNode(t) // every memo, body or not
-      for (const l of extractLinks(t.note)) {
+      for (const l of linksOf(t)) {
         const hit = resolveFromNote(tasks, all, l.target, t.workspace_id)
         connect(noteNode(t), hit ? nodeFor(hit) : ghost(l.target, t.workspace_color))
       }

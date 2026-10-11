@@ -1,8 +1,9 @@
 import { join } from 'path'
-import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'fs'
 import { app, dialog, shell, BrowserWindow } from 'electron'
 import Database from 'better-sqlite3'
 import { getDb, closeDb, dbPath } from './db'
+import { SCHEMA_VERSION } from './db/migrations'
 import { attachmentsDir } from './attachmentPaths'
 import { graphArchive, graphArchiveDir } from './graphArchive'
 import type { BackupInfo } from '@shared/types'
@@ -45,19 +46,25 @@ export async function exportBackupTo(parentDir: string, now = new Date()): Promi
   return folder
 }
 
-/** Throws a user-facing message unless dir holds a readable AOP Note database. */
+/** Throws a user-facing message unless dir holds an intact AOP Note database this build can open. */
 export function validateBackupDir(dir: string, file = DB_FILE): void {
   const path = join(dir, file)
   if (!existsSync(path)) throw new Error(`백업 폴더가 아닙니다. '${file}' 파일이 있는 폴더를 선택하세요.`)
   let probe: Database.Database | null = null
+  let version = 0
   try {
     probe = new Database(path, { readonly: true, fileMustExist: true })
     const ok = probe.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'workspaces'").get()
     if (!ok) throw new Error('no workspaces table')
+    if (probe.pragma('integrity_check', { simple: true }) !== 'ok') throw new Error('integrity')
+    version = probe.pragma('user_version', { simple: true }) as number
   } catch {
     throw new Error('백업 파일을 읽을 수 없습니다. 손상되었거나 AOP Note 백업이 아닙니다.')
   } finally {
     probe?.close()
+  }
+  if (version > SCHEMA_VERSION) {
+    throw new Error('더 새 버전의 AOP Note에서 만든 백업입니다. 앱을 업데이트한 뒤 복원하세요.')
   }
 }
 
@@ -110,9 +117,19 @@ export async function restoreBackup(win: BrowserWindow | null): Promise<boolean>
   mkdirSync(backupsDir(), { recursive: true })
   await getDb().backup(join(backupsDir(), `before-restore-${stamp(new Date()).replace(' ', '-')}.db`))
 
+  // Stage the copy next to the live file, then swap with one rename: a crash mid-copy leaves the old DB intact.
+  const staged = `${dbPath()}.restoring`
+  copyFileSync(join(dir, DB_FILE), staged)
   closeDb()
-  for (const suffix of ['-wal', '-shm']) rmSync(dbPath() + suffix, { force: true })
-  copyFileSync(join(dir, DB_FILE), dbPath())
+  try {
+    for (const suffix of ['-wal', '-shm']) rmSync(dbPath() + suffix, { force: true })
+    renameSync(staged, dbPath())
+  } catch (error) {
+    // e.g. the file is locked on Windows: keep running on the current data instead of a closed DB.
+    rmSync(staged, { force: true })
+    getDb()
+    throw new Error(`복원하지 못했습니다 (${error instanceof Error ? error.message : String(error)}). 현재 데이터는 그대로입니다.`)
+  }
   // Merge rather than wipe: current attachment files stay on disk (harmless) and
   // everything the backup's memos reference is present.
   if (existsSync(join(dir, 'attachments'))) {

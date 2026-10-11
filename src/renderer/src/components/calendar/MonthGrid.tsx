@@ -45,7 +45,7 @@ export function MonthGrid({ days, month, items, onPickRange }: MonthGridProps): 
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="grid grid-cols-7 border-b border-border pb-1">
         {WEEKDAYS.map((w, i) => (
-          <div key={w} className={cn('px-2 text-xs font-medium text-muted-foreground', i === 0 && 'text-rose-400/80', i === 6 && 'text-sky-400/80')}>
+          <div key={w} className={cn('px-2 text-xs font-medium text-muted-foreground', i === 0 && 'text-rose-500/70', i === 6 && 'text-sky-500/70')}>
             {w}
           </div>
         ))}
@@ -77,17 +77,18 @@ export function MonthGrid({ days, month, items, onPickRange }: MonthGridProps): 
                     onPointerEnter={() => drag && setDrag({ ...drag, to: k })}
                     title="클릭하거나 여러 날을 드래그해서 일정 추가"
                     className={cn(
-                      'relative min-h-0 cursor-cell bg-background p-1 transition-colors hover:bg-accent/30',
-                      !inMonth && 'bg-muted/30 text-muted-foreground',
-                      selected(k) && 'bg-primary/15 hover:bg-primary/15'
+                      'relative min-h-0 cursor-cell bg-background p-1 transition-colors duration-fast hover:bg-accent/40',
+                      // Outside the month only the number fades; a translucent cell would let the grid lines flood through.
+                      !inMonth && 'text-muted-foreground/45',
+                      selected(k) && 'bg-desk/[0.12] hover:bg-desk/[0.12]'
                     )}
                   >
                     <span
                       className={cn(
-                        'flex h-5 w-5 items-center justify-center rounded-full text-xs tabular-nums',
-                        k === today && 'bg-primary font-semibold text-primary-foreground',
-                        k !== today && d.getDay() === 0 && inMonth && 'text-rose-400',
-                        k !== today && d.getDay() === 6 && inMonth && 'text-sky-400'
+                        'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1 text-xs tabular-nums',
+                        k === today && 'bg-desk font-semibold text-white',
+                        k !== today && d.getDay() === 0 && inMonth && 'text-rose-500/80',
+                        k !== today && d.getDay() === 6 && inMonth && 'text-sky-500/80'
                       )}
                     >
                       {d.getDate()}
@@ -123,9 +124,9 @@ export function MonthGrid({ days, month, items, onPickRange }: MonthGridProps): 
                       onClick={it.open}
                       title={`${it.title}\n${dayRange(it.startDay, it.endDay)}${it.time ? ` · ${it.time}` : ''}`}
                       className={cn(
-                        'absolute z-10 flex h-[18px] items-center gap-1 truncate px-1.5 text-left text-[11px] leading-none transition-[filter] hover:brightness-110',
-                        b.continuesLeft ? 'rounded-l-none' : 'rounded-l',
-                        b.continuesRight ? 'rounded-r-none' : 'rounded-r',
+                        'absolute z-10 flex h-[18px] items-center gap-1 truncate px-1.5 text-left text-[11px] font-medium leading-none transition-[filter,transform] duration-fast hover:brightness-110 active:scale-[0.98]',
+                        b.continuesLeft ? 'rounded-l-none' : 'rounded-l-[5px]',
+                        b.continuesRight ? 'rounded-r-none' : 'rounded-r-[5px]',
                         it.done && 'line-through opacity-50'
                       )}
                       style={{
@@ -157,7 +158,7 @@ function DayList({ day, items, onClose }: { day: string; items: CalItem[]; onClo
   return (
     <div
       onPointerDown={(e) => e.stopPropagation()}
-      className="glass-overlay absolute left-1 top-6 z-30 w-56 rounded-lg p-2 text-xs shadow-lg"
+      className="glass-overlay absolute left-1 top-6 z-30 w-56 origin-top-left animate-pop-in rounded-lg p-2 text-xs shadow-lg"
       role="dialog"
       aria-label={`${dayRange(day, day)} 일정`}
     >

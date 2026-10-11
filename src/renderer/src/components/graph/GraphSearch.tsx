@@ -74,7 +74,7 @@ export function GraphSearch({ query, onQuery, results, hiddenCount, onPick }: Gr
         <div
           id="graph-search-results"
           role="listbox"
-          className="glass-overlay absolute left-0 top-10 z-30 max-h-80 w-96 overflow-y-auto rounded-lg p-1 text-xs"
+          className="glass-overlay absolute left-0 top-10 z-30 origin-top animate-pop-in max-h-80 w-96 overflow-y-auto rounded-lg p-1 text-xs"
         >
           <p className="px-2 py-1 text-[11px] text-muted-foreground">
             {results.length ? `${results.length}개 일치` : '일치하는 메모가 없습니다'}

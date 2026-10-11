@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  CalendarDays,
+  Wrench,
   Search,
   CheckSquare,
   Folder,
@@ -13,10 +15,11 @@ import {
   Waypoints,
   FolderGit2,
   type LucideIcon,
-  Sparkles
+  Sparkles,
+  FileText
 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import type { SearchHit } from '@shared/types'
 import { shortcut } from '@/lib/utils'
@@ -24,7 +27,8 @@ import { shortcut } from '@/lib/utils'
 const HIT_ICONS = {
   task: CheckSquare,
   category: Folder,
-  workspace: LayoutGrid
+  workspace: LayoutGrid,
+  document: FileText
 } as const
 
 /** One selectable row — a search hit or, with an empty query, a quick action / desk. */
@@ -49,6 +53,7 @@ export function CommandPalette(): JSX.Element {
   const selectSmartView = useStore((s) => s.selectSmartView)
   const setMainView = useStore((s) => s.setMainView)
   const openQuickCapture = useStore((s) => s.openQuickCapture)
+  const previewDocument = useStore((s) => s.previewDocument)
   const toggleHelp = useStore((s) => s.toggleHelp)
   const openUtility = useStore((s) => s.openUtility)
 
@@ -86,6 +91,8 @@ export function CommandPalette(): JSX.Element {
         category_id: hit.category_id,
         task_id: hit.id
       })
+    } else if (hit.type === 'document') {
+      previewDocument(hit.id, hit.title)
     } else if (hit.type === 'category' && hit.category_id) {
       await selectWorkspace(hit.workspace_id)
       setMainView('tasks')
@@ -112,6 +119,8 @@ export function CommandPalette(): JSX.Element {
         { key: 'a-help', group: '바로 가기', icon: Keyboard, title: '키보드 단축키', hint: '?', run: toggleHelp },
         { key: 'a-projects', group: '바로 가기', icon: FolderGit2, title: '프로젝트 목록', run: () => openUtility('projects') },
         { key: 'a-ask', group: '바로 가기', icon: Sparkles, title: 'AI에게 묻기 (내 메모 기반)', run: () => openUtility('ask') },
+        { key: 'a-calendar', group: '바로 가기', icon: CalendarDays, title: '통합 달력 (모든 데스크)', run: () => openUtility('calendar') },
+        { key: 'a-tools', group: '바로 가기', icon: Wrench, title: '도구 (계산기, 부가세, 대출, 날짜 계산…)', run: () => openUtility('tools') },
         { key: 'a-graph', group: '바로 가기', icon: Waypoints, title: '그래프', run: () => openUtility('graph') },
         { key: 'a-trash', group: '바로 가기', icon: Trash2, title: '휴지통', run: () => openUtility('trash') },
         { key: 'a-settings', group: '바로 가기', icon: Settings, title: '설정 · 백업', run: () => openUtility('settings') },
@@ -155,6 +164,7 @@ export function CommandPalette(): JSX.Element {
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? null : close())}>
       <DialogContent className="top-[14%] max-w-xl translate-y-0 gap-0 p-0" hideClose>
+        <DialogTitle className="sr-only">검색 및 빠른 이동</DialogTitle>
         <div className="flex items-center gap-2.5 border-b border-border px-4">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input

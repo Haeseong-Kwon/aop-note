@@ -37,6 +37,9 @@ import type {
   TrashKind,
   BackupInfo,
   AppSettings,
+  SyncResult,
+  UpdateStatus,
+  ImportSummary,
   Backlinks,
   GraphData,
   McpInfo,
@@ -84,6 +87,7 @@ export const IPC = {
     listByCategory: 'task:listByCategory',
     listByWorkspace: 'task:listByWorkspace',
     listUpcoming: 'task:listUpcoming',
+    listDueBetween: 'task:listDueBetween',
     create: 'task:create',
     update: 'task:update',
     setStatus: 'task:setStatus',
@@ -125,6 +129,9 @@ export const IPC = {
   },
   theme: {
     set: 'theme:set'
+  },
+  emoji: {
+    showPanel: 'emoji:showPanel'
   },
   link: {
     backlinks: 'link:backlinks',
@@ -213,7 +220,22 @@ export const IPC = {
     restore: 'backup:restore',
     openDataFolder: 'backup:openDataFolder'
   },
+  data: {
+    exportMarkdown: 'data:exportMarkdown',
+    exportJson: 'data:exportJson',
+    importJson: 'data:importJson',
+    importMarkdown: 'data:importMarkdown',
+    syncChoose: 'data:syncChoose',
+    syncNow: 'data:syncNow',
+    syncDisable: 'data:syncDisable',
+    exportIcs: 'data:exportIcs'
+  },
+  update: {
+    status: 'update:status',
+    check: 'update:check'
+  },
   events: {
+    dataMerged: 'event:dataMerged',
     navigateToTask: 'event:navigateToTask',
     quickCapture: 'event:quickCapture',
     projectChanged: 'event:projectChanged',
@@ -244,6 +266,8 @@ export interface Api {
     listByWorkspace(workspaceId: string): Promise<Task[]>
     /** Cross-workspace tasks with due_date on or before endIso (overdue included). */
     listUpcoming(endIso: string): Promise<TaskWithContext[]>
+    /** Cross-workspace open tasks due within [startIso, endIso] (the unified calendar). */
+    listDueBetween(startIso: string, endIso: string): Promise<TaskWithContext[]>
     create(input: CreateTaskInput): Promise<Task>
     update(input: UpdateTaskInput): Promise<Task>
     setStatus(id: string, status: TaskStatus, sortOrder?: number): Promise<Task>
@@ -387,6 +411,28 @@ export interface Api {
     /** Add/remove the SessionStart hook in ~/.claude/settings.json; resolves to the new state. */
     setHook(enabled: boolean): Promise<boolean>
   }
+  data: {
+    /** Write every memo as Markdown (with [[links]]) into a chosen folder; resolves its path, null if cancelled. */
+    exportMarkdown(): Promise<string | null>
+    /** Save all data as one JSON file (re-importable on any device); null if cancelled. */
+    exportJson(): Promise<string | null>
+    /** Merge a JSON export (newer rows win); resolves rows changed, null if cancelled. */
+    importJson(): Promise<number | null>
+    /** Import a Markdown folder (Obsidian vault / Notion export) as a new desk; null if cancelled. */
+    importMarkdown(): Promise<ImportSummary | null>
+    /** Pick the shared folder and sync once; null if cancelled. */
+    syncChoose(): Promise<AppSettings | null>
+    syncNow(): Promise<SyncResult>
+    syncDisable(): Promise<AppSettings>
+    /** Save schedules + open tasks with due dates as an .ics file; null if cancelled. */
+    exportIcs(): Promise<string | null>
+  }
+  update: {
+    status(): Promise<UpdateStatus>
+    check(): Promise<UpdateStatus>
+  }
+  /** Other devices' changes were merged in (sync); reload what's on screen. */
+  onDataMerged(cb: () => void): () => void
   vault: {
     /** Pick a folder, start mirroring into <folder>/AOP Note/. Null if cancelled. */
     choose(): Promise<AppSettings | null>
@@ -414,6 +460,8 @@ export interface Api {
    * backdrop follows the OS, and light UI over a dark blur reads as grey mud.
    */
   setTheme(theme: 'light' | 'dark'): Promise<void>
+  /** Open the OS emoji picker (macOS/Windows); it types into the focused input. */
+  showEmojiPanel(): Promise<void>
   /** Electron 32+: resolve the absolute filesystem path of a picked/dropped File. */
   getPathForFile(file: File): string
   /** Subscribe to "open this task" requests from notification clicks. Returns an unsubscribe fn. */

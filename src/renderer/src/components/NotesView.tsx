@@ -4,6 +4,7 @@ import { useStore } from '@/store/useStore'
 import { Button } from '@/components/ui/button'
 import { NotePage } from './NotePage'
 import { cn } from '@/lib/utils'
+import { formatRelative } from '@/lib/format'
 import { flattenTree, type TreeRow } from '@shared/tree'
 import type { Task, TaskStatus } from '@shared/types'
 import { ResizablePane } from '@/components/ui/ResizablePane'
@@ -14,8 +15,8 @@ const STATUS_DOT: Record<TaskStatus, string> = {
   done: 'bg-emerald-400'
 }
 
-/** First meaningful line of a memo, stripped of common Markdown noise. */
-function memoPreview(note: string): string {
+/** First meaningful line of a memo, stripped of common Markdown noise; null when the memo is empty. */
+function memoPreview(note: string): string | null {
   const line = note
     .split('\n')
     .map((l) =>
@@ -25,7 +26,7 @@ function memoPreview(note: string): string {
         .trim()
     )
     .find((l) => l.length > 0)
-  return line ?? '비어 있음'
+  return line ?? null
 }
 
 const INDENT_PX = 14
@@ -44,8 +45,8 @@ function NoteListItem({ row, active, collapsed, onSelect, onToggle, onAddChild }
   return (
     <div
       className={cn(
-        'group flex items-start rounded-md pr-1 transition-colors',
-        active ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+        'group flex items-start rounded-md pr-1 transition-colors duration-fast',
+        active ? 'bg-desk/10 text-foreground' : 'hover:bg-accent/50'
       )}
       style={{ paddingLeft: depth * INDENT_PX }}
     >
@@ -57,22 +58,29 @@ function NoteListItem({ row, active, collapsed, onSelect, onToggle, onAddChild }
       >
         <ChevronRight className={cn('h-3 w-3 transition-transform', !collapsed && 'rotate-90')} />
       </button>
-      <button onClick={onSelect} className="flex min-w-0 flex-1 items-start gap-2 py-2 pl-1 text-left">
-        <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <button onClick={onSelect} className="flex min-w-0 flex-1 items-start gap-2 py-[7px] pl-1 text-left">
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
             <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', STATUS_DOT[task.status])} />
-            <span className={cn('truncate text-sm', task.status === 'done' && 'text-muted-foreground line-through')}>
+            <span
+              className={cn(
+                'truncate text-[13px]',
+                active && 'font-medium',
+                task.status === 'done' && 'text-muted-foreground line-through'
+              )}
+            >
               {task.title || '제목 없음'}
             </span>
           </span>
-          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{memoPreview(task.note)}</span>
+          <span className="mt-0.5 block truncate pl-3 text-xs text-muted-foreground/80">
+            {memoPreview(task.note) ?? <span className="tabular">{formatRelative(task.updated_at)} 수정</span>}
+          </span>
         </span>
       </button>
       <button
         onClick={onAddChild}
         title="하위 메모 추가"
-        className="mt-1.5 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+        className="mt-1.5 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>

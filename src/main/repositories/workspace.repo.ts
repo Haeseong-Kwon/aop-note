@@ -62,19 +62,30 @@ export const workspaceRepo = {
     const db = getDb()
     const existing = this.getById(input.id)
     if (!existing) throw new Error(`Workspace not found: ${input.id}`)
+    if (input.parent_id) {
+      if (!this.getById(input.parent_id)) throw new Error('상위 데스크를 찾을 수 없습니다.')
+      const inSubtree = db
+        .prepare(
+          `WITH RECURSIVE sub(id) AS (SELECT ? UNION SELECT w.id FROM workspaces w JOIN sub ON w.parent_id = sub.id)
+           SELECT 1 FROM sub WHERE id = ?`
+        )
+        .get(input.id, input.parent_id)
+      if (inSubtree) throw new Error('데스크를 자기 자신이나 그 하위 데스크 안으로 옮길 수 없습니다.')
+    }
 
     const updated: Workspace = {
       ...existing,
       name: input.name ?? existing.name,
       color: input.color ?? existing.color,
       icon: input.icon ?? existing.icon,
+      parent_id: input.parent_id === undefined ? existing.parent_id : input.parent_id,
       sort_order: input.sort_order ?? existing.sort_order,
       updated_at: nowIso()
     }
 
     db.prepare(
       `UPDATE workspaces
-       SET name = @name, color = @color, icon = @icon,
+       SET name = @name, color = @color, icon = @icon, parent_id = @parent_id,
            sort_order = @sort_order, updated_at = @updated_at
        WHERE id = @id`
     ).run(updated)

@@ -24,7 +24,7 @@ const SYSTEM = [
 ].join('\n')
 
 const SYSTEM_ASK = [
-  "You answer questions using the user's own notes from AOP Note, provided in <note> tags.",
+  "You answer questions using the user's own notes and uploaded documents from AOP Note, provided in <note> tags.",
   'Answer in 한국어, concisely, as Markdown.',
   'Base the answer on the notes; if they do not contain the answer, say so plainly and suggest what to write down.',
   'Cite the notes you used inline as [[note title]] (the exact title attribute) so the user can open them.'
@@ -108,9 +108,23 @@ export function parseCliLine(line: string): { delta?: string; final?: string; er
 const MAX_SOURCES = 8
 const STOPWORDS = new Set(['뭐', '뭐였지', '알려줘', '알려', '어떻게', '무엇', '관련', '대해', '정리', '해줘', '있어', '했지', '는', '은', '이', '가'])
 
+// Korean particles / endings stripped from question words ("회의록에서" → "회의록"), longest first.
+// ponytail: suffix list, not a morphological analyzer — add one if retrieval misses common forms.
+const PARTICLES = ['에서는', '에서', '에게', '한테', '까지', '부터', '이랑', '으로', '처럼', '보다', '했던', '했나', '인가', '이야', '은', '는', '이', '가', '을', '를', '의', '와', '과', '도', '만', '로', '랑', '에']
+
+/** Search terms from a natural-language question: lowercased, stopwords dropped, Korean particles stripped. */
+export function questionTerms(question: string): string[] {
+  const words = question.toLowerCase().split(/[\s,.?!()[\]"'·:;]+/).filter(Boolean)
+  const stripped = words.map((w) => {
+    const p = PARTICLES.find((x) => w.endsWith(x) && [...w].length - [...x].length >= 2)
+    return p ? w.slice(0, -p.length) : w
+  })
+  return [...new Set(stripped.filter((t) => [...t].length >= 2 && !STOPWORDS.has(t)))]
+}
+
 /** Crude keyword retrieval for "ask your notes": title hits ×3, body hits ×1, top 8. */
 export function rankNotes(question: string, tasks: TaskWithContext[]): TaskWithContext[] {
-  const terms = [...new Set(question.toLowerCase().split(/[\s,.?!()[\]"'·:;]+/).filter((t) => t.length >= 2 && !STOPWORDS.has(t)))]
+  const terms = questionTerms(question)
   if (terms.length === 0) return []
   return tasks
     .map((t) => {

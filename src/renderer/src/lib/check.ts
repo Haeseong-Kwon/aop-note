@@ -183,7 +183,7 @@ assert.equal(renameLinks('[[A.B*]]', 'a.b*', 'c'), '[[c]]', 'regex characters in
 console.log('wiki links: all assertions passed')
 
 // --- forceLayout: linked notes settle together, nothing explodes --------------
-import { createLayout, tickLayout } from './forceLayout'
+import { createLayout, tickLayout, EXACT_LIMIT, exactRepulsion, barnesHut } from './forceLayout'
 
 // 0–1–2 form a chain; 3 and 4 are loners.
 const layout = createLayout(5, [
@@ -203,6 +203,31 @@ layout.pinned[3] = true
 const before = [layout.x[3], layout.y[3]]
 tickLayout(layout)
 assert.deepEqual([layout.x[3], layout.y[3]], before)
+// Big graphs switch to Barnes–Hut: forces track the exact ones closely, and it's fast.
+{
+  const n = 1500
+  const l = createLayout(n, [])
+  for (let i = 0; i < n; i++) {
+    l.x[i] += ((i * 7919) % 400) - 200 // deterministic scatter
+    l.y[i] += ((i * 104729) % 400) - 200
+  }
+  const [ex, ey, bx, by] = [0, 0, 0, 0].map(() => new Float64Array(n))
+  exactRepulsion(l, 4000, ex, ey)
+  barnesHut(l, 4000, bx, by)
+  let err = 0
+  let mag = 0
+  for (let i = 0; i < n; i++) {
+    err += Math.hypot(ex[i] - bx[i], ey[i] - by[i])
+    mag += Math.hypot(ex[i], ey[i])
+  }
+  assert.ok(err / mag < 0.1, `Barnes–Hut within 10% of exact (${((err / mag) * 100).toFixed(1)}%)`)
+  assert.ok([...bx, ...by].every(Number.isFinite), 'no NaN')
+  const big = createLayout(5000, [])
+  const t0 = performance.now()
+  for (let i = 0; i < 5; i++) tickLayout(big)
+  assert.ok((performance.now() - t0) / 5 < 60, '5k nodes: a tick fits in a few frames')
+  assert.ok(n > EXACT_LIMIT)
+}
 console.log('forceLayout: all assertions passed')
 
 // Links inside code are examples, not links (Obsidian ignores them too).
@@ -337,7 +362,7 @@ assert.equal(parseViewConfig('not json'), null)
 console.log('database views: all assertions passed')
 
 // --- tree: folders / sub-memos ------------------------------------------------
-import { flattenTree, ancestorsOf } from '@shared/tree'
+import { flattenTree, ancestorsOf, planTreeDrop } from '@shared/tree'
 {
   const n = (id: string, parent_id: string | null = null): { id: string; parent_id: string | null } => ({ id, parent_id })
   const items = [n('b', 'a'), n('a'), n('c', 'b'), n('orphan', 'gone'), n('d')]
@@ -348,6 +373,25 @@ import { flattenTree, ancestorsOf } from '@shared/tree'
   assert.deepEqual(flattenTree([n('x', 'y'), n('y', 'x')]), [], 'cycles never loop')
   assert.deepEqual(ancestorsOf(items, 'c').map((i) => i.id), ['a', 'b'], 'root first')
   assert.deepEqual(ancestorsOf(items, 'a'), [])
+
+  // Drag-and-drop between desks: before/after = reorder among the target's siblings, inside = nest.
+  const desks = [n('a'), n('b'), n('a1', 'a'), n('a2', 'a')]
+  assert.deepEqual(planTreeDrop(desks, 'b', 'a', 'inside'), [
+    { id: 'a1', sort_order: 0 },
+    { id: 'a2', sort_order: 1 },
+    { id: 'b', parent_id: 'a', sort_order: 2 }
+  ], 'inside → last child of the target')
+  assert.deepEqual(planTreeDrop(desks, 'a2', 'b', 'after'), [
+    { id: 'a', sort_order: 0 },
+    { id: 'b', sort_order: 1 },
+    { id: 'a2', parent_id: null, sort_order: 2 }
+  ], 'edge of a top-level desk → moves out to top level')
+  assert.deepEqual(planTreeDrop(desks, 'a2', 'a1', 'before'), [
+    { id: 'a2', parent_id: 'a', sort_order: 0 },
+    { id: 'a1', sort_order: 1 }
+  ], 'plain reorder among siblings')
+  assert.equal(planTreeDrop(desks, 'a', 'a1', 'inside'), null, 'never into its own subtree')
+  assert.equal(planTreeDrop(desks, 'a', 'a', 'inside'), null)
   console.log('tree: all assertions passed')
 }
 
@@ -510,4 +554,190 @@ import { layoutWeek } from './calendarBars'
   // Longer items take the upper lanes (Google-Calendar-like).
   assert.ok((by.get('trip')?.lane ?? 9) < (by.get('lunch')?.lane ?? 0))
   console.log('calendar bars: all assertions passed')
+}
+
+// --- palette: desk/category colors + icons -------------------------------------
+import { SWATCHES, DESK_EMOJIS, firstGrapheme } from './palette'
+{
+  assert.equal(new Set(SWATCHES).size, SWATCHES.length, 'no duplicate swatches')
+  assert.ok(SWATCHES.every((c) => /^#[0-9a-f]{6}$/.test(c)), 'swatches are #rrggbb (native color input format)')
+  assert.equal(new Set(DESK_EMOJIS).size, DESK_EMOJIS.length, 'no duplicate emojis')
+  assert.ok(DESK_EMOJIS.every((e) => firstGrapheme(e) === e), 'each emoji is one grapheme')
+  assert.equal(firstGrapheme(' 👨‍👩‍👧 rest'), '👨‍👩‍👧', 'ZWJ family stays whole')
+  assert.equal(firstGrapheme('🇰🇷'), '🇰🇷', 'flag stays whole')
+  assert.equal(firstGrapheme('가나'), '가')
+  assert.equal(firstGrapheme('  '), '')
+  console.log('palette: all assertions passed')
+}
+
+// --- undo stack: restores in LIFO order, replay never records, capped ------------
+import { pushUndo, popUndo, undoDepth, snapshot, changedKeys } from '../store/undo'
+{
+  const run = async (): Promise<void> => {
+    let value = 'c'
+    const log: string[] = []
+    const set = (next: string, label: string): void => {
+      const prev = value
+      value = next
+      pushUndo({ label, undo: async () => set(prev, `re-${label}`) })
+    }
+    set('b', 'second')
+    set('a', 'first')
+    assert.equal(await popUndo(), 'first')
+    assert.equal(value, 'b')
+    assert.equal(undoDepth(), 1, 'undoing does not push a new entry')
+    log.push((await popUndo()) ?? '')
+    assert.equal(value, 'c')
+    assert.equal(await popUndo(), null, 'empty stack')
+    for (let i = 0; i < 60; i++) pushUndo({ label: String(i), undo: async () => undefined })
+    assert.equal(undoDepth(), 50, 'capped')
+    while (await popUndo()) {
+      /* drain */
+    }
+    assert.deepEqual(snapshot({ id: 'x', a: 1, b: 2 }, ['a']), { a: 1 })
+    assert.deepEqual(changedKeys({ id: 'x', status: 'done', note: 'n', title: undefined }, new Set(['note'])), ['status'])
+    console.log('undo: all assertions passed')
+  }
+  await run()
+}
+
+// --- goal pace: progress vs elapsed time to the due date -------------------------
+import { goalPace } from '@shared/goalPace'
+{
+  const g = (progress: number, total = 4, due: string | null = '2026-10-31T00:00:00.000Z', status = 'todo') => ({
+    status,
+    created_at: '2026-10-01T00:00:00.000Z',
+    due_date: due,
+    total_tasks: total,
+    progress
+  })
+  const mid = new Date('2026-10-16T00:00:00.000Z') // half the time gone
+  assert.equal(goalPace(g(0.5), mid), 'on_track')
+  assert.equal(goalPace(g(0.25), mid), 'behind')
+  assert.equal(goalPace(g(0.75), mid), 'ahead')
+  assert.equal(goalPace(g(1, 4, '2026-10-31T00:00:00.000Z', 'done'), mid), 'done')
+  assert.equal(goalPace(g(0.9), new Date('2026-11-02T00:00:00.000Z')), 'overdue')
+  assert.equal(goalPace(g(0, 4, null), mid), null, 'no due date → no judgement')
+  assert.equal(goalPace(g(0, 0), mid), null, 'no tasks yet → no judgement')
+  console.log('goal pace: all assertions passed')
+}
+
+// --- desk accent: every swatch yields readable button text, in both themes -----
+import { deskAccent, hexToHsl, contrast } from './deskAccent'
+import { SWATCHES as ALL_SWATCHES } from './palette'
+{
+  const rgb = (channels: string): [number, number, number] => {
+    const [h, s, l] = channels.split(' ').map((p) => parseFloat(p))
+    const a = (s / 100) * Math.min(l / 100, 1 - l / 100)
+    const f = (n: number): number => {
+      const k = (n + h / 30) % 12
+      return l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+    }
+    return [f(0), f(8), f(4)]
+  }
+  for (const hex of [...ALL_SWATCHES, '#ffffff', '#ffff00', '#000000']) {
+    for (const dark of [false, true]) {
+      const a = deskAccent(hex, dark)!
+      const c = contrast(rgb(a.primary), [1, 1, 1])
+      assert.ok(c >= 4.5, `${hex} (${dark ? 'dark' : 'light'}): white text contrast ${c.toFixed(2)} ≥ 4.5`)
+    }
+  }
+  assert.deepEqual(hexToHsl('#2563eb'), [221, 83, 53])
+  assert.equal(deskAccent('not a colour', false), null)
+  assert.equal(deskAccent('#2563eb', false)!.primary.split(' ')[0], '221', 'hue is kept')
+  console.log('desk accent: all assertions passed')
+}
+
+// --- toolMath: calculator, finance, dates -----------------------------------
+import * as tm from './toolMath'
+{
+  const near = (a: number, b: number, eps = 1e-6): void => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`)
+  assert.equal(tm.evaluate('1 + 2 * 3'), 7)
+  assert.equal(tm.evaluate('(1+2)*3'), 9)
+  assert.equal(tm.evaluate('2^3^2'), 512)
+  assert.equal(tm.evaluate('-2^2'), -4)
+  assert.equal(tm.evaluate('1,000 × 3 ÷ 2'), 1500)
+  assert.equal(tm.evaluate('200 * 10%'), 20)
+  assert.equal(tm.evaluate('10 % 4'), 2)
+  assert.equal(tm.evaluate('sqrt(16) + abs(-2)'), 6)
+  near(tm.evaluate('2pi'.replace('2pi', '2*pi')), 2 * Math.PI)
+  for (const bad of ['', '1+', '(1', '1)', 'foo(2)', '1/0', 'alert(1)']) assert.throws(() => tm.evaluate(bad), bad)
+
+  const ann = tm.loanSchedule(1_000_000, 12, 12, 'annuity')
+  near(ann[0].payment, 88_848.79, 0.01)
+  near(ann[11].balance, 0, 1e-6)
+  const eq = tm.loanSchedule(1_200_000, 12, 12, 'equal-principal')
+  near(eq[0].payment, 112_000)
+  const bullet = tm.loanSchedule(1_000_000, 12, 3, 'bullet')
+  near(bullet[0].payment, 10_000)
+  near(bullet[2].payment, 1_010_000)
+  near(tm.loanSchedule(1200, 0, 12, 'annuity')[0].payment, 100)
+
+  near(tm.npv(10, [-100, 110]), 0)
+  near(tm.irr([-100, 110])!, 10, 1e-4)
+  assert.equal(tm.irr([100, 100]), null)
+  near(tm.futureValue(1000, 0, 12, 1), 1000 * 1.01 ** 12)
+  near(tm.cagr(100, 121, 2), 10)
+  assert.equal(tm.breakEvenUnits(1000, 15, 5), 100)
+  assert.equal(tm.breakEvenUnits(1000, 5, 5), null)
+  assert.deepEqual(tm.vat(11_000, 'total'), { supply: 10_000, tax: 1_000, total: 11_000 })
+  assert.deepEqual(tm.vat(10_000, 'supply'), { supply: 10_000, tax: 1_000, total: 11_000 })
+  assert.deepEqual(tm.pert(2, 4, 12), { expected: 5, sd: 10 / 6 })
+  assert.equal(tm.rice(100, 2, 50, 4), 25)
+
+  assert.equal(tm.daysBetween('2026-03-01', '2026-04-01'), 31) // across DST in some zones
+  assert.equal(tm.businessDaysBetween('2026-10-05', '2026-10-11'), 5) // Mon–Sun
+  assert.equal(tm.businessDaysBetween('2026-10-05', '2026-10-11', new Set(['2026-10-09'])), 4)
+  assert.equal(tm.addBusinessDays('2026-10-09', 1), '2026-10-12') // Fri → Mon
+  assert.equal(tm.addBusinessDays('2026-10-12', -1), '2026-10-09')
+  assert.equal(tm.addDays('2026-12-31', 1), '2027-01-01')
+  assert.equal(tm.monthlyHours(40), 209)
+  assert.equal(tm.koreanWon(123_456_789), '1억 2,345만 6,789원')
+  assert.equal(tm.koreanWon(0), '0원')
+  console.log('toolMath: all assertions passed')
+}
+
+// --- toolMath: wording, payroll, text -------------------------------------
+{
+  const near = (a: number, b: number, eps = 1e-6): void => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`)
+  assert.equal(tm.groupDigits('1234567'), '1,234,567')
+  assert.equal(tm.groupDigits('-1234.50'), '-1,234.50')
+  assert.equal(tm.groupDigits('00012'), '12')
+  assert.equal(tm.groupDigits('1.2.3'), '1.23')
+  assert.equal(tm.groupDigits('abc'), '')
+  assert.equal(tm.groupDigits('0.5'), '0.5')
+  assert.equal(tm.amountInWords(123456789, 'hangul'), '일억이천삼백사십오만육천칠백팔십구')
+  assert.equal(tm.amountInWords(10000, 'hangul'), '일만')
+  assert.equal(tm.amountInWords(100000000, 'hangul'), '일억')
+  assert.equal(tm.amountInWords(1010, 'hanja'), '壹阡壹拾')
+  assert.equal(tm.amountInWords(0, 'hangul'), '영')
+  assert.deepEqual(tm.withholding(1_000_000, 3), { gross: 1_000_000, income: 30_000, local: 3_000, net: 967_000 })
+  assert.deepEqual(tm.withholding(1_000_000, 8), { gross: 1_000_000, income: 80_000, local: 8_000, net: 912_000 })
+  assert.equal(tm.withholding(123_456, 3).income, 3_700) // 3,703.68 → cut to 10원
+  assert.equal(tm.grossFromNet(967_000, 3), 1_000_000)
+  assert.ok(tm.withholding(tm.grossFromNet(500_000, 8), 8).net >= 500_000)
+  assert.equal(tm.monthsBetween('2025-01-31', '2025-02-28'), 0)
+  assert.equal(tm.monthsBetween('2025-01-15', '2025-02-15'), 1)
+  assert.deepEqual(tm.annualLeave('2026-01-10', '2026-06-10'), { years: 0, months: 5, days: 5, firstYear: true })
+  assert.equal(tm.annualLeave('2025-01-10', '2026-01-10').days, 15)
+  assert.equal(tm.annualLeave('2023-01-10', '2026-01-10').days, 16) // 3 years
+  assert.equal(tm.annualLeave('2000-01-01', '2026-01-01').days, 25) // capped
+  assert.equal(tm.addMonths('2026-05-31', -3), '2026-02-28')
+  const sev = tm.severance('2024-01-01', '2026-01-01', 9_200_000)
+  assert.equal(sev.serviceDays, 731)
+  assert.ok(sev.eligible)
+  near(sev.dailyWage, 9_200_000 / 92)
+  assert.equal(sev.amount, Math.floor((100_000 * 30 * 731) / 365))
+  assert.equal(tm.severance('2025-06-01', '2026-01-01', 9_000_000).eligible, false)
+  assert.equal(tm.workedMinutes('09:00', '18:00', 60), 480)
+  assert.equal(tm.workedMinutes('22:00', '06:00', 0), 480)
+  assert.equal(tm.workedMinutes('09:00', '', 60), null)
+  let k = 0
+  const seq = (n: number): number => k++ % n
+  const pw = tm.makePassword(16, { upper: true, digits: true, symbols: true }, true, seq)
+  assert.equal(pw.length, 16)
+  assert.ok(/[a-z]/.test(pw) && /[A-Z]/.test(pw) && /\d/.test(pw) && /[!@#$%^&*\-_=+?]/.test(pw))
+  assert.ok(!/[Il1O0o]/.test(pw))
+  near(tm.entropyBits(10, 32), 50)
+  console.log('toolMath (payroll, wording): all assertions passed')
 }

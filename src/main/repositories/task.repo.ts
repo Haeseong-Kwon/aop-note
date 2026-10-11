@@ -94,6 +94,11 @@ export const taskRepo = {
   },
 
   /** Cross-workspace: incomplete tasks with due_date in [startIso, endIso]. Used by the notifier. */
+  /** One desk's live tasks with context (desk database view). */
+  listWorkspaceWithContext(workspaceId: string): TaskWithContext[] {
+    return getDb().prepare(`${CONTEXT_SELECT} AND w.id = ? ${CONTEXT_ORDER}`).all(workspaceId) as TaskWithContext[]
+  },
+
   /** Every live task with its desk/category context (links, graph, vault mirror). */
   listAllWithContext(): TaskWithContext[] {
     return getDb().prepare(`${CONTEXT_SELECT} ${CONTEXT_ORDER}`).all() as TaskWithContext[]

@@ -8,6 +8,10 @@ import { CommandPalette } from './components/CommandPalette'
 import { HelpOverlay } from './components/HelpOverlay'
 import { Toast } from './components/Toast'
 import { FilePreview } from './components/FilePreview'
+import { DocumentViewer } from './components/DocumentViewer'
+import { popUndo } from './store/undo'
+import { useToast, toastError } from './store/useToast'
+import { FloatingTools } from './components/tools/FloatingTools'
 
 function App(): JSX.Element {
   const init = useStore((s) => s.init)
@@ -19,6 +23,8 @@ function App(): JSX.Element {
   const collapse = useStore((s) => s.collapse)
   const navigateToTask = useStore((s) => s.navigateToTask)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
+  const openDocument = useStore((s) => s.openDocument)
+  const closeDocument = useStore((s) => s.closeDocument)
   const toggleSidebar = useStore((s) => s.toggleSidebar)
 
   useEffect(() => {
@@ -43,6 +49,21 @@ function App(): JSX.Element {
   useEffect(() => window.api.onProjectChanged(() => useStore.getState().bumpProjectVersion()), [])
 
   useEffect(() => window.api.onCalendarsSynced(() => useStore.getState().bumpCalendarVersion()), [])
+
+  // Another device's edits were merged in (folder sync): reload desks and the open view.
+  useEffect(
+    () =>
+      window.api.onDataMerged(() => {
+        void window.api.workspace
+          .list()
+          .then((workspaces) => {
+            useStore.setState({ workspaces })
+            return useStore.getState().refresh()
+          })
+          .catch(toastError)
+      }),
+    []
+  )
 
   // System-wide quick capture (global shortcut / menu-bar icon).
   useEffect(() => window.api.onQuickCapture(() => openQuickCapture()), [openQuickCapture])
@@ -71,6 +92,14 @@ function App(): JSX.Element {
       if (mod && e.key.toLowerCase() === 'p') {
         e.preventDefault()
         openPalette()
+        return
+      }
+      // App-level undo (moves, status, renames…) when focus isn't in a text field — those keep their own undo.
+      if (mod && !e.shiftKey && e.key.toLowerCase() === 'z' && !isTypingTarget(e.target)) {
+        e.preventDefault()
+        void popUndo()
+          .then((label) => useToast.getState().show({ message: label ? `실행 취소: ${label}` : '되돌릴 작업이 없습니다.' }))
+          .catch(toastError)
         return
       }
       if (mod && e.key === '\\') {
@@ -110,8 +139,12 @@ function App(): JSX.Element {
       <QuickCapture />
       <CommandPalette />
       <HelpOverlay />
+      <FloatingTools />
       <Toast />
       <FilePreview />
+      {openDocument && (
+        <DocumentViewer attachmentId={openDocument.id} fileName={openDocument.fileName} onClose={closeDocument} />
+      )}
     </div>
   )
 }

@@ -13,8 +13,10 @@ asarUnpack:
   - resources/**
   - '**/*.node'
 mac:
+  # zip is what the updater reads (latest-mac.yml); dmg is for first installs.
   target:
     - dmg
+    - zip
   category: public.app-category.productivity
 win:
   target:
@@ -32,3 +34,7 @@ linux:
     - AppImage
   category: Utility
 npmRebuild: false
+publish:
+  provider: github
+  owner: Haeseong-Kwon
+  repo: aop-note

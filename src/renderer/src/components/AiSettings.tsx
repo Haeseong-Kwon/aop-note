@@ -4,17 +4,14 @@ import { useToast, toastError } from '@/store/useToast'
 import { SettingRow } from './SettingsView'
 import { cn } from '@/lib/utils'
 import type { AiProvider, AiStatus, AppSettings } from '@shared/types'
+import { AI_MODELS, DEFAULT_AI_MODEL } from '@shared/aiModels'
 
 const PROVIDERS: { value: AiProvider; label: string; hint: string }[] = [
   { value: 'claude-code', label: 'Claude Code', hint: '이 Mac에 로그인된 claude CLI로 실행 (구독 사용)' },
   { value: 'api', label: 'Anthropic API 키', hint: '직접 발급한 API 키로 실행 (사용량만큼 과금)' }
 ]
 
-const MODELS: { value: string; label: string }[] = [
-  { value: 'claude-opus-5', label: 'Claude Opus 5 (가장 똑똑함)' },
-  { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (균형)' },
-  { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (가장 빠름)' }
-]
+const MODELS = AI_MODELS.map((m) => ({ value: m.id, label: m.label }))
 
 /** Settings → AI: how requests run, which model, the API key. */
 export function AiSettings({
@@ -74,7 +71,7 @@ export function AiSettings({
       </SettingRow>
       <SettingRow label="모델">
         <select
-          value={settings?.aiModel ?? 'claude-opus-5'}
+          value={settings?.aiModel ?? DEFAULT_AI_MODEL}
           disabled={!settings}
           onChange={(e) => void update({ aiModel: e.target.value })}
           className="rounded-md border border-border bg-background px-2 py-1 text-sm"

@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { buildAiPrompt, parseCliLine, rankNotes, AI_ACTIONS } from './aiPrompts'
+import { buildAiPrompt, parseCliLine, rankNotes, AI_ACTIONS, questionTerms } from './aiPrompts'
 import type { TaskWithContext } from '@shared/types'
 
 // --- prompts: the text to work on is fenced, the instruction is explicit ---
@@ -45,3 +45,9 @@ const ranked = rankNotes('배포 절차 알려줘', [
 assert.deepEqual(ranked.map((t) => t.id), ['c', 'b'])
 
 console.log('ai: all assertions passed')
+
+// --- question terms: Korean particles stripped, stopwords and 1-char words dropped ---
+assert.deepEqual(questionTerms('지난주 회의록에서 배포 일정은 뭐였지?'), ['지난주', '회의록', '배포', '일정'])
+assert.deepEqual(questionTerms('API를 어떻게 써?'), ['api'], 'short stems keep their particle-less form')
+assert.deepEqual(questionTerms('나는'), ['나는'], 'never strips a word down to one character')
+console.log('ai question terms: all assertions passed')

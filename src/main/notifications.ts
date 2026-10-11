@@ -1,6 +1,7 @@
 import { Notification, BrowserWindow } from 'electron'
 import { IPC } from '@shared/ipc'
 import { taskRepo } from './repositories/task.repo'
+import { goalRepo } from './repositories/goal.repo'
 import { loadSettings } from './settings'
 import type { TaskWithContext } from '@shared/types'
 
@@ -50,6 +51,22 @@ function check(win: BrowserWindow): void {
       if (notified.has(t.id)) continue
       notified.add(t.id)
       notify(win, '오늘 마감 작업', t)
+    }
+    // Goals due by the end of tomorrow (or already overdue) and not achieved yet.
+    const tomorrow = new Date(new Date(end).getTime() + 24 * 60 * 60_000).toISOString()
+    for (const g of goalRepo.listOpenDueBy(tomorrow)) {
+      if (notified.has(g.id)) continue
+      notified.add(g.id)
+      const n = new Notification({
+        title: g.due_date && g.due_date < start ? '목표 기한이 지났습니다' : '목표 마감 임박',
+        body: `${g.title}\n${g.workspace_name} · 작업 ${g.done_tasks}/${g.total_tasks} 완료`
+      })
+      n.on('click', () => {
+        if (win.isDestroyed()) return
+        win.show()
+        win.focus()
+      })
+      n.show()
     }
   } catch (e) {
     console.error('[notifier] check failed:', e)

@@ -1,7 +1,7 @@
-import { extname, basename } from 'path'
-import { existsSync, copyFileSync, statSync, readFileSync, writeFileSync, rmSync } from 'fs'
+import { extname, basename, isAbsolute, join, relative, resolve, sep } from 'path'
+import { existsSync, copyFileSync, statSync, readFileSync, writeFileSync, rmSync, realpathSync } from 'fs'
 import { randomUUID } from 'crypto'
-import { shell } from 'electron'
+import { app, shell } from 'electron'
 import mammoth from 'mammoth'
 import * as XLSX from 'xlsx'
 import { attachmentRepo } from './repositories/attachment.repo'
@@ -9,6 +9,7 @@ import { docFolderRepo } from './repositories/docFolder.repo'
 import { readPptxSlides } from './pptx'
 import { pathForStored } from './attachmentPaths'
 import { nowIso } from './repositories/util'
+import { indexDocument } from './docText'
 import type { Attachment, AttachmentRender } from '@shared/types'
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'])
@@ -42,8 +43,11 @@ const ofTask = (taskId: string): Owner => ({ task_id: taskId, workspace_id: null
 function record(owner: Owner, fileName: string, storedName: string, size: number): Attachment {
   const ext = extOf(storedName)
   const now = nowIso()
+  const id = randomUUID()
+  // Search index fills in the background; the upload never waits on text extraction.
+  setImmediate(() => void indexDocument(id).catch((error) => console.error('[search] index failed:', error)))
   return attachmentRepo.insert({
-    id: randomUUID(),
+    id,
     ...owner,
     file_name: fileName,
     ext,
@@ -69,12 +73,47 @@ export function addDocument(workspaceId: string, folderId: string | null, source
   return copyIn({ task_id: null, workspace_id: workspaceId, folder_id: folderId }, sourcePath, fileName)
 }
 
+/** Largest file accepted as an attachment / document upload. */
+const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024
+/** Never copied in, even if asked: the app's own data and common credential stores. */
+const PROTECTED_DIRS = ['.ssh', '.aws', '.gnupg', '.kube', '.docker', 'Library/Keychains', '.config/gh', '.config/anthropic']
+
+/**
+ * The renderer names the file to copy (drag & drop / file picker), so main checks it:
+ * an absolute path to an existing regular file of sane size, outside AOP Note's data
+ * folder and outside credential directories. Throws a user-facing message otherwise.
+ */
+export function assertUploadable(sourcePath: string): string {
+  if (typeof sourcePath !== 'string' || !isAbsolute(sourcePath)) throw new Error('파일 경로가 올바르지 않습니다.')
+  const abs = resolve(sourcePath)
+  let real: string
+  try {
+    real = realpathSync(abs)
+  } catch {
+    throw new Error('파일을 찾을 수 없습니다.')
+  }
+  const st = statSync(real)
+  if (!st.isFile()) throw new Error('폴더는 첨부할 수 없습니다. 파일을 선택하세요.')
+  if (st.size > MAX_UPLOAD_BYTES) throw new Error('1GB 이하 파일만 올릴 수 있습니다.')
+  const inside = (dir: string): boolean => {
+    // Compare real paths on both sides (macOS: /var → /private/var, symlinked homes).
+    const base = existsSync(dir) ? realpathSync(dir) : dir
+    const rel = relative(base, real)
+    return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel))
+  }
+  if (inside(app.getPath('userData'))) throw new Error('AOP Note 데이터 폴더의 파일은 첨부할 수 없습니다.')
+  const home = app.getPath('home')
+  if (PROTECTED_DIRS.some((d) => inside(join(home, d)))) throw new Error('보안 자격 증명 폴더의 파일은 첨부할 수 없습니다.')
+  return real
+}
+
 function copyIn(owner: Owner, sourcePath: string, fileName: string): Attachment {
+  const real = assertUploadable(sourcePath) // copy what was checked, not a path that could be re-pointed
   const name = basename(fileName || sourcePath).trim()
   if (!name) throw new Error('파일 이름이 비어 있습니다.')
   const storedName = newStoredName(extOf(name) || extOf(sourcePath))
-  copyFileSync(sourcePath, pathForStored(storedName))
-  return record(owner, name, storedName, statSync(sourcePath).size)
+  copyFileSync(real, pathForStored(storedName))
+  return record(owner, name, storedName, statSync(real).size)
 }
 
 const fileUrl = (storedName: string): string => `aop-file:///${encodeURIComponent(storedName)}`

@@ -19,8 +19,17 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: '⌘/Ctrl + ⇧ + Space', desc: '다른 앱을 쓰는 중에도 퀵 캡처' },
       { keys: '⌘/Ctrl + P', desc: '빠른 이동 / 검색 팔레트' },
       { keys: '⌘/Ctrl + \\', desc: '사이드바 접기 / 펼치기' },
+      { keys: '⌘/Ctrl + Z', desc: '실행 취소 — 이동·상태·이름·색 변경 (글 입력 중엔 에디터 자체 실행 취소)' },
       { keys: '?', desc: '단축키 도움말 열기' },
       { keys: 'Esc', desc: '열린 패널/모달 닫기' }
+    ]
+  },
+  {
+    title: '데스크 (사이드바의 ⋮⋮ 손잡이에 포커스)',
+    items: [
+      { keys: 'Alt + ↑ / ↓', desc: '같은 단계에서 순서 바꾸기' },
+      { keys: 'Alt + →', desc: '바로 위 데스크의 하위로 넣기' },
+      { keys: 'Alt + ←', desc: '한 단계 밖으로 꺼내기' }
     ]
   },
   {

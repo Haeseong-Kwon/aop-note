@@ -1,5 +1,15 @@
 import assert from 'node:assert'
-import { parseLinkPreview, fetchLinkPreview } from './linkPreview'
+import { parseLinkPreview, fetchLinkPreview, isPrivateAddress } from './linkPreview'
+
+for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.0.10', '169.254.169.254', '100.64.0.1', '0.0.0.0', '::1', 'fd00::1', 'fe80::1', '::ffff:127.0.0.1']) {
+  assert.ok(isPrivateAddress(ip), `${ip} is private`)
+}
+// IPv6 spellings that carry an IPv4 address (what new URL() turns [::ffff:127.0.0.1] into).
+for (const ip of ['::ffff:7f00:1', '::7f00:1', '64:ff9b::7f00:1', '2002:a00:1::', '::ffff:a00:1', '0:0:0:0:0:ffff:c0a8:1', '[::ffff:7f00:1]']) {
+  assert.ok(isPrivateAddress(ip), `${ip} embeds a private IPv4`)
+}
+assert.ok(!isPrivateAddress('::ffff:808:808'), 'mapped public IPv4 stays public')
+for (const ip of ['8.8.8.8', '172.32.0.1', '1.1.1.1', '2606:4700::1111']) assert.ok(!isPrivateAddress(ip), `${ip} is public`)
 
 const html = `<!doctype html><html><head>
 <meta charset="utf-8"><title>대체 제목 &amp; 기타</title>

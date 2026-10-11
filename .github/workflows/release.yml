@@ -1,0 +1,36 @@
+name: Release
+
+# Push a tag like v0.2.1 (matching package.json "version") to build installers and publish a
+# GitHub Release; installed apps pick it up through the updater (latest.yml / latest-mac.yml).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    strategy:
+      matrix:
+        os: [macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Package and publish
+        run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Unsigned until certificates are added as repository secrets:
+          #   macOS: CSC_LINK (Developer ID .p12, base64) + CSC_KEY_PASSWORD, and
+          #          APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID for notarization
+          #   Windows: WIN_CSC_LINK + WIN_CSC_KEY_PASSWORD
+          # Then remove the next line and set `mac.notarize: true` in electron-builder.yml.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'

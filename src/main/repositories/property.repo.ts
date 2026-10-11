@@ -87,7 +87,7 @@ export const propertyRepo = {
       sort_order: next
     }
     db.prepare(
-      'INSERT INTO properties (id, workspace_id, name, type, options, sort_order, created_at) VALUES (@id, @workspace_id, @name, @type, @options, @sort_order, @created_at)'
+      'INSERT INTO properties (id, workspace_id, name, type, options, sort_order, created_at, updated_at) VALUES (@id, @workspace_id, @name, @type, @options, @sort_order, @created_at, @created_at)'
     ).run({ ...row, created_at: nowIso() })
     return toProperty(row)
   },
@@ -107,14 +107,17 @@ export const propertyRepo = {
             ),
       sort_order: input.sort_order ?? row.sort_order
     }
-    getDb().prepare('UPDATE properties SET name = @name, options = @options, sort_order = @sort_order WHERE id = @id').run(next)
+    getDb()
+      .prepare('UPDATE properties SET name = @name, options = @options, sort_order = @sort_order, updated_at = @updated_at WHERE id = @id')
+      .run({ ...next, updated_at: nowIso() })
     return toProperty(next)
   },
 
   remove(id: string): void {
     const db = getDb()
     db.transaction(() => {
-      db.prepare('UPDATE properties SET deleted_at = ? WHERE id = ?').run(nowIso(), id)
+      const now = nowIso()
+      db.prepare('UPDATE properties SET deleted_at = ?, updated_at = ? WHERE id = ?').run(now, now, id)
       db.prepare('DELETE FROM task_values WHERE property_id = ?').run(id)
     })()
   },
@@ -125,6 +128,9 @@ export const propertyRepo = {
     const v = normalise(row.type, value)
     const db = getDb()
     db.transaction(() => {
+      // A cell belongs to its memo: touching it marks the memo changed, so device sync carries
+      // the memo's current values (including cleared ones) with it.
+      db.prepare('UPDATE tasks SET updated_at = ? WHERE id = ?').run(nowIso(), taskId)
       if (v === null) {
         db.prepare('DELETE FROM task_values WHERE task_id = ? AND property_id = ?').run(taskId, propertyId)
         return
@@ -135,7 +141,7 @@ export const propertyRepo = {
         const added = used.filter((name) => !options.some((o) => o.name === name))
         if (added.length) {
           const all = [...options, ...added.map((name, i) => ({ name, color: OPTION_COLORS[(options.length + i) % OPTION_COLORS.length] }))]
-          db.prepare('UPDATE properties SET options = ? WHERE id = ?').run(JSON.stringify(all), propertyId)
+          db.prepare('UPDATE properties SET options = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(all), nowIso(), propertyId)
         }
       }
       db.prepare(

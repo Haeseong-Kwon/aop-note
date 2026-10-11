@@ -34,7 +34,7 @@ export function GraphSettingsPanel({ settings, onChange, onClose }: GraphSetting
     <section
       aria-label="그래프 표시 설정"
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
-      className="glass-overlay absolute right-3 top-14 z-10 w-64 rounded-xl p-3 text-xs"
+      className="glass-overlay absolute right-3 top-14 z-10 w-64 origin-top-right animate-pop-in rounded-xl p-3 text-xs"
     >
       <header className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">표시 설정</h3>

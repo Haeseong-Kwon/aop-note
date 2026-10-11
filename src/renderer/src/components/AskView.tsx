@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { Sparkles, Square, FileText, ArrowUp } from 'lucide-react'
+import { Sparkles, Square, FileText, ArrowUp, Paperclip } from 'lucide-react'
+import type { AiSource } from '@shared/types'
 import { useAi } from '@/hooks/useAi'
 import { useStore } from '@/store/useStore'
 import { toastError } from '@/store/useToast'
@@ -13,6 +14,11 @@ const linkify = (md: string): string =>
 /** "AI에게 묻기": answers from the user's own memos, citing them. */
 export function AskView(): JSX.Element {
   const openNote = useStore((s) => s.openNote)
+  const previewDocument = useStore((s) => s.previewDocument)
+  const openSource = async (s: AiSource): Promise<void> => {
+    if (s.kind === 'document') previewDocument(s.id, s.title)
+    else await openNote(s)
+  }
   const ai = useAi()
   const [question, setQuestion] = useState('')
   const [asked, setAsked] = useState('')
@@ -31,7 +37,8 @@ export function AskView(): JSX.Element {
     const title = decodeURIComponent(href.slice(1))
     const source = ai.result?.sources?.find((s) => s.title === title)
     try {
-      const note = source ?? (await window.api.link.resolve(title, null))
+      if (source) return await openSource(source)
+      const note = await window.api.link.resolve(title, null)
       if (note) await openNote(note)
     } catch (e) {
       toastError(e)
@@ -45,7 +52,7 @@ export function AskView(): JSX.Element {
         <div className="mx-auto max-w-3xl px-8 py-6">
           {!asked && (
             <p className="text-sm text-muted-foreground">
-              내 메모를 근거로 답합니다. 관련 메모를 찾아 읽고, 근거가 된 메모를 [[제목]]으로 알려 줍니다.
+              내 메모와 올린 문서를 근거로 답합니다. 관련 메모·문서를 찾아 읽고, 근거가 된 메모를 [[제목]]으로 알려 줍니다.
             </p>
           )}
           {asked && <p className="mb-4 text-lg font-semibold tracking-tight">{asked}</p>}
@@ -59,15 +66,19 @@ export function AskView(): JSX.Element {
           )}
           {ai.result?.sources && ai.result.sources.length > 0 && (
             <div className="mt-6 border-t border-border pt-3">
-              <p className="mb-1.5 text-xs font-medium text-muted-foreground">읽은 메모</p>
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">읽은 메모 · 문서</p>
               <div className="flex flex-wrap gap-1.5">
                 {ai.result.sources.map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => void openNote(s).catch(toastError)}
+                    onClick={() => void openSource(s).catch(toastError)}
                     className="flex items-center gap-1 rounded-md bg-muted/60 px-2 py-1 text-xs hover:bg-accent"
                   >
-                    <FileText className="h-3 w-3 text-muted-foreground" />
+                    {s.kind === 'document' ? (
+                      <Paperclip className="h-3 w-3 text-muted-foreground" />
+                    ) : (
+                      <FileText className="h-3 w-3 text-muted-foreground" />
+                    )}
                     {s.title}
                   </button>
                 ))}

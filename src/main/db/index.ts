@@ -19,6 +19,8 @@ export function getDb(): Database.Database {
   // WAL = better concurrency + durability; foreign_keys for referential integrity.
   instance.pragma('journal_mode = WAL')
   instance.pragma('foreign_keys = ON')
+  // The MCP server is a second writer on this file: wait for its lock instead of failing with SQLITE_BUSY.
+  instance.pragma('busy_timeout = 5000')
 
   runMigrations(instance)
 

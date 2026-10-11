@@ -48,6 +48,7 @@ const api: Api = {
     listByWorkspace: (workspaceId: string) =>
       ipcRenderer.invoke(IPC.task.listByWorkspace, workspaceId),
     listUpcoming: (endIso: string) => ipcRenderer.invoke(IPC.task.listUpcoming, endIso),
+    listDueBetween: (startIso: string, endIso: string) => ipcRenderer.invoke(IPC.task.listDueBetween, startIso, endIso),
     create: (input: CreateTaskInput) => ipcRenderer.invoke(IPC.task.create, input),
     update: (input: UpdateTaskInput) => ipcRenderer.invoke(IPC.task.update, input),
     setStatus: (id: string, status: TaskStatus, sortOrder?: number) =>
@@ -186,6 +187,7 @@ const api: Api = {
     openDataFolder: () => ipcRenderer.invoke(IPC.backup.openDataFolder)
   },
   setTheme: (theme: 'light' | 'dark') => ipcRenderer.invoke(IPC.theme.set, theme),
+  showEmojiPanel: () => ipcRenderer.invoke(IPC.emoji.showPanel),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   onNavigateToTask: (cb: (payload: NavigatePayload) => void) => {
     const listener = (_e: IpcRendererEvent, payload: NavigatePayload): void => cb(payload)
@@ -216,6 +218,25 @@ const api: Api = {
     const listener = (): void => cb()
     ipcRenderer.on(IPC.events.calendarsSynced, listener)
     return () => ipcRenderer.removeListener(IPC.events.calendarsSynced, listener)
+  },
+  data: {
+    exportMarkdown: () => ipcRenderer.invoke(IPC.data.exportMarkdown),
+    exportJson: () => ipcRenderer.invoke(IPC.data.exportJson),
+    importJson: () => ipcRenderer.invoke(IPC.data.importJson),
+    importMarkdown: () => ipcRenderer.invoke(IPC.data.importMarkdown),
+    syncChoose: () => ipcRenderer.invoke(IPC.data.syncChoose),
+    syncNow: () => ipcRenderer.invoke(IPC.data.syncNow),
+    syncDisable: () => ipcRenderer.invoke(IPC.data.syncDisable),
+    exportIcs: () => ipcRenderer.invoke(IPC.data.exportIcs)
+  },
+  update: {
+    status: () => ipcRenderer.invoke(IPC.update.status),
+    check: () => ipcRenderer.invoke(IPC.update.check)
+  },
+  onDataMerged: (cb: () => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on(IPC.events.dataMerged, listener)
+    return () => ipcRenderer.removeListener(IPC.events.dataMerged, listener)
   }
 }
 

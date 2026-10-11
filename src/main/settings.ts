@@ -2,6 +2,7 @@ import { join } from 'path'
 import { readFileSync, writeFileSync } from 'fs'
 import { app } from 'electron'
 import type { AppSettings } from '@shared/types'
+import { DEFAULT_AI_MODEL, isAiModel } from '@shared/aiModels'
 
 export const DEFAULT_SETTINGS: AppSettings = {
   launchAtLogin: false,
@@ -9,7 +10,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   globalShortcut: true,
   vaultPath: '',
   aiProvider: 'claude-code',
-  aiModel: 'claude-opus-5'
+  aiModel: DEFAULT_AI_MODEL,
+  syncPath: ''
 }
 
 export const settingsPath = (): string => join(app.getPath('userData'), 'settings.json')
@@ -23,7 +25,8 @@ function sanitize(input: unknown): Partial<AppSettings> {
     if (typeof value === typeof DEFAULT_SETTINGS[key]) out[key] = value as never
   }
   if (out.aiProvider !== undefined && out.aiProvider !== 'claude-code' && out.aiProvider !== 'api') delete out.aiProvider
-  if (out.aiModel !== undefined && !['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5'].includes(out.aiModel)) delete out.aiModel
+  // Unknown or retired model ids (e.g. an older generation saved before an update) fall back to the default.
+  if (out.aiModel !== undefined && !isAiModel(out.aiModel)) delete out.aiModel
   return out
 }
 

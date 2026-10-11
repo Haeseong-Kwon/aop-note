@@ -6,6 +6,8 @@ import { autoBackup, backupsDir, exportBackupTo, validateBackupDir, AUTO_BACKUP_
 import { attachmentsDir } from './attachmentPaths'
 import { workspaceRepo } from './repositories/workspace.repo'
 import { graphArchive } from './graphArchive'
+import Database from 'better-sqlite3'
+import { SCHEMA_VERSION, runMigrations } from './db/migrations'
 
 async function main(): Promise<void> {
   workspaceRepo.create({ name: '백업 대상' })
@@ -54,6 +56,14 @@ async function main(): Promise<void> {
   assert.throws(() => validateBackupDir(empty), /백업 폴더가 아닙니다/)
   writeFileSync(join(empty, 'aop-note.db'), 'not sqlite')
   assert.throws(() => validateBackupDir(empty), /읽을 수 없습니다/)
+
+  // A backup from a newer app (higher schema version) is refused instead of half-opening.
+  const newer = await exportBackupTo(mkdtempSync(join(tmpdir(), 'aop-newer-')), today)
+  const bump = new Database(join(newer, 'aop-note.db'))
+  bump.pragma(`user_version = ${SCHEMA_VERSION + 1}`)
+  bump.close()
+  assert.throws(() => validateBackupDir(newer), /더 새 버전/)
+  assert.throws(() => runMigrations(new Database(join(newer, 'aop-note.db'))), /더 새 버전/, 'and the app never migrates it down')
 
   console.log('backup: all assertions passed')
 }
