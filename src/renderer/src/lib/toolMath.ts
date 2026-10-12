@@ -1,4 +1,7 @@
 /** Pure math behind the 도구 (tools) view. No DOM, so lib/check.ts can assert on it. */
+import { HAS_KOREAN_UNIT, parseKoreanAmount } from '@shared/koreanAmount'
+
+export { parseKoreanAmount }
 
 // --- Calculator: a small recursive-descent parser (no eval) -------------------
 
@@ -245,7 +248,10 @@ export const monthlyHours = (weeklyHours: number): number => {
 // --- Formatting --------------------------------------------------------------
 
 /** Parses "1,234.5" (or "") from an input; NaN when not a number. */
-export const num = (s: string): number => (s.trim() === '' ? NaN : Number(s.replace(/,/g, '')))
+export const num = (s: string): number => (s.trim() === '' ? NaN : HAS_KOREAN_UNIT.test(s) ? parseKoreanAmount(s) : Number(s.replace(/,/g, '')))
+
+/** What a number field shows once left: Korean units resolved, digits grouped. */
+export const normalizeAmount = (raw: string): string => (HAS_KOREAN_UNIT.test(raw) && Number.isFinite(parseKoreanAmount(raw)) ? groupDigits(String(parseKoreanAmount(raw))) : groupDigits(raw))
 
 /** Grouped number with up to `digits` decimals; '—' for NaN / ±Infinity. */
 export const fmt = (n: number, digits = 0): string =>
@@ -272,6 +278,7 @@ export function koreanWon(n: number): string {
 
 /** Live-typing format for number inputs: keeps '-', one '.', groups the integer part ("1234.5" → "1,234.5"). */
 export function groupDigits(raw: string): string {
+  if (HAS_KOREAN_UNIT.test(raw)) return raw // '3억 5천' mid-typing: resolved when the field is left
   const neg = raw.trim().startsWith('-')
   const clean = raw.replace(/[^\d.]/g, '')
   const dot = clean.indexOf('.')

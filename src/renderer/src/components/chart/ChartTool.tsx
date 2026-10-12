@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FilePlus2, FileText, ImageDown, Presentation } from 'lucide-react'
-import { emptyDoc, parseChartDoc, type ChartDoc, type ChartKind } from '@shared/chart/kinds'
+import { computeReport, emptyDoc, parseChartDoc, type ChartDoc, type ChartKind } from '@shared/chart/kinds'
 import { usePersistentState } from '../tools/ui'
 import { ChartEditor } from './ChartEditor'
 import { ChartView } from './ChartView'
@@ -50,10 +50,15 @@ export function ChartTool({ kind }: { kind: ChartKind }): JSX.Element {
           <FilePlus2 className="h-4 w-4" /> {saving ? '저장 중…' : '메모로 저장'}
         </button>
         <ChartFileButtons doc={doc} />
-        <span className="ml-auto text-[12px] text-muted-foreground">메모에서는 ‘/’ 메뉴의 통계·그래프로 바로 넣을 수 있습니다</span>
+        <span className="ml-auto text-[12px] text-muted-foreground">
+          메모 안에서는 <kbd className="chart-kbd">/</kbd> → 통계·그래프로 바로 넣을 수 있습니다
+        </span>
       </div>
-      <div className="chart-tool-grid grid items-start gap-x-8 gap-y-6">
-        <ChartEditor doc={doc} onChange={setRaw} />
+      {/* Until there is something to draw, the inputs come first. */}
+      <div className="chart-tool-grid grid items-start gap-x-6 gap-y-5" data-empty={!computeReport(doc).svg || undefined}>
+        <div className="tool-inputs min-w-0 rounded-[1.25rem] p-5">
+          <ChartEditor doc={doc} onChange={setRaw} />
+        </div>
         <ChartView doc={doc} />
       </div>
     </div>

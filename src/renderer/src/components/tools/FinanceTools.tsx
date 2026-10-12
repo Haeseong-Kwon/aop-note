@@ -132,12 +132,12 @@ export function LoanTool(): JSX.Element {
     <ToolLayout
       inputs={
         <>
+          <Segmented label="상환 방식" value={method} onChange={setMethod} options={[['annuity', '원리금균등'], ['equal-principal', '원금균등'], ['bullet', '만기일시']]} />
           <Field won label="대출 금액" value={amount} onChange={setAmount} placeholder="100,000,000" />
           <FieldRow>
             <Field label="연 이율" value={rate} onChange={setRate} suffix="%" placeholder="4.5" />
             <Field label="기간" value={years} onChange={setYears} suffix="년" placeholder="5" />
           </FieldRow>
-          <Segmented label="상환 방식" value={method} onChange={setMethod} options={[['annuity', '원리금균등'], ['equal-principal', '원금균등'], ['bullet', '만기일시']]} />
           {rows.length > 0 && <Schedule rows={rows} />}
         </>
       }

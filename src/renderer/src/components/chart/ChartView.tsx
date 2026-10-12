@@ -24,7 +24,7 @@ export function ChartView({ doc, showTitle = true, className }: { doc: ChartDoc;
       {svg ? (
         <div className="chart-svg" role="img" aria-label={`${title} — ${report.insight}`} dangerouslySetInnerHTML={{ __html: svg }} />
       ) : (
-        <div className="chart-empty flex aspect-[16/9] flex-col items-center justify-center gap-2 rounded-xl text-center">
+        <div className="chart-empty flex aspect-[16/7] flex-col items-center justify-center gap-2 rounded-xl text-center">
           <BarChart3 className="h-7 w-7 text-muted-foreground/35" />
           <p className="max-w-[18rem] text-[13px] text-muted-foreground">{report.empty}</p>
         </div>
@@ -36,7 +36,7 @@ export function ChartView({ doc, showTitle = true, className }: { doc: ChartDoc;
         </p>
       )}
       {report.stats.length > 0 && (
-        <dl className="chart-stats mt-3 grid gap-px overflow-hidden rounded-xl">
+        <dl className="chart-stats mt-3 grid overflow-hidden rounded-xl">
           {report.stats.map((s) => (
             <div key={s.label} className="flex min-w-0 flex-col gap-0.5 px-3 py-2">
               <dt className="truncate text-[11.5px] text-muted-foreground" title={s.label}>

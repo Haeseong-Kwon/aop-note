@@ -1,7 +1,7 @@
-import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useEffect, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { Check, Copy, Plus, X } from 'lucide-react'
 import { useToast } from '@/store/useToast'
-import { groupDigits, koreanWon, num } from '@/lib/toolMath'
+import { groupDigits, koreanWon, normalizeAmount, num } from '@/lib/toolMath'
 import { cn } from '@/lib/utils'
 
 /** Prefix of every tool's saved inputs; the tool page's 초기화 clears `${TOOL_STORE}${toolId}.*`. */
@@ -28,11 +28,33 @@ export function usePersistentState<T>(key: string, initial: T): [T, (v: T) => vo
   return [value, setValue]
 }
 
-/** Inputs on the left, the readout on the right; stacks in a narrow pane. `wide`: table-style inputs get more room. */
+const FOCUSABLE = 'input:not([type=hidden]):not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+
+/**
+ * Enter moves to the next field, like a form you fill top to bottom. A field that uses
+ * Enter itself (calculator, grid, textarea) calls preventDefault and is left alone.
+ */
+export function focusNextOnEnter(e: KeyboardEvent<HTMLElement>): void {
+  const el = e.target as HTMLElement
+  if (e.key !== 'Enter' || e.defaultPrevented || e.nativeEvent.isComposing || e.shiftKey || el.tagName !== 'INPUT') return
+  const fields = [...e.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE)]
+  const next = fields[fields.indexOf(el) + 1]
+  if (!next) return
+  e.preventDefault()
+  next.focus()
+  if (next instanceof HTMLInputElement) next.select()
+}
+
+/**
+ * Inputs on the left in their own panel, the readout on the right (sticky); stacks in a
+ * narrow pane. `wide`: table-style inputs get more room.
+ */
 export function ToolLayout({ inputs, readout, wide }: { inputs: ReactNode; readout: ReactNode; wide?: boolean }): JSX.Element {
   return (
-    <div className={cn('tool-grid grid items-start gap-x-8 gap-y-6', wide && 'tool-grid-wide')}>
-      <div className="flex min-w-0 flex-col gap-5">{inputs}</div>
+    <div className={cn('tool-grid grid items-start gap-x-6 gap-y-5', wide && 'tool-grid-wide')}>
+      <section aria-label="입력" onKeyDown={focusNextOnEnter} className="tool-inputs flex min-w-0 flex-col gap-5 rounded-[1.25rem] p-5">
+        {inputs}
+      </section>
       <div className="min-w-0">{readout}</div>
     </div>
   )
@@ -55,7 +77,12 @@ export function NumInput({ value, onChange, className, ...rest }: { value: strin
       if (document.activeElement === el) el.setSelectionRange(pos, pos)
     })
   }
-  return <input type="text" inputMode="decimal" autoComplete="off" value={value} onChange={handle} className={className} {...rest} />
+  // '3억 5천만' stays as typed while editing (and already computes); leaving the field shows the digits.
+  const resolve = (): void => {
+    const next = normalizeAmount(value)
+    if (next !== value) onChange(next)
+  }
+  return <input type="text" inputMode="decimal" autoComplete="off" value={value} onChange={handle} onBlur={resolve} className={className} {...rest} />
 }
 
 interface FieldProps {
@@ -70,26 +97,30 @@ interface FieldProps {
   won?: boolean
 }
 
-const FIELD_BOX =
-  'flex h-11 items-center rounded-xl border border-input bg-background/80 shadow-[inset_0_1px_2px_hsl(var(--foreground)/0.04)] transition-[box-shadow,border-color] duration-fast hover:border-[color:var(--tool-line)] focus-within:border-[color:var(--tool)] focus-within:shadow-[0_0_0_3px_var(--tool-soft)]'
+const FIELD_BOX = 'tool-field flex h-11 items-center rounded-xl transition-[box-shadow,border-color,background-color] duration-fast'
+
+/** A bare number as placeholder reads like a filled-in value; mark it as an example. */
+export const examplePlaceholder = (p: string | undefined): string | undefined => (p && /^[-\d,.]+$/.test(p.trim()) ? `예: ${p}` : p)
 
 /** A labelled input; numbers stay strings so the field can be empty mid-edit. */
 export function Field({ label, value, onChange, suffix, hint, placeholder, type = 'number', won }: FieldProps): JSX.Element {
   const n = num(value)
   const wonHint = won && Number.isFinite(n) && Math.abs(n) >= 10_000 ? koreanWon(n) : undefined
-  const inputClass = 'h-full min-w-0 flex-1 bg-transparent px-3.5 text-[15px] tabular-nums outline-none placeholder:text-muted-foreground/45'
+  // Discoverability: money fields accept '3억 5천만' — say so while the field is empty.
+  const unitHint = won && !value.trim() && !hint ? '만·억 단위로 입력해도 됩니다 (예: 3억 5천만)' : undefined
+  const inputClass = 'h-full min-w-0 flex-1 bg-transparent px-3.5 text-[15px] font-medium tabular-nums outline-none placeholder:font-normal placeholder:text-muted-foreground/50'
   return (
     <label className="flex min-w-0 flex-col gap-1.5">
       <span className="text-[12px] font-medium text-muted-foreground">{label}</span>
       <span className={FIELD_BOX}>
         {type === 'number' ? (
-          <NumInput value={value} onChange={onChange} placeholder={placeholder} className={inputClass} />
+          <NumInput value={value} onChange={onChange} placeholder={examplePlaceholder(placeholder)} className={inputClass} />
         ) : (
-          <input type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className={inputClass} />
+          <input type={type} value={value} placeholder={examplePlaceholder(placeholder)} onChange={(e) => onChange(e.target.value)} className={inputClass} />
         )}
         {(suffix ?? (won ? '원' : undefined)) && <span className="pr-3.5 text-[13px] text-muted-foreground">{suffix ?? '원'}</span>}
       </span>
-      {(wonHint || hint) && <span className="text-[11.5px] text-muted-foreground/85">{wonHint ?? hint}</span>}
+      {(wonHint || hint || unitHint) && <span className={cn('text-[11.5px]', wonHint ? 'font-medium text-[color:var(--tool)]' : 'text-muted-foreground/85')}>{wonHint ?? hint ?? unitHint}</span>}
     </label>
   )
 }
@@ -113,10 +144,12 @@ interface SegmentedProps<T extends string> {
   options: readonly (readonly [T, string])[]
   onChange: (v: T) => void
   label: string
+  /** The label is already shown next to it (e.g. a settings row). */
+  hideLabel?: boolean
 }
 
-export function Segmented<T extends string>({ value, options, onChange, label }: SegmentedProps<T>): JSX.Element {
-  return (
+export function Segmented<T extends string>({ value, options, onChange, label, hideLabel }: SegmentedProps<T>): JSX.Element {
+  const group = (
     <div role="radiogroup" aria-label={label} className="flex rounded-xl bg-muted/70 p-1 text-[13px]">
       {options.map(([v, text]) => (
         <button
@@ -133,6 +166,13 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
           {text}
         </button>
       ))}
+    </div>
+  )
+  if (hideLabel) return group
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[12px] font-medium text-muted-foreground">{label}</span>
+      {group}
     </div>
   )
 }
@@ -247,12 +287,13 @@ export function Plate({ label, children, action, className }: { label?: string; 
 export const newRowId = (): string => crypto.randomUUID().slice(0, 8)
 
 /** A compact cell input (wide = the name column; otherwise a grouped number). */
-export function RowInput({ value, onChange, label, wide, placeholder }: { value: string; onChange: (v: string) => void; label: string; wide?: boolean; placeholder?: string }): JSX.Element {
-  const cls = 'field h-9 rounded-lg tabular-nums placeholder:text-muted-foreground/40 focus:border-[color:var(--tool)] focus:shadow-[0_0_0_3px_var(--tool-soft)]'
+/** `money`: a wider number column for amounts in 원. */
+export function RowInput({ value, onChange, label, wide, money, placeholder }: { value: string; onChange: (v: string) => void; label: string; wide?: boolean; money?: boolean; placeholder?: string }): JSX.Element {
+  const cls = 'tool-field h-9 rounded-lg px-2.5 text-[13px] tabular-nums outline-none placeholder:text-muted-foreground/45'
   return wide ? (
     <input value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} placeholder={placeholder ?? label} className={cn(cls, 'min-w-[6rem] flex-1')} />
   ) : (
-    <NumInput value={value} onChange={onChange} aria-label={label} placeholder={placeholder} className={cn(cls, 'w-16 text-right')} />
+    <NumInput value={value} onChange={onChange} aria-label={label} placeholder={placeholder} className={cn(cls, money ? 'w-28' : 'w-16', 'text-right')} />
   )
 }
 
@@ -273,12 +314,12 @@ export function AddButton({ onClick, label }: { onClick: () => void; label: stri
 }
 
 /** Column headings above RowInput rows; `cols` are the numeric columns' labels (right-aligned, w-16). */
-export function RowHeader({ name, cols, trailing = true }: { name: string; cols: { label: string; title?: string }[]; trailing?: boolean }): JSX.Element {
+export function RowHeader({ name, cols, trailing = true }: { name: string; cols: { label: string; title?: string; money?: boolean }[]; trailing?: boolean }): JSX.Element {
   return (
     <div className={cn('flex items-center gap-2 text-[11px] font-medium text-muted-foreground', trailing && 'pr-9')}>
       <span className="min-w-[6rem] flex-1">{name}</span>
       {cols.map((c) => (
-        <span key={c.label} title={c.title} className="w-16 text-right">
+        <span key={c.label} title={c.title} className={cn(c.money ? 'w-28' : 'w-16', 'text-right')}>
           {c.label}
         </span>
       ))}

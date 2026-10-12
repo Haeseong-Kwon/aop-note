@@ -40,20 +40,20 @@ export function QuoteTool(): JSX.Element {
       wide
       inputs={
         <>
+          <Segmented label="단가 기준" value={vatMode} onChange={setVatMode} options={[['separate', '부가세 별도'], ['included', '부가세 포함가'], ['exempt', '면세']]} />
           <div className="flex flex-col gap-1.5">
-            <RowHeader name="품목" cols={[{ label: '수량' }, { label: '단가' }]} />
+            <RowHeader name="품목" cols={[{ label: '수량' }, { label: '단가', money: true }]} />
             {rows.map((r) => (
               <div key={r.id} className="flex items-center gap-2">
                 <RowInput wide label="품목" placeholder="예: 웹사이트 디자인" value={r.name} onChange={(v) => set(r.id, { name: v })} />
                 <RowInput label="수량" placeholder="1" value={r.qty} onChange={(v) => set(r.id, { qty: v })} />
-                <RowInput label="단가" placeholder="0" value={r.price} onChange={(v) => set(r.id, { price: v })} />
+                <RowInput money label="단가" placeholder="0" value={r.price} onChange={(v) => set(r.id, { price: v })} />
                 <RemoveButton disabled={rows.length <= 1} onClick={() => setRows(rows.filter((x) => x.id !== r.id))} />
               </div>
             ))}
             <AddButton label="품목 추가" onClick={() => setRows([...rows, { id: newRowId(), name: '', qty: '', price: '' }])} />
           </div>
           <Field label="할인율 (선택)" value={discount} onChange={setDiscount} suffix="%" placeholder="0" />
-          <Segmented label="부가세" value={vatMode} onChange={setVatMode} options={[['separate', '부가세 별도'], ['included', '부가세 포함가'], ['exempt', '면세']]} />
         </>
       }
       readout={

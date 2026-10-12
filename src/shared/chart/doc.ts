@@ -55,6 +55,8 @@ export interface GridShape {
   growRows: boolean
   maxCols?: number
   rowLabels?: string[]
+  /** What each column means, shown under the header ('항목', 'X', '계열'…); the last repeats. */
+  roles?: string[]
   hint: string
 }
 

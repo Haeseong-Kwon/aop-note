@@ -678,6 +678,36 @@ body.is-resizing * {
   }
 }
 
+/* The input panel: a quiet card so inputs read as one form, apart from the readout plate. */
+.tool-inputs {
+  border: 1px solid hsl(var(--border) / 0.9);
+  background: hsl(var(--card));
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.03);
+}
+.dark .tool-inputs {
+  background: hsl(var(--card) / 0.6);
+}
+/* Fields: a clearly writable white surface (grey fills read as disabled), tinted on hover, ringed on focus. */
+.tool-field {
+  border: 1px solid hsl(var(--input));
+  background: hsl(var(--background));
+  box-shadow: inset 0 1px 1.5px hsl(var(--foreground) / 0.045);
+}
+.tool-inputs .tool-field {
+  background: hsl(var(--card));
+}
+.tool-field:hover {
+  border-color: color-mix(in srgb, var(--tool) 45%, hsl(var(--input)));
+}
+.tool-field:focus-within {
+  border-color: var(--tool);
+  box-shadow: 0 0 0 3px var(--tool-soft);
+}
+.dark .tool-inputs .tool-field,
+.dark .tool-field {
+  background: hsl(var(--background) / 0.7);
+}
+
 /* The headline figure: scales with the pane so long amounts never overflow. */
 .tool-figure {
   font-size: clamp(1.75rem, 3.4cqi, 2.6rem);
@@ -859,11 +889,14 @@ body.is-resizing * {
 }
 .chart-stats {
   grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
-  background: var(--chart-hair);
+  gap: 0;
   box-shadow: 0 0 0 1px var(--chart-hair);
 }
+/* Hairlines drawn by each cell (right + bottom), so a short last row leaves no grey gap. */
 .chart-stats > div {
-  background: var(--chart-surface);
+  box-shadow:
+    1px 0 0 var(--chart-hair),
+    0 1px 0 var(--chart-hair);
 }
 .chart-table th {
   padding: 0.35rem 0.6rem;
@@ -882,45 +915,91 @@ body.is-resizing * {
   border-bottom: 0;
 }
 
-/* Editor + preview side by side once there's room; the preview stays in view. */
+/* Narrow: the chart on top, its editor below. Wide: editor | chart, the chart stays in view. */
 .chart-tool-grid {
   grid-template-columns: minmax(0, 1fr);
 }
-@container (min-width: 56rem) {
+.chart-tool-grid > .chart-card {
+  order: -1;
+}
+.chart-tool-grid[data-empty] > .chart-card {
+  order: 1;
+}
+@container (min-width: 68rem) {
   .chart-tool-grid {
-    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.3fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   }
-  .chart-tool-grid > :last-child {
+  .chart-tool-grid > .chart-card {
+    order: 0;
     position: sticky;
     top: 1rem;
   }
 }
 
-/* The data grid: a quiet spreadsheet. Header row tinted, label column muted. */
-.chart-grid td {
+/* The data grid: a quiet spreadsheet. Header + role row tinted, row numbers in a gutter. */
+.chart-grid :is(td, th) {
   border: 1px solid hsl(var(--border));
   padding: 0;
-  background: hsl(var(--background) / 0.6);
+  font-weight: inherit;
+  text-align: left;
 }
-.chart-grid td.chart-grid-gutter {
-  border: 0;
-  background: transparent;
-}
-.chart-grid tr:first-child td {
-  border-top: 0;
-}
-.chart-grid td:first-child {
+.chart-grid tr > :first-child {
   border-left: 0;
 }
-.chart-grid-head td {
-  background: color-mix(in srgb, var(--tool) 6%, hsl(var(--background)));
+.chart-grid thead tr:first-child > * {
+  border-top: 0;
+}
+.chart-grid tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.chart-grid-head > * {
+  background: color-mix(in srgb, var(--tool) 6%, hsl(var(--card)));
+}
+.chart-grid-roles > * {
+  background: color-mix(in srgb, var(--tool) 3%, hsl(var(--card)));
+  padding: 3px 8px !important;
+  border-bottom-width: 1.5px !important;
+}
+.chart-role {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 17px;
+  color: var(--tool);
+  background: var(--tool-soft);
+}
+.chart-role--label {
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+}
+.chart-grid .chart-grid-num {
+  width: 2rem;
+  min-width: 2rem;
+  text-align: center;
+  font-size: 11px;
+  color: hsl(var(--muted-foreground) / 0.7);
+  background: hsl(var(--muted) / 0.35);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
 }
 .chart-grid-label {
-  background: hsl(var(--muted) / 0.45) !important;
+  background: hsl(var(--muted) / 0.3);
 }
-.chart-grid td:focus-within {
+.chart-grid td:focus-within,
+.chart-grid th:focus-within {
   box-shadow: inset 0 0 0 2px var(--tool);
   background: hsl(var(--background));
+}
+.chart-grid .chart-grid-bad {
+  background: rgb(244 63 94 / 0.08);
+  box-shadow: inset 0 0 0 1.5px rgb(244 63 94 / 0.55);
+}
+.chart-grid :is(td, th).chart-grid-gutter {
+  border: 0;
+  background: transparent;
+  width: 1.75rem;
 }
 .chart-grid-x {
   display: inline-flex;
@@ -935,11 +1014,11 @@ body.is-resizing * {
   background: hsl(var(--accent));
   color: hsl(var(--foreground));
 }
-.chart-grid-head .chart-grid-x {
+.chart-grid-colx {
   opacity: 0;
 }
-.chart-grid-head td:hover .chart-grid-x,
-.chart-grid-head .chart-grid-x:focus-visible {
+.chart-grid-head th:hover .chart-grid-colx,
+.chart-grid-colx:focus-visible {
   opacity: 1;
 }
 .chart-grid-add {
@@ -958,6 +1037,62 @@ body.is-resizing * {
   border-color: var(--tool);
   background: var(--tool-soft);
   color: var(--tool);
+}
+.chart-kbd {
+  display: inline-block;
+  border-radius: 4px;
+  border: 1px solid hsl(var(--border));
+  border-bottom-width: 2px;
+  padding: 0 4px;
+  font-family: inherit;
+  font-size: 10.5px;
+  line-height: 15px;
+  color: hsl(var(--foreground) / 0.75);
+  background: hsl(var(--background));
+}
+
+/* Editor: a heading-sized title field, numbered steps, label | control option rows. */
+.chart-title-input {
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 0 0.6rem;
+  margin-left: -0.6rem;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  outline: none;
+  transition: all 140ms ease;
+}
+.chart-title-input::placeholder {
+  color: hsl(var(--muted-foreground) / 0.4);
+}
+.chart-title-input:hover {
+  border-color: hsl(var(--border));
+}
+.chart-title-input:focus {
+  border-color: var(--tool);
+  box-shadow: 0 0 0 3px var(--tool-soft);
+  background: hsl(var(--background));
+}
+.chart-step-n {
+  display: inline-flex;
+  height: 1.25rem;
+  width: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  background: var(--tool);
+}
+.chart-opt-row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
 }
 
 /* Buttons: one filled primary, chips, and a segmented export group. */

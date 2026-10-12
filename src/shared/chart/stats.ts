@@ -1,8 +1,11 @@
 // Statistics for the 통계·그래프 tools. Pure functions, no dependencies: the renderer
 // shows the results live and the main process re-computes them for PDF/PPTX export.
 
-/** "1,234", " 12.5% ", "-3" → number; blanks and junk → NaN. */
+import { HAS_KOREAN_UNIT, parseKoreanAmount } from '../koreanAmount'
+
+/** "1,234", " 12.5% ", "-3", "1500만" → number; blanks and junk → NaN. */
 export function parseNum(raw: string | undefined): number {
+  if (raw && HAS_KOREAN_UNIT.test(raw)) return parseKoreanAmount(raw)
   const s = (raw ?? '').replace(/[,\s원%₩$]/g, '')
   if (!s || !/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s)) return NaN
   return Number(s)

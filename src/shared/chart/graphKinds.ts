@@ -9,7 +9,7 @@ export const bar: KindDef = {
   section: 'graph',
   name: '막대 그래프',
   blurb: '항목별 크기 비교 — 묶음·누적·100%, 가로/세로',
-  grid: { head: ['항목', '값'], rows: 5, labelCol: true, growCols: true, growRows: true, maxCols: 9, hint: '열을 추가하면 여러 계열을 비교합니다' },
+  grid: { roles: ['항목', '계열'], head: ['항목', '값'], rows: 5, labelCol: true, growCols: true, growRows: true, maxCols: 9, hint: '열을 추가하면 여러 계열을 비교합니다' },
   options: [
     { key: 'dir', label: '방향', default: 'v', choices: [['v', '세로'], ['h', '가로']] },
     { key: 'mode', label: '배치', default: 'group', choices: [['group', '묶음'], ['stack', '누적'], ['percent', '100%']] },
@@ -46,7 +46,7 @@ export const line: KindDef = {
   section: 'graph',
   name: '선 그래프',
   blurb: '시간에 따른 변화와 추세 — 여러 계열, 영역',
-  grid: { head: ['기간', '값'], rows: 6, labelCol: true, growCols: true, growRows: true, maxCols: 9, hint: '왼쪽 열에 기간(월, 주, 연도)을 적으세요' },
+  grid: { roles: ['기간', '계열'], head: ['기간', '값'], rows: 6, labelCol: true, growCols: true, growRows: true, maxCols: 9, hint: '왼쪽 열에 기간(월, 주, 연도)을 적으세요' },
   options: [
     { key: 'area', label: '영역 채우기', default: 'off', choices: [['off', '선만'], ['on', '영역']] },
     { key: 'zero', label: '세로축', default: 'auto', choices: [['auto', '자동'], ['zero', '0부터']] },
@@ -87,7 +87,7 @@ export const pie: KindDef = {
   section: 'graph',
   name: '원형·도넛 그래프',
   blurb: '전체에서 각 항목이 차지하는 비중',
-  grid: { head: ['항목', '값'], rows: 5, labelCol: true, growCols: false, growRows: true, hint: '8개를 넘는 항목은 ‘기타’로 묶습니다' },
+  grid: { roles: ['항목', '값'], head: ['항목', '값'], rows: 5, labelCol: true, growCols: false, growRows: true, hint: '8개를 넘는 항목은 ‘기타’로 묶습니다' },
   options: [{ key: 'donut', label: '모양', default: 'on', choices: [['on', '도넛'], ['off', '원형']] }, UNIT],
   sample: { title: '비용 구성', grid: [['항목', '금액'], ['인건비', '5400'], ['임차료', '1800'], ['마케팅', '1250'], ['IT·도구', '640'], ['기타', '410']], opts: { unit: '만원' } },
   compute(doc, th) {
@@ -115,7 +115,7 @@ export const scatter: KindDef = {
   section: 'graph',
   name: '산점도·회귀선',
   blurb: '두 값의 관계, 회귀식과 예측값',
-  grid: { head: ['이름', 'X', 'Y'], rows: 8, labelCol: true, growCols: false, growRows: true, hint: '이름은 비워도 됩니다. 머리글에 X·Y의 이름을 적으세요' },
+  grid: { roles: ['이름', 'X 값', 'Y 값'], head: ['이름', 'X', 'Y'], rows: 8, labelCol: true, growCols: false, growRows: true, hint: '이름은 비워도 됩니다. 머리글에 X·Y의 이름을 적으세요' },
   options: [
     { key: 'fit', label: '회귀선', default: 'band', choices: [['band', '선+예측구간'], ['line', '선만'], ['off', '없음']] },
     { key: 'at', label: 'X가 이 값일 때 Y 예측', default: '', placeholder: '예: 120' }
@@ -160,7 +160,7 @@ export const histogram: KindDef = {
   section: 'graph',
   name: '히스토그램',
   blurb: '값이 어디에 몰려 있는지 — 분포와 정규곡선',
-  grid: { head: ['값'], rows: 12, labelCol: false, growCols: false, growRows: true, hint: '엑셀 한 열을 그대로 붙여 넣으세요' },
+  grid: { roles: ['값'], head: ['값'], rows: 12, labelCol: false, growCols: false, growRows: true, hint: '엑셀 한 열을 그대로 붙여 넣으세요' },
   options: [
     { key: 'bins', label: '구간 수', default: '', placeholder: '자동', suffix: '개' },
     { key: 'curve', label: '정규분포 곡선', default: 'on', choices: [['on', '표시'], ['off', '숨김']] }
@@ -198,7 +198,7 @@ export const box: KindDef = {
   section: 'graph',
   name: '상자 수염 그림',
   blurb: '그룹별 분포·중앙값·이상치 비교',
-  grid: { head: ['그룹 A', '그룹 B', '그룹 C'], rows: 10, labelCol: false, growCols: true, growRows: true, maxCols: 8, hint: '열마다 한 그룹의 값을 세로로 입력하세요' },
+  grid: { roles: ['그룹'], head: ['그룹 A', '그룹 B', '그룹 C'], rows: 10, labelCol: false, growCols: true, growRows: true, maxCols: 8, hint: '열마다 한 그룹의 값을 세로로 입력하세요' },
   options: [UNIT],
   sample: { title: '지점별 일 매출', grid: [['강남', '홍대', '판교'], ['320', '280', '410'], ['350', '260', '390'], ['290', '310', '450'], ['410', '240', '420'], ['330', '300', '380'], ['360', '270', '640'], ['300', '290', '400'], ['340', '250', '430']], opts: { unit: '만원' } },
   compute(doc, th) {
@@ -227,7 +227,7 @@ export const pareto: KindDef = {
   section: 'graph',
   name: '파레토 차트',
   blurb: '핵심 소수 찾기 — 80%를 만드는 원인',
-  grid: { head: ['원인', '건수'], rows: 6, labelCol: true, growCols: false, growRows: true, hint: '순서는 상관없습니다. 큰 순서로 정렬해 그립니다' },
+  grid: { roles: ['원인', '건수'], head: ['원인', '건수'], rows: 6, labelCol: true, growCols: false, growRows: true, hint: '순서는 상관없습니다. 큰 순서로 정렬해 그립니다' },
   options: [],
   sample: { title: '고객 불만 원인', grid: [['원인', '건수'], ['배송 지연', '142'], ['파손', '61'], ['오배송', '38'], ['응대 불친절', '22'], ['환불 지연', '17'], ['기타', '9']] },
   compute(doc, th) {
@@ -253,7 +253,7 @@ export const waterfall: KindDef = {
   section: 'graph',
   name: '폭포 차트',
   blurb: '시작값에서 증감을 거쳐 최종값까지',
-  grid: { head: ['항목', '금액'], rows: 6, labelCol: true, growCols: false, growRows: true, hint: '첫 행은 시작값, 그 아래는 증가(+)·감소(−)를 적으세요' },
+  grid: { roles: ['항목', '시작값·증감'], head: ['항목', '금액'], rows: 6, labelCol: true, growCols: false, growRows: true, hint: '첫 행은 시작값, 그 아래는 증가(+)·감소(−)를 적으세요' },
   options: [{ key: 'total', label: '마지막 막대 이름', default: '최종', placeholder: '최종', text: true }, UNIT],
   sample: { title: '영업이익 변동 요인', grid: [['항목', '금액'], ['전년 영업이익', '1200'], ['매출 증가', '480'], ['원가 상승', '-260'], ['인건비', '-140'], ['환율 효과', '90'], ['일회성 비용', '-70']], opts: { unit: '백만원', total: '올해 영업이익' } },
   compute(doc, th) {
@@ -283,7 +283,7 @@ export const radar: KindDef = {
   section: 'graph',
   name: '레이더 차트',
   blurb: '여러 항목의 균형 — 역량·평가 비교',
-  grid: { head: ['항목', '대상 1'], rows: 6, labelCol: true, growCols: true, growRows: true, maxCols: 4, hint: '항목 3개 이상, 비교 대상은 3개까지' },
+  grid: { roles: ['평가 항목', '대상'], head: ['항목', '대상 1'], rows: 6, labelCol: true, growCols: true, growRows: true, maxCols: 4, hint: '항목 3개 이상, 비교 대상은 3개까지' },
   options: [],
   sample: { title: '후보 솔루션 평가', grid: [['평가 항목', '솔루션 A', '솔루션 B'], ['기능', '8', '6'], ['가격', '5', '9'], ['보안', '9', '7'], ['확장성', '7', '6'], ['지원', '6', '8'], ['사용성', '8', '7']] },
   compute(doc, th) {
@@ -313,7 +313,7 @@ export const heatmap: KindDef = {
   section: 'graph',
   name: '히트맵',
   blurb: '표의 크기를 색으로 — 요일×시간, 지역×월',
-  grid: { head: ['', '열 1', '열 2', '열 3', '열 4'], rows: 4, labelCol: true, growCols: true, growRows: true, maxCols: 16, hint: '행·열 이름을 적고 칸에 값을 채우세요' },
+  grid: { roles: ['행 이름', '값'], head: ['', '열 1', '열 2', '열 3', '열 4'], rows: 4, labelCol: true, growCols: true, growRows: true, maxCols: 16, hint: '행·열 이름을 적고 칸에 값을 채우세요' },
   options: [],
   sample: { title: '요일·시간대별 문의 수', grid: [['', '09시', '11시', '13시', '15시', '17시'], ['월', '42', '58', '31', '47', '36'], ['화', '35', '49', '28', '41', '30'], ['수', '30', '44', '26', '38', '29'], ['목', '33', '46', '29', '40', '33'], ['금', '28', '39', '24', '35', '45']] },
   compute(doc, th) {
@@ -347,7 +347,7 @@ export const bullet: KindDef = {
   section: 'graph',
   name: '목표 대비 실적',
   blurb: 'KPI 달성률 — 항목별 실적과 목표선',
-  grid: { head: ['항목', '실적', '목표'], rows: 4, labelCol: true, growCols: false, growRows: true, hint: '항목마다 실적과 목표를 입력하세요' },
+  grid: { roles: ['항목', '실적', '목표'], head: ['항목', '실적', '목표'], rows: 4, labelCol: true, growCols: false, growRows: true, hint: '항목마다 실적과 목표를 입력하세요' },
   options: [UNIT],
   sample: { title: '3분기 팀별 매출 목표 달성', grid: [['팀', '실적', '목표'], ['영업 1팀', '4.6', '4.2'], ['영업 2팀', '3.1', '3.8'], ['파트너', '2.4', '2.5'], ['온라인', '5.3', '4.5']], opts: { unit: '억원' } },
   compute(doc, th) {
@@ -377,7 +377,7 @@ export const treemap: KindDef = {
   section: 'graph',
   name: '트리맵',
   blurb: '많은 항목의 비중을 면적으로',
-  grid: { head: ['항목', '값'], rows: 8, labelCol: true, growCols: false, growRows: true, hint: '항목이 많을 때 원형 그래프보다 읽기 쉽습니다' },
+  grid: { roles: ['항목', '값'], head: ['항목', '값'], rows: 8, labelCol: true, growCols: false, growRows: true, hint: '항목이 많을 때 원형 그래프보다 읽기 쉽습니다' },
   options: [UNIT],
   sample: { title: '제품별 매출 비중', grid: [['제품', '매출'], ['프로 요금제', '4200'], ['베이직 요금제', '2600'], ['엔터프라이즈', '3900'], ['애드온 저장소', '820'], ['교육 서비스', '640'], ['컨설팅', '1100'], ['하드웨어', '450'], ['기타', '230']], opts: { unit: '만원' } },
   compute(doc, th) {
@@ -403,7 +403,7 @@ export const dumbbell: KindDef = {
   section: 'graph',
   name: '전후 비교',
   blurb: '항목별 이전 → 이후 변화 (덤벨 차트)',
-  grid: { head: ['항목', '이전', '이후'], rows: 5, labelCol: true, growCols: false, growRows: true, hint: '머리글에 비교 시점(예: 2025, 2026)을 적으세요' },
+  grid: { roles: ['항목', '이전', '이후'], head: ['항목', '이전', '이후'], rows: 5, labelCol: true, growCols: false, growRows: true, hint: '머리글에 비교 시점(예: 2025, 2026)을 적으세요' },
   options: [UNIT],
   sample: { title: '개선 전후 처리 시간', grid: [['업무', '도입 전', '도입 후'], ['견적 작성', '45', '18'], ['계약 검토', '120', '75'], ['정산', '90', '40'], ['보고서', '60', '35'], ['온보딩', '240', '150']], opts: { unit: '분' } },
   compute(doc, th) {

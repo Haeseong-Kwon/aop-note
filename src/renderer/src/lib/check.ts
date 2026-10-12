@@ -754,3 +754,22 @@ import { extractCharts, restoreChartBlocks } from './memoMarkdown'
   assert.deepEqual(blocks[0], { type: 'chart', props: { doc: '{"kind":"bar"}' } })
   console.log('memoMarkdown charts: all assertions passed')
 }
+
+// --- toolMath: Korean unit amounts ("3억 5천만") in number fields -----------------
+{
+  const tm = await import('./toolMath')
+  assert.equal(tm.parseKoreanAmount('3억 5천만'), 350_000_000)
+  assert.equal(tm.parseKoreanAmount('1500만'), 15_000_000)
+  assert.equal(tm.parseKoreanAmount('2.5억'), 250_000_000)
+  assert.equal(tm.parseKoreanAmount('1조 2000억'), 1_200_000_000_000)
+  assert.equal(tm.parseKoreanAmount('5만 3,000'), 53_000)
+  assert.equal(tm.parseKoreanAmount('-3천'), -3000)
+  assert.ok(Number.isNaN(tm.parseKoreanAmount('억')))
+  assert.ok(Number.isNaN(tm.parseKoreanAmount('abc')))
+  assert.equal(tm.num('3억'), 300_000_000) // fields compute while still typed in units
+  assert.equal(tm.num('1,234'), 1234)
+  assert.equal(tm.groupDigits('3억 5천'), '3억 5천') // left alone until the field is left
+  assert.equal(tm.normalizeAmount('3억 5천만'), '350,000,000')
+  assert.equal(tm.normalizeAmount('12345'), '12,345')
+  console.log('toolMath (korean units): all assertions passed')
+}

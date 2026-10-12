@@ -150,3 +150,20 @@ test('floating tools button: list opens from it and runs a tool in a panel', asy
   await expect(fab).toBeHidden()
 })
 
+
+test('tools: money fields take 만·억 units and Enter moves to the next field', async ({ page }) => {
+  await createDesk(page, '회사')
+  await page.locator('aside nav').getByRole('button', { name: '도구' }).click()
+  const main = page.locator('main')
+  await main.getByRole('navigation', { name: '도구 목록' }).getByRole('button', { name: '대출 상환', exact: true }).click()
+  const amount = main.getByLabel('대출 금액')
+  await amount.fill('3억 5천만')
+  await expect(main.getByText('3억 5,000만원')).toBeVisible() // computes while still typed in units
+  await amount.press('Enter')
+  await expect(main.getByLabel('연 이율')).toBeFocused()
+  await expect(amount).toHaveValue('350,000,000') // resolved once left
+  await page.keyboard.type('4.5')
+  await page.keyboard.press('Enter')
+  await page.keyboard.type('5')
+  await expect(main.locator('output').first()).toContainText('6,525,') // 원리금균등 monthly payment
+})

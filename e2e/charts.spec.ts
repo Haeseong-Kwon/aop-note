@@ -51,7 +51,7 @@ test('통계·그래프: tool draws a chart, pastes from Excel, saves as a live 
   // Every kind renders its sample.
   for (const name of ['선 그래프', '원형·도넛 그래프', '산점도·회귀선', '히스토그램', '상자 수염 그림', '파레토 차트', '폭포 차트', '레이더 차트', '히트맵', '목표 대비 실적', '트리맵', '전후 비교', '기술통계 요약', '상관 행렬', '두 집단 평균 비교 (t-검정)', '분산분석 (ANOVA)', 'A/B 테스트 유의성', '카이제곱 독립성 검정', '추세·예측', '표본 크기 계산', '정규분포 확률']) {
     await rail.getByRole('button', { name, exact: true }).click()
-    await main.getByRole('button', { name: '예시 데이터' }).click()
+    await main.getByRole('button', { name: '예시', exact: true }).click()
     await expect(main.locator('.chart-svg svg'), name).toBeVisible()
     await expect(main.locator('.chart-insight'), name).not.toBeEmpty()
     await shot(page, `chart-${name.replace(/[^\w가-힣]/g, '')}`)
@@ -98,7 +98,7 @@ test('통계·그래프: "/" menu inserts a chart block that opens in its editor
   await page.locator('aside nav').getByRole('button', { name: '도구' }).click()
   const main = page.locator('main')
   await main.getByRole('navigation', { name: '도구 목록' }).getByRole('button', { name: '파레토 차트', exact: true }).click()
-  await main.getByRole('button', { name: '예시 데이터' }).click()
+  await main.getByRole('button', { name: '예시', exact: true }).click()
   await main.getByRole('button', { name: '메모로 저장' }).click()
   await expect(page.locator('.bn-chart .chart-svg svg')).toBeVisible()
 
@@ -110,7 +110,7 @@ test('통계·그래프: "/" menu inserts a chart block that opens in its editor
   const charts = page.locator('.bn-chart')
   await expect(charts).toHaveCount(2)
   await expect(charts.nth(1).getByText('값을 다섯 개 이상 입력하세요')).toBeVisible() // empty → editor open
-  await charts.nth(1).getByRole('button', { name: '예시 데이터' }).click()
+  await charts.nth(1).getByRole('button', { name: '예시', exact: true }).click()
   await expect(charts.nth(1).locator('.chart-svg svg').first()).toBeVisible()
   await shot(page, 'chart-slash')
   await expect.poll(async () => ((await tasks(page))[0]?.note.match(/```aop-chart/g) ?? []).length, { timeout: 8_000 }).toBe(2)

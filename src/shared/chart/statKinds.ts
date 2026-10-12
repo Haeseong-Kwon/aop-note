@@ -28,7 +28,7 @@ export const describe: KindDef = {
   section: 'stats',
   name: '기술통계 요약',
   blurb: '평균, 표준편차, 사분위수, 이상치를 한 번에',
-  grid: { head: ['데이터 1'], rows: 12, labelCol: false, growCols: true, growRows: true, maxCols: 8, hint: '열마다 한 변수 — 엑셀 범위를 그대로 붙여 넣으세요' },
+  grid: { roles: ['변수'], head: ['데이터 1'], rows: 12, labelCol: false, growCols: true, growRows: true, maxCols: 8, hint: '열마다 한 변수 — 엑셀 범위를 그대로 붙여 넣으세요' },
   options: [],
   sample: { title: '주간 판매량 요약', grid: [['A 매장', 'B 매장'], ['132', '98'], ['118', '105'], ['141', '112'], ['127', '87'], ['155', '120'], ['122', '95'], ['138', '101'], ['210', '108'], ['129', '92'], ['134', '117']] },
   compute(doc, th) {
@@ -66,7 +66,7 @@ export const corr: KindDef = {
   section: 'stats',
   name: '상관 행렬',
   blurb: '여러 변수 사이의 상관계수와 유의성',
-  grid: { head: ['변수 1', '변수 2', '변수 3'], rows: 10, labelCol: false, growCols: true, growRows: true, maxCols: 10, hint: '열마다 한 변수, 같은 행은 같은 관측' },
+  grid: { roles: ['변수'], head: ['변수 1', '변수 2', '변수 3'], rows: 10, labelCol: false, growCols: true, growRows: true, maxCols: 10, hint: '열마다 한 변수, 같은 행은 같은 관측' },
   options: [{ key: 'method', label: '방법', default: 'pearson', choices: [['pearson', '피어슨'], ['spearman', '스피어먼']] }],
   sample: { title: '마케팅 지표 상관관계', grid: [['광고비', '방문자', '전환수', '이탈률'], ['120', '5200', '130', '48'], ['150', '5600', '118', '51'], ['90', '4900', '125', '46'], ['200', '7100', '170', '47'], ['170', '6000', '142', '44'], ['230', '7400', '160', '49'], ['110', '5800', '150', '45'], ['260', '8100', '175', '43']] },
   compute(doc, th) {
@@ -101,7 +101,7 @@ export const ttest: KindDef = {
   section: 'stats',
   name: '두 집단 평균 비교 (t-검정)',
   blurb: '두 그룹 평균 차이가 우연인지 판정',
-  grid: { head: ['A 집단', 'B 집단'], rows: 10, labelCol: false, growCols: false, growRows: true, hint: '두 열에 각 집단의 값을 입력하세요. 대응 표본은 같은 행이 같은 대상' },
+  grid: { roles: ['A 집단', 'B 집단'], head: ['A 집단', 'B 집단'], rows: 10, labelCol: false, growCols: false, growRows: true, hint: '두 열에 각 집단의 값을 입력하세요. 대응 표본은 같은 행이 같은 대상' },
   options: [{ key: 'paired', label: '표본', default: 'off', choices: [['off', '독립 (Welch)'], ['on', '대응 (전후)']] }, ALPHA],
   sample: { title: '새 온보딩 전후 만족도', grid: [['기존 방식', '새 방식'], ['72', '81'], ['68', '79'], ['75', '77'], ['70', '85'], ['66', '74'], ['74', '83'], ['69', '78'], ['71', '80']] },
   compute(doc, th) {
@@ -166,7 +166,7 @@ export const anova: KindDef = {
   section: 'stats',
   name: '분산분석 (ANOVA)',
   blurb: '세 그룹 이상의 평균 차이 검정',
-  grid: { head: ['그룹 1', '그룹 2', '그룹 3'], rows: 8, labelCol: false, growCols: true, growRows: true, maxCols: 10, hint: '열마다 한 그룹의 값을 입력하세요' },
+  grid: { roles: ['그룹'], head: ['그룹 1', '그룹 2', '그룹 3'], rows: 8, labelCol: false, growCols: true, growRows: true, maxCols: 10, hint: '열마다 한 그룹의 값을 입력하세요' },
   options: [ALPHA],
   sample: { title: '광고 소재별 클릭률(%)', grid: [['소재 A', '소재 B', '소재 C'], ['2.1', '2.8', '1.9'], ['2.4', '3.1', '2.0'], ['1.9', '2.6', '2.2'], ['2.2', '3.3', '1.7'], ['2.0', '2.9', '2.1'], ['2.5', '3.0', '1.8']] },
   compute(doc, th) {
@@ -199,7 +199,7 @@ export const abtest: KindDef = {
   section: 'stats',
   name: 'A/B 테스트 유의성',
   blurb: '전환율 차이, 상승률, 필요한 표본 수',
-  grid: { head: ['', '방문자', '전환'], rows: 2, labelCol: true, growCols: false, growRows: false, rowLabels: ['A (기존)', 'B (변경)'], hint: '각 안의 방문자 수와 전환 수를 입력하세요' },
+  grid: { roles: ['안', '방문자 수', '전환 수'], head: ['', '방문자', '전환'], rows: 2, labelCol: true, growCols: false, growRows: false, rowLabels: ['A (기존)', 'B (변경)'], hint: '각 안의 방문자 수와 전환 수를 입력하세요' },
   options: [ALPHA],
   sample: { title: '결제 버튼 문구 A/B 테스트', grid: [['', '방문자', '전환'], ['A (기존)', '4820', '231'], ['B (변경)', '4790', '289']] },
   compute(doc, th) {
@@ -239,7 +239,7 @@ export const chisq: KindDef = {
   section: 'stats',
   name: '카이제곱 독립성 검정',
   blurb: '교차표 — 두 범주가 서로 관련 있는지',
-  grid: { head: ['', '열 1', '열 2'], rows: 2, labelCol: true, growCols: true, growRows: true, maxCols: 10, hint: '행·열 범주 이름과 각 칸의 빈도(건수)를 입력하세요' },
+  grid: { roles: ['행 범주', '빈도'], head: ['', '열 1', '열 2'], rows: 2, labelCol: true, growCols: true, growRows: true, maxCols: 10, hint: '행·열 범주 이름과 각 칸의 빈도(건수)를 입력하세요' },
   options: [ALPHA],
   sample: { title: '연령대별 선호 요금제', grid: [['', '베이직', '프로', '팀'], ['20대', '86', '42', '12'], ['30대', '64', '71', '35'], ['40대 이상', '38', '55', '48']] },
   compute(doc, th) {
@@ -275,7 +275,7 @@ export const forecast: KindDef = {
   section: 'stats',
   name: '추세·예측',
   blurb: '이동평균과 선형 추세로 다음 기간 예측',
-  grid: { head: ['기간', '값'], rows: 8, labelCol: true, growCols: false, growRows: true, hint: '시간 순서대로 입력하세요 (최소 4개 기간)' },
+  grid: { roles: ['기간', '값'], head: ['기간', '값'], rows: 8, labelCol: true, growCols: false, growRows: true, hint: '시간 순서대로 입력하세요 (최소 4개 기간)' },
   options: [
     { key: 'ahead', label: '예측 기간', default: '3', suffix: '기간' },
     { key: 'ma', label: '이동평균', default: '3', suffix: '기간' },

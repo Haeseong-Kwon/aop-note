@@ -200,6 +200,18 @@
       "type": "file"
     },
     {
+      "path": "src/renderer/src/components/chart/DataGrid.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1791772986843,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/chart/ChartEditor.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1791772987187,
+      "type": "file"
+    },
+    {
       "path": "src/main/index.ts",
       "accessCount": 2,
       "lastAccessed": 1791593932632,
@@ -353,18 +365,6 @@
       "path": "src/renderer/src/components/chart/ChartView.tsx",
       "accessCount": 1,
       "lastAccessed": 1791729494149,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/chart/DataGrid.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791729532334,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/chart/ChartEditor.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791729573863,
       "type": "file"
     },
     {
