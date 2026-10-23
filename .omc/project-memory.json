@@ -199,6 +199,12 @@
       "accessCount": 1,
       "lastAccessed": 1792759267339,
       "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/ScrollJump.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1792779843043,
+      "type": "file"
     }
   ],
   "userDirectives": []

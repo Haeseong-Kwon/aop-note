@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"CLEAN_PATH=$(echo \\\"$PATH\\\" | tr ':' '\\\\n' | grep -v \\\"/hooks/shims\\\" | paste -sd: -) && PATH=\\\"$CLEAN_PATH\\\" npm run install:mac 2>&1 | tail -2; npx asar extract-file /Applications/aop-no...",
+  "error": "Exit code 1\n\n완료: /Applications/aop-note.app 설치 및 실행됨. Launchpad/응용 프로그램에서 'aop-note' 로 언제든 실행하세요.\n/Users/haeseong/Desktop/Products/aop-note/node_modules/@electron/asar/lib/filesystem.js:187\n            throw new Error(`\"${p}\" was not found in this archive`);\n            ^\n\nError: \"/out/renderer/assets/index-B42S90Ki.js\" was not found in this archive\n    at Filesystem.getFile (/Users/haeseong/Desktop/Products/aop-note/node_modules/@electron/asar/lib/filesystem.js:187:19)\n    at Object.extractFile...",
+  "timestamp": "2026-10-23T18:31:51.288Z",
+  "retry_count": 1
+}

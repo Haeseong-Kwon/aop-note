@@ -11,6 +11,7 @@ import {
   type DefaultReactSuggestionItem
 } from '@blocknote/react'
 import { AiPanel } from './ai/AiPanel'
+import { ScrollJump } from './ScrollJump'
 import type { AiAction } from '@shared/types'
 import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu, SuggestionMenu } from '@blocknote/core/extensions'
 import { Lightbulb, Bookmark, ListTree, Link2, Table2, RefreshCcw, Sparkles } from 'lucide-react'
@@ -411,6 +412,7 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
           <SuggestionMenuController triggerCharacter="[" minQueryLength={1} getItems={getLinkItems} />
         </BlockNoteView>
         {footer}
+        <ScrollJump />
         {ai &&
           createPortal(
             <AiPanel

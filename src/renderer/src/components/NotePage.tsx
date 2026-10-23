@@ -10,6 +10,7 @@ import { NotePageMenu, PageIconPicker } from './memo/NotePageMenu'
 import { useMemoPersist } from '@/hooks/useMemoPersist'
 import { cn } from '@/lib/utils'
 import { DueField } from './DueField'
+import { ScrollJump } from './ScrollJump'
 import { parsePageMeta, type PageMeta } from '@shared/pageMeta'
 import { ancestorsOf } from '@shared/tree'
 import type { Attachment, Category, Task, TaskStatus } from '@shared/types'
@@ -240,6 +241,8 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
           footer={<Backlinks taskId={task.id} className={cn('mx-auto mb-12', column)} />}
           className={cn('pt-2', meta.fullWidth && 'bn-memo--full', fontClass)}
         />
+        {/* Sits above the floating tools button that shares this bottom-right corner. */}
+        <ScrollJump className="bottom-16" />
       </div>
 
       {picker === 'icon' && (
