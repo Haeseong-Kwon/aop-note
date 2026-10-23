@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "jobId": "09b8001c-146f-43d9-9458-65b9fbbfb495",
+  "sessionId": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+  "scopeKey": "688d3012ea659c02f9b77bc2f9e5f38f6c25bae77f45adfdc18e0406f7a91cd6",
+  "revision": 57,
+  "createdAt": "2026-10-14T08:36:58.957Z",
+  "updatedAt": "2026-10-14T08:37:30.851Z",
+  "producerGraceExpiresAt": "2026-10-14T08:37:28.957Z",
+  "bestEffortDeadlineAt": "2026-10-14T08:38:19.957Z",
+  "producers": {
+    "core": {
+      "state": "sealed",
+      "intentKey": "682edf526a9330df9f2edd6566ffb25035b3aa303591b22572fc7b249d006222",
+      "payloadDigest": "682edf526a9330df9f2edd6566ffb25035b3aa303591b22572fc7b249d006222",
+      "sealedAt": "2026-10-14T08:37:29.897Z",
+      "sealedBy": "recovery"
+    },
+    "wiki": {
+      "state": "no-op",
+      "sealedAt": "2026-10-14T08:36:58.972Z",
+      "sealedBy": "wiki-producer"
+    }
+  },
+  "actions": {
+    "foreground-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "589115c367eecfde5df863b18bd53c24c4946841e99a88c08149e12016cd68f5",
+      "payload": {
+        "transcriptPath": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+        "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+        "reason": "other",
+        "input": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "transcript_path": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+          "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+          "scratchpad_dir": "/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6/scratchpad",
+          "prompt_id": "e5163ca7-7ff3-4b30-831e-3ba3bd154001",
+          "hook_event_name": "SessionEnd",
+          "reason": "other"
+        },
+        "initialTeamNames": [],
+        "openClawRouting": {},
+        "metrics": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "ended_at": "2026-10-14T08:37:29.161Z",
+          "reason": "other",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        }
+      },
+      "budgetMs": 9000,
+      "claimedAt": "2026-10-14T08:37:29.017Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "f5f6b7c7-ab21-4092-a915-c9a226e47965",
+        "phase": "terminal",
+        "deadlineAt": "2026-10-14T08:37:38.959Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-10-14T08:37:29.885Z"
+    },
+    "wiki-capture": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 0,
+      "idempotencyKey": "0b465b38d90f1d8ca430210396ca369936f51a4fb222dd19bfdfa5568eb4f6db",
+      "payload": {
+        "transcriptPath": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+        "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+        "reason": "other",
+        "input": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "transcript_path": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+          "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+          "scratchpad_dir": "/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6/scratchpad",
+          "prompt_id": "e5163ca7-7ff3-4b30-831e-3ba3bd154001",
+          "hook_event_name": "SessionEnd",
+          "reason": "other"
+        },
+        "initialTeamNames": [],
+        "openClawRouting": {}
+      },
+      "budgetMs": 9000,
+      "completedAt": "2026-10-14T08:36:58.972Z"
+    },
+    "team-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "b49f734e6f41d78abf0042e6d36af465d8b448f49978926e21bf17d03efc1b59",
+      "payload": {
+        "transcriptPath": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+        "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+        "reason": "other",
+        "input": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "transcript_path": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+          "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+          "scratchpad_dir": "/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6/scratchpad",
+          "prompt_id": "e5163ca7-7ff3-4b30-831e-3ba3bd154001",
+          "hook_event_name": "SessionEnd",
+          "reason": "other"
+        },
+        "initialTeamNames": [],
+        "openClawRouting": {},
+        "metrics": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "ended_at": "2026-10-14T08:37:29.161Z",
+          "reason": "other",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        }
+      },
+      "budgetMs": 9000,
+      "claimedAt": "2026-10-14T08:37:29.924Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "4184a557-0505-4999-86d8-623b33f632c2",
+        "phase": "terminal",
+        "deadlineAt": "2026-10-14T08:37:38.959Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-10-14T08:37:30.072Z"
+    },
+    "python-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "a7024f50dcadca816f20166876eae1cfe08046952de718c064bfef2875696cd8",
+      "payload": {
+        "transcriptPath": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+        "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+        "reason": "other",
+        "input": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "transcript_path": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+          "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+          "scratchpad_dir": "/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6/scratchpad",
+          "prompt_id": "e5163ca7-7ff3-4b30-831e-3ba3bd154001",
+          "hook_event_name": "SessionEnd",
+          "reason": "other"
+        },
+        "initialTeamNames": [],
+        "openClawRouting": {},
+        "metrics": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "ended_at": "2026-10-14T08:37:29.161Z",
+          "reason": "other",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        }
+      },
+      "budgetMs": 9000,
+      "claimedAt": "2026-10-14T08:37:30.092Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "22177fdd-1cf3-4734-a446-fa1de8217dd7",
+        "phase": "terminal",
+        "deadlineAt": "2026-10-14T08:37:38.959Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-10-14T08:37:30.292Z"
+    },
+    "reply-cleanup": {
+      "class": "required",
+      "phase": "deferred-required",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "5753a03329513482a79f83f5f22ac88178d2a3287abcf3b0f6ce5eedf87b9ad3",
+      "payload": {
+        "transcriptPath": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+        "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+        "reason": "other",
+        "input": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "transcript_path": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+          "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+          "scratchpad_dir": "/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6/scratchpad",
+          "prompt_id": "e5163ca7-7ff3-4b30-831e-3ba3bd154001",
+          "hook_event_name": "SessionEnd",
+          "reason": "other"
+        },
+        "initialTeamNames": [],
+        "openClawRouting": {}
+      },
+      "budgetMs": 9000,
+      "claimedAt": "2026-10-14T08:37:30.311Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "4257e826-e557-489e-a561-73ac72c41bb3",
+        "phase": "terminal",
+        "deadlineAt": "2026-10-14T08:37:38.959Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-10-14T08:37:30.428Z"
+    },
+    "callback": {
+      "class": "best-effort",
+      "phase": "deferred-best-effort",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "b1eadb9b97bd34efd4e81e617758fef5987e06f91dde6fc60d144d7e2d456804",
+      "payload": {
+        "transcriptPath": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+        "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+        "reason": "other",
+        "input": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "transcript_path": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+          "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+          "scratchpad_dir": "/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6/scratchpad",
+          "prompt_id": "e5163ca7-7ff3-4b30-831e-3ba3bd154001",
+          "hook_event_name": "SessionEnd",
+          "reason": "other"
+        },
+        "initialTeamNames": [],
+        "openClawRouting": {},
+        "metrics": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "ended_at": "2026-10-14T08:37:29.161Z",
+          "reason": "other",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        }
+      },
+      "budgetMs": 2000,
+      "claimedAt": "2026-10-14T08:37:30.455Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "51cb9e76-aaed-4aca-9ce7-9d4a1fa89624",
+        "phase": "terminal",
+        "deadlineAt": "2026-10-14T08:37:38.959Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-10-14T08:37:30.571Z"
+    },
+    "notification": {
+      "class": "best-effort",
+      "phase": "deferred-best-effort",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "97042e6011c8048ea27b62a26e58f3dd2f42f25c936c4e4db2e3237511db7579",
+      "payload": {
+        "transcriptPath": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+        "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+        "reason": "other",
+        "input": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "transcript_path": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+          "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+          "scratchpad_dir": "/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6/scratchpad",
+          "prompt_id": "e5163ca7-7ff3-4b30-831e-3ba3bd154001",
+          "hook_event_name": "SessionEnd",
+          "reason": "other"
+        },
+        "initialTeamNames": [],
+        "openClawRouting": {},
+        "metrics": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "ended_at": "2026-10-14T08:37:29.161Z",
+          "reason": "other",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        }
+      },
+      "budgetMs": 2000,
+      "claimedAt": "2026-10-14T08:37:30.590Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "891eed06-357e-4dae-bd81-29b522792a63",
+        "phase": "terminal",
+        "deadlineAt": "2026-10-14T08:37:38.959Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-10-14T08:37:30.694Z"
+    },
+    "openclaw": {
+      "class": "best-effort",
+      "phase": "deferred-best-effort",
+      "status": "completed",
+      "attempts": 1,
+      "idempotencyKey": "39116ab5a1c7268b638317d1b83dafd7e7e850a6c38a41895b42b6a7677542dd",
+      "payload": {
+        "transcriptPath": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+        "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+        "reason": "other",
+        "input": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "transcript_path": "/Users/haeseong/.claude/projects/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6.jsonl",
+          "cwd": "/Users/haeseong/Desktop/Products/aop-note",
+          "scratchpad_dir": "/private/tmp/claude-501/-Users-haeseong-Desktop-Products-aop-note/7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6/scratchpad",
+          "prompt_id": "e5163ca7-7ff3-4b30-831e-3ba3bd154001",
+          "hook_event_name": "SessionEnd",
+          "reason": "other"
+        },
+        "initialTeamNames": [],
+        "openClawRouting": {},
+        "metrics": {
+          "session_id": "7895947d-f09d-4ac6-b4f7-fe2ca1fccaa6",
+          "ended_at": "2026-10-14T08:37:29.161Z",
+          "reason": "other",
+          "agents_spawned": 0,
+          "agents_completed": 0,
+          "modes_used": []
+        }
+      },
+      "budgetMs": 2000,
+      "claimedAt": "2026-10-14T08:37:30.713Z",
+      "runner": {
+        "attempt": 1,
+        "runnerNonce": "b0ec8a98-f141-40bd-8ef7-96c018677c0a",
+        "phase": "terminal",
+        "deadlineAt": "2026-10-14T08:37:38.959Z"
+      },
+      "lastOutcomeCode": "completed",
+      "completedAt": "2026-10-14T08:37:30.815Z"
+    }
+  },
+  "owner": null,
+  "phase": "complete",
+  "completion": {
+    "completedAt": "2026-10-14T08:37:30.832Z",
+    "terminalDigest": "bc6eba1dc31a42f03f18a402f6f4e312fffa6f441628eb98490afe45db01a10d",
+    "terminalRevision": 56
+  }
+}

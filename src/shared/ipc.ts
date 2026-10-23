@@ -68,6 +68,9 @@ export interface NavigatePayload {
   task_id: string
 }
 
+export const EDIT_COMMANDS = ['selectAll', 'copy', 'cut', 'paste'] as const
+export type EditCommand = (typeof EDIT_COMMANDS)[number]
+
 export const IPC = {
   workspace: {
     list: 'workspace:list',
@@ -135,6 +138,9 @@ export const IPC = {
   },
   emoji: {
     showPanel: 'emoji:showPanel'
+  },
+  edit: {
+    run: 'edit:run'
   },
   link: {
     backlinks: 'link:backlinks',
@@ -469,6 +475,8 @@ export interface Api {
   setTheme(theme: 'light' | 'dark'): Promise<void>
   /** Open the OS emoji picker (macOS/Windows); it types into the focused input. */
   showEmojiPanel(): Promise<void>
+  /** Run a native edit command (as the Edit menu would) on this window. */
+  runEditCommand(command: EditCommand): Promise<void>
   /** Electron 32+: resolve the absolute filesystem path of a picked/dropped File. */
   getPathForFile(file: File): string
   /** Subscribe to "open this task" requests from notification clicks. Returns an unsubscribe fn. */

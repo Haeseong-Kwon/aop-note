@@ -4,7 +4,7 @@ import { addBusinessDays, addDays, businessDaysBetween, daysBetween, fmt, num, p
 import { WEEKDAYS } from '@/components/calendar/types'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { EMPTY, Field, FieldRow, Note, Readout, Segmented, Stat, ToolLayout, usePersistentState } from './ui'
+import { EMPTY, Field, FieldRow, Note, Readout, Segmented, Stat, ToolLayout, numOr, usePersistentState } from './ui'
 
 /** Re-renders every `ms` while `on` (for live clocks / timers). */
 function useTick(on: boolean, ms = 1000): number {
@@ -27,7 +27,8 @@ const parseHolidays = (text: string): Set<string> => new Set(text.match(/\d{4}-\
 export function DateTool(): JSX.Element {
   const today = toDayKey(new Date())
   const [mode, setMode] = usePersistentState<'between' | 'add'>('dates.mode', 'between')
-  const [from, setFrom] = usePersistentState('dates.from', today)
+  const [fromRaw, setFrom] = usePersistentState('dates.from', '')
+  const from = fromRaw || today // blank start = today
   const [to, setTo] = usePersistentState('dates.to', '')
   const [n, setN] = usePersistentState('dates.n', '')
   const [holidayText, setHolidayText] = usePersistentState('dates.holidays', '')
@@ -46,12 +47,12 @@ export function DateTool(): JSX.Element {
           <Segmented label="계산" value={mode} onChange={setMode} options={[['between', '두 날짜 사이'], ['add', '날짜 더하기']]} />
           {mode === 'between' ? (
             <FieldRow>
-              <Field type="date" label="시작일" value={from} onChange={setFrom} />
+              <Field type="date" label="시작일 (비우면 오늘)" value={fromRaw} onChange={setFrom} />
               <Field type="date" label="종료일" value={to} onChange={setTo} />
             </FieldRow>
           ) : (
             <FieldRow>
-              <Field type="date" label="기준일" value={from} onChange={setFrom} />
+              <Field type="date" label="기준일 (비우면 오늘)" value={fromRaw} onChange={setFrom} />
               <Field label="더할 일수 (빼려면 음수)" value={n} onChange={setN} suffix="일" placeholder="14" />
             </FieldRow>
           )}
@@ -61,8 +62,8 @@ export function DateTool(): JSX.Element {
               value={holidayText}
               onChange={(e) => setHolidayText(e.target.value)}
               rows={2}
-              placeholder="2026-10-09, 2026-12-25"
-              className="resize-none rounded-xl border border-input bg-background/80 px-3.5 py-2.5 text-[13px] tabular-nums outline-none transition-shadow placeholder:text-muted-foreground/45 focus:border-[color:var(--tool)] focus:shadow-[0_0_0_3px_var(--tool-soft)]"
+              placeholder="예: 2026-10-09, 2026-12-25"
+              className="resize-none rounded-xl tool-field px-3.5 py-2.5 text-[13px] tabular-nums outline-none transition-shadow placeholder:text-muted-foreground/45 focus:border-[color:var(--tool)] focus:shadow-[0_0_0_3px_var(--tool-soft)]"
             />
             <span className="text-[11px] text-muted-foreground/80">주말(토·일)은 항상 제외합니다. 인식한 휴일 {holidays.size}개</span>
           </label>
@@ -119,7 +120,7 @@ function partsIn(at: Date, zone: string): { hour: number; minute: number; day: s
 }
 
 export function TimezoneTool(): JSX.Element {
-  const [zones, setZones] = usePersistentState<string[]>('timezone.zones', ['Asia/Seoul', 'America/New_York', 'Europe/London'])
+  const [zones, setZones] = usePersistentState<string[]>('timezone.zones', ['Asia/Seoul'])
   const [offsetH, setOffsetH] = usePersistentState('timezone.offset', 0)
   const now = useTick(offsetH === 0, 15_000)
   const at = new Date(Math.floor(now / 60000) * 60000 + offsetH * 3_600_000)
@@ -137,7 +138,7 @@ export function TimezoneTool(): JSX.Element {
             <input type="range" min={-24} max={24} step={0.5} value={offsetH} onChange={(e) => setOffsetH(Number(e.target.value))} className="accent-[color:var(--tool)]" />
           </label>
           <div className="flex gap-2">
-            <select value={adding} onChange={(e) => setAdding(e.target.value)} aria-label="도시 추가" className="field h-9 flex-1">
+            <select value={adding} onChange={(e) => setAdding(e.target.value)} aria-label="도시 추가" className="tool-field h-9 min-w-0 flex-1 rounded-lg px-2.5 text-[13px] outline-none">
               <option value="">도시 추가…</option>
               {ZONES.filter(([z]) => !zones.includes(z)).map(([z, name]) => (
                 <option key={z} value={z}>
@@ -205,9 +206,9 @@ const notify = (body: string): void => {
 }
 
 export function TimerTool(): JSX.Element {
-  const [focusMin, setFocusMin] = usePersistentState('timer.focus', '25')
-  const [breakMin, setBreakMin] = usePersistentState('timer.break', '5')
-  const lengthMs = (p: Phase): number => Math.max(1, num(p === 'focus' ? focusMin : breakMin) || 1) * 60_000
+  const [focusMin, setFocusMin] = usePersistentState('timer.focus', '')
+  const [breakMin, setBreakMin] = usePersistentState('timer.break', '')
+  const lengthMs = (p: Phase): number => Math.max(1, p === 'focus' ? numOr(focusMin, 25) : numOr(breakMin, 5)) * 60_000
   const [t, setT] = usePersistentState<TimerState>('timer.state', { phase: 'focus', endsAt: null, leftMs: 25 * 60_000, rounds: 0 })
   const running = t.endsAt !== null
   const now = useTick(running, 250)
@@ -233,8 +234,8 @@ export function TimerTool(): JSX.Element {
       inputs={
         <>
           <FieldRow>
-            <Field label="집중" value={focusMin} onChange={setFocusMin} suffix="분" />
-            <Field label="휴식" value={breakMin} onChange={setBreakMin} suffix="분" />
+            <Field label="집중" value={focusMin} onChange={setFocusMin} suffix="분" placeholder="25" hint="비우면 25분" />
+            <Field label="휴식" value={breakMin} onChange={setBreakMin} suffix="분" placeholder="5" hint="비우면 5분" />
           </FieldRow>
           <div className="flex flex-wrap gap-2">
             {[
@@ -314,13 +315,13 @@ interface MeetingState {
 export function MeetingCostTool(): JSX.Element {
   const [people, setPeople] = usePersistentState('meeting.people', '')
   const [salary, setSalary] = usePersistentState('meeting.salary', '')
-  const [overhead, setOverhead] = usePersistentState('meeting.overhead', '30')
+  const [overhead, setOverhead] = usePersistentState('meeting.overhead', '')
   const [planned, setPlanned] = usePersistentState('meeting.planned', '')
   const [m, setM] = usePersistentState<MeetingState>('meeting.state', { startedAt: null, elapsed: 0 })
   const now = useTick(m.startedAt !== null, 200)
   const elapsed = m.elapsed + (m.startedAt !== null ? now - m.startedAt : 0)
   // Annual salary → hourly cost incl. benefits/overhead, over ~2,080 work hours a year.
-  const perHour = ((num(salary) * (1 + (num(overhead) || 0) / 100)) / 2080) * num(people)
+  const perHour = ((num(salary) * (1 + numOr(overhead, 30) / 100)) / 2080) * num(people)
   const cost = (perHour * elapsed) / 3_600_000
   const plannedCost = (perHour * num(planned)) / 60
   const hh = Math.floor(elapsed / 3_600_000)
@@ -334,7 +335,7 @@ export function MeetingCostTool(): JSX.Element {
             <Field won label="평균 연봉" value={salary} onChange={setSalary} placeholder="60,000,000" />
           </FieldRow>
           <FieldRow>
-            <Field label="간접비 (4대보험·복리후생)" value={overhead} onChange={setOverhead} suffix="%" />
+            <Field label="간접비 (4대보험·복리후생)" value={overhead} onChange={setOverhead} suffix="%" placeholder="30" hint="비우면 30%" />
             <Field label="예정 시간 (선택)" value={planned} onChange={setPlanned} suffix="분" placeholder="60" />
           </FieldRow>
           <Note>연 2,080시간 근무 기준. 회의를 시작하면 비용이 실시간으로 올라갑니다.</Note>

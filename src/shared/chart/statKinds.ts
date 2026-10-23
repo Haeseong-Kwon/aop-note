@@ -327,7 +327,7 @@ export const samplesize: KindDef = {
   options: [
     { key: 'conf', label: '신뢰수준', default: '0.95', choices: [['0.9', '90%'], ['0.95', '95%'], ['0.99', '99%']] },
     { key: 'moe', label: '허용 오차범위', default: '', suffix: '%p', placeholder: '5' },
-    { key: 'p', label: '예상 응답 비율', default: '50', suffix: '%', placeholder: '모르면 50' },
+    { key: 'p', label: '예상 응답 비율', default: '', suffix: '%', placeholder: '모르면 비워 두기 (50%)' },
     { key: 'pop', label: '모집단 크기', default: '', suffix: '명', placeholder: '모르면 비워 두기' },
     { key: 'rate', label: '예상 응답률', default: '', suffix: '%', placeholder: '예: 20' }
   ],

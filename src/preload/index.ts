@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 import { IPC } from '@shared/ipc'
-import type { Api, NavigatePayload } from '@shared/ipc'
+import type { Api, EditCommand, NavigatePayload } from '@shared/ipc'
 import type {
   CreateWorkspaceInput,
   CreateDocFolderInput,
@@ -191,6 +191,7 @@ const api: Api = {
   },
   setTheme: (theme: 'light' | 'dark') => ipcRenderer.invoke(IPC.theme.set, theme),
   showEmojiPanel: () => ipcRenderer.invoke(IPC.emoji.showPanel),
+  runEditCommand: (command: EditCommand) => ipcRenderer.invoke(IPC.edit.run, command),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
   onNavigateToTask: (cb: (payload: NavigatePayload) => void) => {
     const listener = (_e: IpcRendererEvent, payload: NavigatePayload): void => cb(payload)

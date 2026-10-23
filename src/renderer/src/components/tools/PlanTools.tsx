@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react'
 import { fmt, num, pert, rice } from '@/lib/toolMath'
-import { AddButton, EMPTY, Note, NumInput, Plate, Readout, RemoveButton, RowHeader, RowInput, Stat, ToolLayout, newRowId, usePersistentState } from './ui'
+import { AddButton, EMPTY, Note, NumInput, Plate, Readout, ListRow, RemoveButton, RowHeader, RowInput, type RowCol, Stat, ToolLayout, newRowId, usePersistentState } from './ui'
 
 const finite = (n: number): boolean => Number.isFinite(n)
 
@@ -12,6 +12,8 @@ interface PertRow {
   p: string
 }
 const blankPert = (): PertRow => ({ id: newRowId(), name: '', o: '', m: '', p: '' })
+
+const PERT_COLS: RowCol[] = [{ label: '낙관', title: '모든 게 잘 풀릴 때' }, { label: '보통', title: '가장 그럴듯한 경우' }, { label: '비관', title: '문제가 생길 때' }]
 
 export function PertTool(): JSX.Element {
   const [rows, setRows] = usePersistentState<PertRow[]>('pert.rows', [{ id: 'r1', name: '', o: '', m: '', p: '' }])
@@ -27,15 +29,15 @@ export function PertTool(): JSX.Element {
       inputs={
         <>
           <div className="flex flex-col gap-1.5">
-            <RowHeader name="작업" cols={[{ label: '낙관' }, { label: '보통' }, { label: '비관' }]} />
+            <RowHeader name="작업" cols={PERT_COLS} />
             {rows.map((r, i) => (
-              <div key={r.id} className="flex items-center gap-2">
+              <ListRow key={r.id} cols={PERT_COLS}>
                 <RowInput wide label="작업 이름" placeholder={i === 0 ? '예: 시안 디자인' : '작업 이름'} value={r.name} onChange={(v) => set(r.id, { name: v })} />
-                <RowInput label="낙관" placeholder="2" value={r.o} onChange={(v) => set(r.id, { o: v })} />
-                <RowInput label="보통" placeholder="3" value={r.m} onChange={(v) => set(r.id, { m: v })} />
-                <RowInput label="비관" placeholder="6" value={r.p} onChange={(v) => set(r.id, { p: v })} />
+                <RowInput label="낙관" value={r.o} onChange={(v) => set(r.id, { o: v })} />
+                <RowInput label="보통" value={r.m} onChange={(v) => set(r.id, { m: v })} />
+                <RowInput label="비관" value={r.p} onChange={(v) => set(r.id, { p: v })} />
                 <RemoveButton disabled={rows.length <= 1} onClick={() => setRows(rows.filter((x) => x.id !== r.id))} />
-              </div>
+              </ListRow>
             ))}
             <AddButton label="작업 추가" onClick={() => setRows([...rows, blankPert()])} />
           </div>
@@ -79,6 +81,13 @@ interface RiceRow {
 const IMPACT_HINT = '3 매우 큼 · 2 큼 · 1 보통 · 0.5 작음 · 0.25 미미'
 const blankRice = (): RiceRow => ({ id: newRowId(), name: '', reach: '', impact: '', confidence: '', effort: '' })
 
+const RICE_COLS: RowCol[] = [
+  { label: '도달', title: '기간 내 영향받는 사용자 수' },
+  { label: '영향', title: IMPACT_HINT },
+  { label: '확신 %', title: '추정에 대한 확신 (0–100)' },
+  { label: '노력', title: '인월 (person-month)' }
+]
+
 export function RiceTool(): JSX.Element {
   const [rows, setRows] = usePersistentState<RiceRow[]>('rice.rows', [{ id: 'r1', name: '', reach: '', impact: '', confidence: '', effort: '' }])
   const set = (id: string, patch: Partial<RiceRow>): void => setRows(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -93,24 +102,16 @@ export function RiceTool(): JSX.Element {
       inputs={
         <>
           <div className="flex flex-col gap-1.5">
-            <RowHeader
-              name="항목"
-              cols={[
-                { label: '도달', title: '기간 내 영향받는 사용자 수' },
-                { label: '영향', title: IMPACT_HINT },
-                { label: '확신 %', title: '추정에 대한 확신' },
-                { label: '노력', title: '인월(person-month)' }
-              ]}
-            />
+            <RowHeader name="항목" cols={RICE_COLS} />
             {rows.map((r, i) => (
-              <div key={r.id} className="flex items-center gap-2">
+              <ListRow key={r.id} cols={RICE_COLS}>
                 <RowInput wide label="항목 이름" placeholder={i === 0 ? '예: 온보딩 개선' : '항목 이름'} value={r.name} onChange={(v) => set(r.id, { name: v })} />
-                <RowInput label="도달" placeholder="800" value={r.reach} onChange={(v) => set(r.id, { reach: v })} />
-                <RowInput label="영향" placeholder="1" value={r.impact} onChange={(v) => set(r.id, { impact: v })} />
-                <RowInput label="확신 %" placeholder="80" value={r.confidence} onChange={(v) => set(r.id, { confidence: v })} />
-                <RowInput label="노력" placeholder="2" value={r.effort} onChange={(v) => set(r.id, { effort: v })} />
+                <RowInput label="도달" value={r.reach} onChange={(v) => set(r.id, { reach: v })} />
+                <RowInput label="영향" value={r.impact} onChange={(v) => set(r.id, { impact: v })} />
+                <RowInput label="확신 %" value={r.confidence} onChange={(v) => set(r.id, { confidence: v })} />
+                <RowInput label="노력" value={r.effort} onChange={(v) => set(r.id, { effort: v })} />
                 <RemoveButton disabled={rows.length <= 1} onClick={() => setRows(rows.filter((x) => x.id !== r.id))} />
-              </div>
+              </ListRow>
             ))}
             <AddButton label="항목 추가" onClick={() => setRows([...rows, blankRice()])} />
           </div>
@@ -175,51 +176,70 @@ export function DecisionMatrixTool(): JSX.Element {
     .sort((a, b) => b.score - a.score)
   const setCriterion = (id: string, patch: Partial<Matrix['criteria'][number]>): void => setM({ ...m, criteria: m.criteria.map((c) => (c.id === id ? { ...c, ...patch } : c)) })
   const setOption = (id: string, patch: Partial<Matrix['options'][number]>): void => setM({ ...m, options: m.options.map((o) => (o.id === id ? { ...o, ...patch } : o)) })
-  const cell = 'field h-9 w-full rounded-lg text-center tabular-nums placeholder:text-muted-foreground/40 focus:border-[color:var(--tool)]'
+  const cellInput = 'h-9 w-full min-w-0 bg-transparent px-2.5 outline-none placeholder:text-muted-foreground/40'
+  const addCriterion = (): void => setM({ ...m, criteria: [...m.criteria, { id: newRowId(), name: '', weight: '' }] })
   return (
     <ToolLayout
       wide
       inputs={
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full border-separate border-spacing-1.5 text-[12px]">
+          <div className="overflow-x-auto rounded-xl border border-border bg-[hsl(var(--card))]">
+            <table className="chart-grid w-full table-fixed border-collapse text-[13px]">
+              <colgroup>
+                <col className="w-[34%]" />
+                {m.criteria.map((c) => (
+                  <col key={c.id} />
+                ))}
+                <col className="w-8" />
+              </colgroup>
               <thead>
-                <tr>
-                  <th className="w-32 text-left align-bottom font-medium text-muted-foreground">대안 \ 기준</th>
+                <tr className="chart-grid-head">
+                  <th className="px-2.5 py-2 text-[11.5px] font-medium text-muted-foreground">대안 ↓ · 기준 →</th>
                   {m.criteria.map((c, i) => (
-                    <th key={c.id} className="min-w-[6rem] font-normal">
-                      <div className="flex items-center gap-0.5">
-                        <input value={c.name} onChange={(e) => setCriterion(c.id, { name: e.target.value })} placeholder={CRITERIA_EXAMPLES[i] ?? '기준'} aria-label="기준 이름" className={`${cell} font-medium`} />
-                        <button onClick={() => setM({ ...m, criteria: m.criteria.filter((x) => x.id !== c.id) })} disabled={m.criteria.length <= 1} aria-label="기준 삭제" className="text-muted-foreground/70 hover:text-foreground disabled:opacity-25">
+                    <th key={c.id} className="relative">
+                      <input value={c.name} onChange={(e) => setCriterion(c.id, { name: e.target.value })} placeholder={CRITERIA_EXAMPLES[i] ? `예: ${CRITERIA_EXAMPLES[i]}` : '기준 이름'} aria-label="기준 이름" className={`${cellInput} pr-6 text-center font-semibold`} />
+                      {m.criteria.length > 1 && (
+                        <button onClick={() => setM({ ...m, criteria: m.criteria.filter((x) => x.id !== c.id) })} aria-label="기준 삭제" title="이 기준 삭제" className="chart-grid-x chart-grid-colx absolute right-1 top-1/2 -translate-y-1/2">
                           <X className="h-3 w-3" />
                         </button>
-                      </div>
-                      <div className="mt-1 flex items-center justify-center gap-1 pr-3.5 text-[11px] text-muted-foreground">
-                        가중치
-                        <NumInput value={c.weight} onChange={(v) => setCriterion(c.id, { weight: v })} placeholder="1" aria-label={`${c.name || '기준'} 가중치`} className="field h-7 w-12 rounded-md text-center tabular-nums placeholder:text-muted-foreground/40" />
-                      </div>
+                      )}
                     </th>
                   ))}
-                  <th className="align-top">
-                    <button onClick={() => setM({ ...m, criteria: [...m.criteria, { id: newRowId(), name: '', weight: '' }] })} aria-label="기준 추가" className="flex h-9 w-9 items-center justify-center rounded-lg border border-dashed border-border text-muted-foreground hover:border-[color:var(--tool)] hover:text-[color:var(--tool)]">
+                  <th className="chart-grid-gutter">
+                    <button onClick={addCriterion} aria-label="기준 추가" title="기준 추가" className="chart-grid-x">
                       <Plus className="h-3.5 w-3.5" />
                     </button>
                   </th>
                 </tr>
+                <tr className="chart-grid-roles">
+                  <th className="text-[11px] font-medium text-muted-foreground" title="기준의 중요도. 비우면 모두 같게 봅니다">
+                    가중치
+                  </th>
+                  {m.criteria.map((c) => (
+                    <th key={c.id} className="!p-0">
+                      <NumInput value={c.weight} onChange={(v) => setCriterion(c.id, { weight: v })} placeholder="같게" aria-label={`${c.name || '기준'} 가중치`} className={`${cellInput} h-8 text-center text-[12px] tabular-nums`} />
+                    </th>
+                  ))}
+                  <th className="chart-grid-gutter" />
+                </tr>
               </thead>
               <tbody>
                 {m.options.map((o, i) => (
-                  <tr key={o.id}>
-                    <td>
-                      <input value={o.name} onChange={(e) => setOption(o.id, { name: e.target.value })} placeholder={OPTION_EXAMPLES[i] ?? '대안'} aria-label="대안 이름" className={`${cell} text-left font-medium`} />
+                  <tr key={o.id} className="group">
+                    <td className="chart-grid-label">
+                      <input value={o.name} onChange={(e) => setOption(o.id, { name: e.target.value })} placeholder={OPTION_EXAMPLES[i] ? `예: ${OPTION_EXAMPLES[i]}` : `대안 ${i + 1}`} aria-label="대안 이름" className={`${cellInput} font-medium`} />
                     </td>
                     {m.criteria.map((c) => (
-                      <td key={c.id} className="pr-3.5">
-                        <NumInput value={o.scores[c.id] ?? ''} onChange={(v) => setOption(o.id, { scores: { ...o.scores, [c.id]: v } })} placeholder="1–5" aria-label={`${o.name || '대안'} ${c.name || '기준'} 점수`} className={cell} />
+                      <td key={c.id}>
+                        <NumInput value={o.scores[c.id] ?? ''} onChange={(v) => setOption(o.id, { scores: { ...o.scores, [c.id]: v } })} aria-label={`${o.name || '대안'} ${c.name || '기준'} 점수`} className={`${cellInput} text-center tabular-nums`} />
                       </td>
                     ))}
-                    <td>
-                      <RemoveButton disabled={m.options.length <= 1} onClick={() => setM({ ...m, options: m.options.filter((x) => x.id !== o.id) })} />
+                    <td className="chart-grid-gutter">
+                      {m.options.length > 1 && (
+                        <button onClick={() => setM({ ...m, options: m.options.filter((x) => x.id !== o.id) })} aria-label="대안 삭제" title="이 대안 삭제" className="chart-grid-x opacity-0 group-hover:opacity-100 focus-visible:opacity-100">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -227,7 +247,7 @@ export function DecisionMatrixTool(): JSX.Element {
             </table>
           </div>
           <AddButton label="대안 추가" onClick={() => setM({ ...m, options: [...m.options, { id: newRowId(), name: '', scores: {} }] })} />
-          <Note>각 기준에 1–5점을 매기세요. 가중치는 비율로 계산하고, 비우면 모두 같게 봅니다.</Note>
+          <Note>각 칸에 1–5점을 매기세요 (5가 가장 좋음). 가중치는 비율로 계산하고, 비우면 모두 같게 봅니다.</Note>
         </>
       }
       readout={

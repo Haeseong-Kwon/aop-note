@@ -1,5 +1,5 @@
 import { fmt, num } from '@/lib/toolMath'
-import { AddButton, EMPTY, Field, FieldRow, Note, Plate, Readout, RemoveButton, RowHeader, RowInput, Stat, ToolLayout, newRowId, usePersistentState } from './ui'
+import { AddButton, EMPTY, Field, FieldRow, Note, Plate, Readout, ListRow, RemoveButton, RowHeader, RowInput, type RowCol, Stat, ToolLayout, newRowId, usePersistentState } from './ui'
 
 const pct = (n: number, d = 2): string => (Number.isFinite(n) ? `${fmt(n, d)}%` : EMPTY)
 const wonText = (n: number): string => (Number.isFinite(n) ? `${fmt(Math.round(n))}원` : EMPTY)
@@ -52,6 +52,8 @@ interface Stage {
   count: string
 }
 
+const FUNNEL_COLS: RowCol[] = [{ label: '인원·건수', money: true }]
+
 export function FunnelTool(): JSX.Element {
   const [stages, setStages] = usePersistentState<Stage[]>('funnel.stages', [
     { id: 's1', name: '', count: '' },
@@ -73,13 +75,13 @@ export function FunnelTool(): JSX.Element {
       inputs={
         <>
           <div className="flex flex-col gap-1.5">
-            <RowHeader name="단계" cols={[{ label: '인원/건수' }]} />
+            <RowHeader name="단계" cols={FUNNEL_COLS} />
             {stages.map((s, i) => (
-              <div key={s.id} className="flex items-center gap-2">
+              <ListRow key={s.id} cols={FUNNEL_COLS}>
                 <RowInput wide label="단계 이름" placeholder={`예: ${PLACEHOLDERS[i] ?? '다음 단계'}`} value={s.name} onChange={(v) => set(s.id, { name: v })} />
-                <RowInput label="인원" placeholder="0" value={s.count} onChange={(v) => set(s.id, { count: v })} />
+                <RowInput label="인원" value={s.count} onChange={(v) => set(s.id, { count: v })} />
                 <RemoveButton disabled={stages.length <= 2} onClick={() => setStages(stages.filter((x) => x.id !== s.id))} />
-              </div>
+              </ListRow>
             ))}
             <AddButton label="단계 추가" onClick={() => setStages([...stages, { id: newRowId(), name: '', count: '' }])} />
           </div>

@@ -62,8 +62,8 @@ export function SeveranceTool(): JSX.Element {
           <Field won label="퇴사 전 3개월 급여 총액 (세전)" value={pay} onChange={setPay} placeholder="10,500,000" hint="기본급과 정기 수당을 합한 금액" />
           <FieldGroup title="선택 항목">
             <FieldRow>
-              <Field won label="직전 1년 상여금" value={bonus} onChange={setBonus} placeholder="0" />
-              <Field won label="직전 1년 연차수당" value={leavePay} onChange={setLeavePay} placeholder="0" />
+              <Field won label="직전 1년 상여금" value={bonus} onChange={setBonus} placeholder="없으면 비워 두기" />
+              <Field won label="직전 1년 연차수당" value={leavePay} onChange={setLeavePay} placeholder="없으면 비워 두기" />
             </FieldRow>
           </FieldGroup>
           <Note>1일 평균임금 × 30일 × 재직일수 ÷ 365로 추정합니다. 1년 이상 근무해야 받을 수 있으며, 실제 금액은 통상임금 비교와 퇴직소득세에 따라 달라집니다.</Note>
@@ -113,7 +113,7 @@ export function WorkHoursTool(): JSX.Element {
       inputs={
         <>
           <div className="flex flex-col gap-1.5">
-            <div className="grid grid-cols-[2rem_1fr_1fr_4.5rem_4.5rem] items-center gap-2 text-[11px] font-medium text-muted-foreground">
+            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_4.25rem_3.75rem] items-center gap-2 text-[11px] font-medium text-muted-foreground">
               <span />
               <span>출근</span>
               <span>퇴근</span>
@@ -121,11 +121,11 @@ export function WorkHoursTool(): JSX.Element {
               <span className="text-right">근무</span>
             </div>
             {ORDER.map((dow, i) => (
-              <div key={dow} className="grid grid-cols-[2rem_1fr_1fr_4.5rem_4.5rem] items-center gap-2">
+              <div key={dow} className="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_4.25rem_3.75rem] items-center gap-2">
                 <span className={cn('text-[13px] font-medium', dow === 0 ? 'text-rose-500' : dow === 6 ? 'text-sky-500' : 'text-foreground/80')}>{WEEKDAYS[dow]}</span>
-                <input type="time" value={week[i].start} onChange={(e) => set(i, { start: e.target.value })} aria-label={`${WEEKDAYS[dow]}요일 출근`} className="field h-9 rounded-lg" />
-                <input type="time" value={week[i].end} onChange={(e) => set(i, { end: e.target.value })} aria-label={`${WEEKDAYS[dow]}요일 퇴근`} className="field h-9 rounded-lg" />
-                <NumInput value={week[i].rest} onChange={(v) => set(i, { rest: v })} aria-label={`${WEEKDAYS[dow]}요일 휴게`} placeholder={String(defaultRest(week[i]))} className="field h-9 rounded-lg text-right tabular-nums placeholder:text-muted-foreground/40" />
+                <input type="time" value={week[i].start} onChange={(e) => set(i, { start: e.target.value })} aria-label={`${WEEKDAYS[dow]}요일 출근`} className="tool-field h-9 w-full min-w-0 rounded-lg px-2.5 text-[13px] outline-none tabular-nums" />
+                <input type="time" value={week[i].end} onChange={(e) => set(i, { end: e.target.value })} aria-label={`${WEEKDAYS[dow]}요일 퇴근`} className="tool-field h-9 w-full min-w-0 rounded-lg px-2.5 text-[13px] outline-none tabular-nums" />
+                <NumInput value={week[i].rest} onChange={(v) => set(i, { rest: v })} aria-label={`${WEEKDAYS[dow]}요일 휴게`} placeholder={week[i].start && week[i].end ? `자동 ${defaultRest(week[i])}` : ''} className="tool-field h-9 w-full min-w-0 rounded-lg px-2.5 text-[13px] outline-none text-right tabular-nums placeholder:text-muted-foreground/45" />
                 <span className={cn('text-right text-[13px] tabular-nums', minutes[i] === null && 'text-muted-foreground/40')}>{minutes[i] === null ? EMPTY : hm(minutes[i] as number)}</span>
               </div>
             ))}

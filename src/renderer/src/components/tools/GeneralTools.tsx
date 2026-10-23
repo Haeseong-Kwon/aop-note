@@ -3,7 +3,7 @@ import { ArrowLeftRight, Delete, Shuffle, Trash2 } from 'lucide-react'
 import { evaluate, fmt, koreanWon, num } from '@/lib/toolMath'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { EMPTY, Field, FieldRow, Note, Readout, Segmented, Stat, ToolLayout, usePersistentState } from './ui'
+import { EMPTY, Field, FieldRow, Note, Readout, Segmented, Stat, ToolLayout, numOr, usePersistentState } from './ui'
 
 // --- Calculator ----------------------------------------------------------------
 
@@ -235,7 +235,7 @@ function UnitSelect({ label, value, units, onChange }: { label: string; value: s
   return (
     <label className="flex min-w-0 flex-1 flex-col gap-1.5">
       <span className="text-[12px] font-medium text-muted-foreground">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="field h-10 rounded-lg text-[14px]">
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="tool-field h-10 rounded-lg px-2.5 text-[14px] outline-none">
         {units.map(([id, name]) => (
           <option key={id} value={id}>
             {name}
@@ -267,7 +267,7 @@ export function TextCountTool(): JSX.Element {
             onChange={(e) => setText(e.target.value)}
             placeholder="자기소개서, 공고문, 보도자료 등을 붙여 넣으세요."
             aria-label="텍스트"
-            className="min-h-[18rem] resize-y rounded-xl border border-input bg-background/80 p-4 text-[14px] leading-relaxed outline-none transition-shadow placeholder:text-muted-foreground/45 focus:border-[color:var(--tool)] focus:shadow-[0_0_0_3px_var(--tool-soft)]"
+            className="min-h-[18rem] resize-y rounded-xl tool-field p-4 text-[14px] leading-relaxed outline-none transition-shadow placeholder:text-muted-foreground/45 focus:border-[color:var(--tool)] focus:shadow-[0_0_0_3px_var(--tool-soft)]"
           />
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setText(text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim())} disabled={!text}>
@@ -317,10 +317,10 @@ const shuffle = <T,>(xs: readonly T[]): T[] => {
 export function PickerTool(): JSX.Element {
   const [text, setText] = usePersistentState('picker.names', '')
   const [mode, setMode] = usePersistentState<'pick' | 'order' | 'teams'>('picker.mode', 'order')
-  const [count, setCount] = usePersistentState('picker.count', '2')
+  const [count, setCount] = usePersistentState('picker.count', '')
   const [result, setResult] = useState<string[][] | null>(null)
   const names = text.split(/[\n,]/).map((s) => s.trim()).filter(Boolean)
-  const k = Math.max(1, Math.trunc(num(count)) || 1)
+  const k = Math.max(1, Math.trunc(numOr(count, 2)) || 1)
   const run = (): void => {
     const s = shuffle(names)
     if (mode === 'pick') setResult([s.slice(0, k)])
@@ -339,10 +339,10 @@ export function PickerTool(): JSX.Element {
               onChange={(e) => setText(e.target.value)}
               rows={7}
               placeholder={'한 줄에 한 명씩, 또는 쉼표로 구분\n예: 김민준, 이서연, 박지호'}
-              className="resize-y rounded-xl border border-input bg-background/80 px-3.5 py-2.5 text-[14px] outline-none transition-shadow placeholder:text-muted-foreground/45 focus:border-[color:var(--tool)] focus:shadow-[0_0_0_3px_var(--tool-soft)]"
+              className="resize-y rounded-xl tool-field px-3.5 py-2.5 text-[14px] outline-none transition-shadow placeholder:text-muted-foreground/45 focus:border-[color:var(--tool)] focus:shadow-[0_0_0_3px_var(--tool-soft)]"
             />
           </label>
-          {mode !== 'order' && <Field label={mode === 'pick' ? '뽑을 수' : '팀 수'} value={count} onChange={setCount} suffix={mode === 'pick' ? '명' : '팀'} />}
+          {mode !== 'order' && <Field label={mode === 'pick' ? '뽑을 수' : '팀 수'} value={count} onChange={setCount} suffix={mode === 'pick' ? '명' : '팀'} placeholder="2" hint="비우면 2" />}
           <Button onClick={run} disabled={names.length === 0} className="bg-[color:var(--tool)] text-white hover:opacity-90">
             <Shuffle className="h-4 w-4" /> {result ? '다시 섞기' : '섞기'}
           </Button>

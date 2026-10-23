@@ -97,4 +97,22 @@ gitInfo(repo)
 scanProject(repo)
 assert.equal(statSync(join(repo, '.git', 'index')).mtimeMs, before, 'read-only git calls leave the index alone')
 
+// A repository inside the linked repository (the "AOP-hub/AOP-hub" layout) or a submodule:
+// the outer `git ls-files` lists it as one "inner/" entry; its documents must still be found,
+// honouring the inner repository's own .gitignore.
+const outer = mkdtempSync(join(tmpdir(), 'aop-nested-'))
+const gitAt = (dir: string, ...args: string[]): string =>
+  execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', env: { ...process.env, GIT_AUTHOR_NAME: 'T', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 'T', GIT_COMMITTER_EMAIL: 't@t' } })
+gitAt(outer, 'init', '-q', '-b', 'main')
+put(outer, 'README.md', '# Hub\n')
+const inner = join(outer, 'AOP-hub')
+mkdirSync(inner)
+gitAt(inner, 'init', '-q', '-b', 'main')
+put(inner, '.gitignore', 'drafts/\n')
+put(inner, 'docs/AOP_사업기획서.docx', 'docx bytes')
+put(inner, 'drafts/scratch.md', 'ignored by the inner repo')
+const nidx = scanProject(outer)
+assert.equal(nidx.git, true)
+assert.deepEqual(nidx.files.map((f) => f.path), ['AOP-hub/docs/AOP_사업기획서.docx', 'README.md'])
+
 console.log('project: all assertions passed')

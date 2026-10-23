@@ -254,7 +254,7 @@ export const waterfall: KindDef = {
   name: '폭포 차트',
   blurb: '시작값에서 증감을 거쳐 최종값까지',
   grid: { roles: ['항목', '시작값·증감'], head: ['항목', '금액'], rows: 6, labelCol: true, growCols: false, growRows: true, hint: '첫 행은 시작값, 그 아래는 증가(+)·감소(−)를 적으세요' },
-  options: [{ key: 'total', label: '마지막 막대 이름', default: '최종', placeholder: '최종', text: true }, UNIT],
+  options: [{ key: 'total', label: '마지막 막대 이름', default: '', placeholder: '비우면 ‘최종’', text: true }, UNIT],
   sample: { title: '영업이익 변동 요인', grid: [['항목', '금액'], ['전년 영업이익', '1200'], ['매출 증가', '480'], ['원가 상승', '-260'], ['인건비', '-140'], ['환율 효과', '90'], ['일회성 비용', '-70']], opts: { unit: '백만원', total: '올해 영업이익' } },
   compute(doc, th) {
     const its = items(doc)

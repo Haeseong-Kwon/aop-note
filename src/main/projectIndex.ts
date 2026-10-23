@@ -55,20 +55,50 @@ const MAX_DOCS = 2_000
 const MAX_DOC_BYTES = 512 * 1024
 const CACHE_MS = 15_000
 
-/** Tracked + untracked-but-not-ignored files, relative to root; null if root isn't in a git work tree. */
-function listWithGit(root: string): string[] | null {
+/** Repositories nested inside nested repositories are followed this deep. */
+const MAX_NESTED_REPOS = 3
+
+/**
+ * Tracked + untracked-but-not-ignored files, relative to root; null if root isn't in a git
+ * work tree. A repository nested inside (a cloned repo in a subfolder, or a submodule) is
+ * listed by git as one directory entry; its files are listed from that repository, so its
+ * own .gitignore applies.
+ */
+function listWithGit(root: string, depth = 0): string[] | null {
+  let out: string
   try {
-    const out = execFileSync('git', ['-C', root, 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
+    out = execFileSync('git', ['-C', root, 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], {
       env: READ_ONLY_GIT_ENV,
       encoding: 'utf8',
       maxBuffer: 256 * 1024 * 1024,
       stdio: ['ignore', 'pipe', 'ignore'],
       timeout: 10_000
     })
-    return out.split('\0').filter((p) => p && existsSync(join(root, p))) // index may list deleted files
   } catch {
     return null
   }
+  const files: string[] = []
+  for (const entry of out.split('\0')) {
+    if (!entry) continue
+    const rel = entry.replace(/\/$/, '')
+    let isDir: boolean
+    try {
+      isDir = statSync(join(root, rel)).isDirectory()
+    } catch {
+      continue // the index may list deleted files
+    }
+    if (!isDir) {
+      files.push(entry)
+      continue
+    }
+    if (depth >= MAX_NESTED_REPOS) continue
+    const dir = join(root, rel)
+    // Only a real repository (.git dir or file) gets its own listing; an uninitialised
+    // submodule is an empty directory, and walking it costs nothing.
+    const inner = (existsSync(join(dir, '.git')) && listWithGit(dir, depth + 1)) || listByWalk(dir)
+    for (const f of inner) files.push(`${rel}/${f}`)
+  }
+  return files
 }
 
 /** Without git: walk, skipping hidden, dependency and build folders; never follow symlinks. */

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1791701290446,
+  "lastScanned": 1792758671920,
   "projectRoot": "/Users/haeseong/Desktop/Products/aop-note",
   "techStack": {
     "languages": [
@@ -95,7 +95,7 @@
       "path": "build",
       "purpose": "Build output",
       "fileCount": 2,
-      "lastAccessed": 1791701290438,
+      "lastAccessed": 1792758671908,
       "keyFiles": [
         "icon.icns",
         "icon.png"
@@ -104,24 +104,25 @@
     "dist": {
       "path": "dist",
       "purpose": "Distribution/build output",
-      "fileCount": 9,
-      "lastAccessed": 1791701290438,
+      "fileCount": 13,
+      "lastAccessed": 1792758671910,
       "keyFiles": [
         "aop-note-0.1.0-arm64.dmg",
         "aop-note-0.1.0-arm64.dmg.blockmap",
-        "aop-note-Setup-0.1.0.exe",
-        "aop-note-Setup-0.1.0.exe.blockmap",
-        "aop-note-Setup-0.1.0.exe.zip"
+        "aop-note-0.2.0-arm64-mac.zip",
+        "aop-note-0.2.0-arm64-mac.zip.blockmap",
+        "aop-note-0.2.0-arm64.dmg"
       ]
     },
     "e2e": {
       "path": "e2e",
       "purpose": null,
-      "fileCount": 5,
-      "lastAccessed": 1791701290441,
+      "fileCount": 7,
+      "lastAccessed": 1792758671914,
       "keyFiles": [
         "app.ts",
         "audit.mjs",
+        "charts.spec.ts",
         "desks.spec.ts",
         "search.spec.ts"
       ]
@@ -130,7 +131,7 @@
       "path": "image",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1791701290442,
+      "lastAccessed": 1792758671914,
       "keyFiles": [
         "logo image.png"
       ]
@@ -139,14 +140,14 @@
       "path": "out",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1791701290442,
+      "lastAccessed": 1792758671914,
       "keyFiles": []
     },
     "resources": {
       "path": "resources",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1791701290443,
+      "lastAccessed": 1792758671915,
       "keyFiles": [
         "tray.png"
       ]
@@ -155,7 +156,7 @@
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 3,
-      "lastAccessed": 1791701290443,
+      "lastAccessed": 1792758671915,
       "keyFiles": [
         "install-mac.sh",
         "make-icon.py",
@@ -166,14 +167,14 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1791701290443,
+      "lastAccessed": 1792758671915,
       "keyFiles": []
     },
     "test": {
       "path": "test",
       "purpose": "Test files",
       "fileCount": 1,
-      "lastAccessed": 1791701290443,
+      "lastAccessed": 1792758671915,
       "keyFiles": [
         "electron-stub.ts"
       ]
@@ -182,213 +183,21 @@
       "path": "test-results",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1791701290444,
+      "lastAccessed": 1792758671915,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
-      "path": "src/renderer/src/components/tools/PlanTools.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1791703031434,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/ToolsView.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1791703603965,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/chart/DataGrid.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1791772986843,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/chart/ChartEditor.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1791772987187,
-      "type": "file"
-    },
-    {
-      "path": "src/main/index.ts",
+      "path": "src/renderer/src/lib/imeEditKeys.ts",
       "accessCount": 2,
-      "lastAccessed": 1791593932632,
+      "lastAccessed": 1792759372575,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/tools/ui.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1791702740380,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/FinanceTools.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1791702803155,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/lib/palette.ts",
+      "path": "src/renderer/src/main.tsx",
       "accessCount": 1,
-      "lastAccessed": 1791593964247,
-      "type": "file"
-    },
-    {
-      "path": "src/main/docx.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791595156130,
-      "type": "file"
-    },
-    {
-      "path": "src/main/sync.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791595265622,
-      "type": "file"
-    },
-    {
-      "path": "src/main/mdImport.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791595335322,
-      "type": "file"
-    },
-    {
-      "path": "src/main/icsExport.check.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791596261636,
-      "type": "file"
-    },
-    {
-      "path": "src/main/icsExport.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791596262077,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/lib/toolMath.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791701698590,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/TimeTools.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791701943582,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/GeneralTools.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791702010984,
-      "type": "file"
-    },
-    {
-      "path": "e2e/tools.spec.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791702118901,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/TaxTools.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791702868672,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/PeopleTools.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791702869013,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/GrowthTools.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791702930278,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/TextTools.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791702930605,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/registry.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791703603589,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/tools/FloatingTools.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791703669112,
-      "type": "file"
-    },
-    {
-      "path": "src/shared/chart/stats.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791727409408,
-      "type": "file"
-    },
-    {
-      "path": "src/shared/chart/svg.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791727700397,
-      "type": "file"
-    },
-    {
-      "path": "src/shared/chart/kinds.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791727995620,
-      "type": "file"
-    },
-    {
-      "path": "src/shared/chart/html.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791728152725,
-      "type": "file"
-    },
-    {
-      "path": "src/main/chartExport.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791728244377,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/lib/chartImage.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791729493804,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/chart/ChartView.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791729494149,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/chart/chartActions.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791729574191,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/chart/ChartTool.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791729592731,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/src/components/memo/chartBlock.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1791729620981,
-      "type": "file"
-    },
-    {
-      "path": "e2e/charts.spec.ts",
-      "accessCount": 1,
-      "lastAccessed": 1791730037720,
+      "lastAccessed": 1792759267339,
       "type": "file"
     }
   ],

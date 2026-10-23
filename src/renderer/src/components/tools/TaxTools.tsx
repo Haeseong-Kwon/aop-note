@@ -1,5 +1,5 @@
 import { amountInWords, fmt, grossFromNet, koreanWon, num, withholding } from '@/lib/toolMath'
-import { AddButton, CopyButton, EMPTY, Field, Note, Plate, Readout, RemoveButton, RowHeader, RowInput, Segmented, Stat, ToolLayout, newRowId, usePersistentState } from './ui'
+import { AddButton, CopyButton, EMPTY, Field, Note, Plate, Readout, ListRow, RemoveButton, RowHeader, RowInput, Segmented, type RowCol, Stat, ToolLayout, newRowId, usePersistentState } from './ui'
 
 const wonText = (n: number): string => (Number.isFinite(n) ? `${fmt(Math.round(n))}원` : EMPTY)
 
@@ -10,6 +10,8 @@ interface QuoteRow {
   price: string
 }
 type VatMode = 'separate' | 'included' | 'exempt'
+
+const QUOTE_COLS: RowCol[] = [{ label: '수량', title: '비우면 1' }, { label: '단가 (원)', money: true }]
 
 export function QuoteTool(): JSX.Element {
   const [rows, setRows] = usePersistentState<QuoteRow[]>('quote.rows', [{ id: 'r1', name: '', qty: '', price: '' }])
@@ -42,18 +44,18 @@ export function QuoteTool(): JSX.Element {
         <>
           <Segmented label="단가 기준" value={vatMode} onChange={setVatMode} options={[['separate', '부가세 별도'], ['included', '부가세 포함가'], ['exempt', '면세']]} />
           <div className="flex flex-col gap-1.5">
-            <RowHeader name="품목" cols={[{ label: '수량' }, { label: '단가', money: true }]} />
+            <RowHeader name="품목" cols={QUOTE_COLS} />
             {rows.map((r) => (
-              <div key={r.id} className="flex items-center gap-2">
+              <ListRow key={r.id} cols={QUOTE_COLS}>
                 <RowInput wide label="품목" placeholder="예: 웹사이트 디자인" value={r.name} onChange={(v) => set(r.id, { name: v })} />
-                <RowInput label="수량" placeholder="1" value={r.qty} onChange={(v) => set(r.id, { qty: v })} />
-                <RowInput money label="단가" placeholder="0" value={r.price} onChange={(v) => set(r.id, { price: v })} />
+                <RowInput label="수량" value={r.qty} onChange={(v) => set(r.id, { qty: v })} />
+                <RowInput label="단가" value={r.price} onChange={(v) => set(r.id, { price: v })} />
                 <RemoveButton disabled={rows.length <= 1} onClick={() => setRows(rows.filter((x) => x.id !== r.id))} />
-              </div>
+              </ListRow>
             ))}
             <AddButton label="품목 추가" onClick={() => setRows([...rows, { id: newRowId(), name: '', qty: '', price: '' }])} />
           </div>
-          <Field label="할인율 (선택)" value={discount} onChange={setDiscount} suffix="%" placeholder="0" />
+          <Field label="할인율 (선택)" value={discount} onChange={setDiscount} suffix="%" />
         </>
       }
       readout={

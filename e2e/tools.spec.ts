@@ -167,3 +167,31 @@ test('tools: money fields take 만·억 units and Enter moves to the next field'
   await page.keyboard.type('5')
   await expect(main.locator('output').first()).toContainText('6,525,') // 원리금균등 monthly payment
 })
+
+test('tools: no pre-filled values — blanks fall back to defaults, stale saved samples are cleared', async ({ page }) => {
+  // Inputs saved by an older version (when tools shipped with sample values).
+  await page.evaluate(() => {
+    localStorage.removeItem('aop-tool-store-version')
+    localStorage.setItem('aop-tool:vat.rate', JSON.stringify('10'))
+    localStorage.setItem('aop-tool:timer.focus', JSON.stringify('25'))
+  })
+  await page.reload()
+  await createDesk(page, '회사')
+  await page.locator('aside nav').getByRole('button', { name: '도구' }).click()
+  const main = page.locator('main')
+  const rail = main.getByRole('navigation', { name: '도구 목록' })
+
+  await rail.getByRole('button', { name: '부가세', exact: true }).click()
+  await expect(main.getByLabel('세율')).toHaveValue('')
+  await main.getByLabel('합계금액 (부가세 포함)').fill('110000')
+  await expect(main.locator('output').first()).toContainText('100,000') // blank rate = 10%
+
+  await rail.getByRole('button', { name: '집중 타이머', exact: true }).click()
+  await expect(main.getByLabel('집중')).toHaveValue('')
+  await expect(main.getByText('25:00')).toBeVisible()
+
+  for (const [tool, label] of [['시급·월급·연봉', '주 소정근로시간'], ['회의 비용', '간접비 (4대보험·복리후생)'], ['날짜 계산', '시작일 (비우면 오늘)']] as const) {
+    await rail.getByRole('button', { name: tool, exact: true }).click()
+    await expect(main.getByLabel(label), tool).toHaveValue('')
+  }
+})

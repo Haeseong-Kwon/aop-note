@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { breakEvenUnits, cagr, fmt, futureValue, irr, koreanWon, loanSchedule, monthlyHours, npv, num, vat, type RepayMethod } from '@/lib/toolMath'
-import { AddButton, EMPTY, Field, FieldRow, Note, NumInput, Readout, RemoveButton, Segmented, SplitBar, Stat, ToolLayout, usePersistentState } from './ui'
+import { AddButton, EMPTY, Field, FieldRow, Note, NumInput, Readout, RemoveButton, Segmented, SplitBar, Stat, ToolLayout, numOr, usePersistentState } from './ui'
 
 const won = (n: number): string => (Number.isFinite(n) ? fmt(Math.round(n)) : EMPTY)
 const wonText = (n: number): string => (Number.isFinite(n) ? `${fmt(Math.round(n))}원` : EMPTY)
@@ -11,10 +11,10 @@ const C_SOFT = 'hsl(var(--muted-foreground) / 0.35)'
 export function VatTool(): JSX.Element {
   const [mode, setMode] = usePersistentState<'total' | 'supply'>('vat.mode', 'total')
   const [amount, setAmount] = usePersistentState('vat.amount', '')
-  const [rate, setRate] = usePersistentState('vat.rate', '10')
+  const [rate, setRate] = usePersistentState('vat.rate', '')
   const a = num(amount)
   const ok = Number.isFinite(a)
-  const r = vat(ok ? a : NaN, mode, num(rate) || 0)
+  const r = vat(ok ? a : NaN, mode, numOr(rate, 10))
   const headline = mode === 'total' ? r.supply : r.total
   return (
     <ToolLayout
@@ -22,7 +22,7 @@ export function VatTool(): JSX.Element {
         <>
           <Segmented label="입력 기준" value={mode} onChange={setMode} options={[['total', '합계금액에서 나누기'], ['supply', '공급가액에 더하기']]} />
           <Field won label={mode === 'total' ? '합계금액 (부가세 포함)' : '공급가액 (부가세 별도)'} value={amount} onChange={setAmount} placeholder="110,000" />
-          <Field label="세율" value={rate} onChange={setRate} suffix="%" hint="일반과세자 10%" />
+          <Field label="세율" value={rate} onChange={setRate} suffix="%" placeholder="10" hint="비우면 일반과세자 10%" />
         </>
       }
       readout={
@@ -270,7 +270,7 @@ export function NpvTool(): JSX.Element {
             {flows.map((f, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="w-12 shrink-0 text-[12px] tabular-nums text-muted-foreground">{i === 0 ? '투자' : `${i}년차`}</span>
-                <NumInput value={f} onChange={(v) => setAt(i, v)} aria-label={`${i}년 현금흐름`} placeholder={i === 0 ? '-10,000,000' : '3,000,000'} className="field h-9 flex-1 rounded-lg tabular-nums placeholder:text-muted-foreground/40" />
+                <NumInput value={f} onChange={(v) => setAt(i, v)} aria-label={`${i}년 현금흐름`} placeholder={i === 0 ? '예: -10,000,000' : '예: 3,000,000'} className="tool-field h-9 min-w-0 flex-1 rounded-lg px-2.5 text-right text-[13px] tabular-nums outline-none placeholder:text-muted-foreground/40" />
                 <RemoveButton disabled={flows.length <= 2} onClick={() => setFlows(flows.filter((_, j) => j !== i))} />
               </div>
             ))}
@@ -336,8 +336,8 @@ type PayBasis = 'hour' | 'month' | 'year'
 export function SalaryTool(): JSX.Element {
   const [basis, setBasis] = usePersistentState<PayBasis>('salary.basis', 'year')
   const [amount, setAmount] = usePersistentState('salary.amount', '')
-  const [weekly, setWeekly] = usePersistentState('salary.weekly', '40')
-  const hours = monthlyHours(num(weekly) || 0)
+  const [weekly, setWeekly] = usePersistentState('salary.weekly', '')
+  const hours = monthlyHours(numOr(weekly, 40))
   const a = num(amount)
   const monthly = basis === 'hour' ? a * hours : basis === 'month' ? a : a / 12
   const hourly = monthly / hours
@@ -347,7 +347,7 @@ export function SalaryTool(): JSX.Element {
         <>
           <Segmented label="입력 기준" value={basis} onChange={setBasis} options={[['hour', '시급'], ['month', '월급'], ['year', '연봉']]} />
           <Field won label={basis === 'hour' ? '시급' : basis === 'month' ? '월급' : '연봉'} value={amount} onChange={setAmount} placeholder={basis === 'hour' ? '10,320' : basis === 'month' ? '3,500,000' : '42,000,000'} />
-          <Field label="주 소정근로시간" value={weekly} onChange={setWeekly} suffix="시간" hint={`주휴 포함 월 ${fmt(hours)}시간으로 환산`} />
+          <Field label="주 소정근로시간" value={weekly} onChange={setWeekly} suffix="시간" placeholder="40" hint={`비우면 40시간 · 주휴 포함 월 ${fmt(hours)}시간으로 환산`} />
           <Note>세전 금액 기준입니다. 4대보험과 소득세는 반영하지 않습니다.</Note>
         </>
       }

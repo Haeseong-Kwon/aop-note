@@ -4,7 +4,7 @@ import { copyFileSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { buildGraphExport, scopeLabelFor, toExportOptions } from '../graphExport'
 import { graphArchive } from '../graphArchive'
-import { IPC } from '@shared/ipc'
+import { EDIT_COMMANDS, IPC, type EditCommand } from '@shared/ipc'
 import { workspaceRepo } from '../repositories/workspace.repo'
 import { categoryRepo } from '../repositories/category.repo'
 import { taskRepo } from '../repositories/task.repo'
@@ -468,5 +468,9 @@ export function registerIpcHandlers(): void {
 
   handle(IPC.emoji.showPanel, () => {
     if (app.isEmojiPanelSupported()) app.showEmojiPanel()
+  })
+
+  ipcMain.handle(IPC.edit.run, (event, command: EditCommand) => {
+    if (EDIT_COMMANDS.includes(command)) event.sender[command]()
   })
 }

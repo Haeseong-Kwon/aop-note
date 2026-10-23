@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useState, type ChangeEvent, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { Check, Copy, Plus, X } from 'lucide-react'
 import { useToast } from '@/store/useToast'
 import { groupDigits, koreanWon, normalizeAmount, num } from '@/lib/toolMath'
@@ -6,6 +6,24 @@ import { cn } from '@/lib/utils'
 
 /** Prefix of every tool's saved inputs; the tool page's 초기화 clears `${TOOL_STORE}${toolId}.*`. */
 export const TOOL_STORE = 'aop-tool:'
+
+/**
+ * Bumped when saved inputs must not carry over: earlier versions shipped sample values
+ * as defaults, and those were saved like typed input. Changing it clears every tool's
+ * saved inputs once.
+ */
+const STORE_VERSION = '3'
+const STORE_VERSION_KEY = 'aop-tool-store-version'
+try {
+  if (localStorage.getItem(STORE_VERSION_KEY) !== STORE_VERSION) {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(TOOL_STORE))
+      .forEach((k) => localStorage.removeItem(k))
+    localStorage.setItem(STORE_VERSION_KEY, STORE_VERSION)
+  }
+} catch {
+  /* storage unavailable: nothing saved to clear */
+}
 
 /** useState that survives switching tools / restarting. Keys are '<tool id>.<field>'. */
 export function usePersistentState<T>(key: string, initial: T): [T, (v: T) => void] {
@@ -107,12 +125,13 @@ export function Field({ label, value, onChange, suffix, hint, placeholder, type 
   const n = num(value)
   const wonHint = won && Number.isFinite(n) && Math.abs(n) >= 10_000 ? koreanWon(n) : undefined
   // Discoverability: money fields accept '3억 5천만' — say so while the field is empty.
-  const unitHint = won && !value.trim() && !hint ? '만·억 단위로 입력해도 됩니다 (예: 3억 5천만)' : undefined
+  const [focused, setFocused] = useState(false)
+  const unitHint = won && focused && !value.trim() && !hint ? '‘3억 5천만’처럼 입력해도 됩니다' : undefined
   const inputClass = 'h-full min-w-0 flex-1 bg-transparent px-3.5 text-[15px] font-medium tabular-nums outline-none placeholder:font-normal placeholder:text-muted-foreground/50'
   return (
     <label className="flex min-w-0 flex-col gap-1.5">
       <span className="text-[12px] font-medium text-muted-foreground">{label}</span>
-      <span className={FIELD_BOX}>
+      <span className={FIELD_BOX} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
         {type === 'number' ? (
           <NumInput value={value} onChange={onChange} placeholder={examplePlaceholder(placeholder)} className={inputClass} />
         ) : (
@@ -176,6 +195,9 @@ export function Segmented<T extends string>({ value, options, onChange, label, h
     </div>
   )
 }
+
+/** A field's number, or `fallback` while it's blank — defaults live in the placeholder, not the value. */
+export const numOr = (raw: string, fallback: number): number => (Number.isFinite(num(raw)) ? num(raw) : fallback)
 
 /** Shown in the readout when inputs are incomplete or invalid. */
 export const EMPTY = '—'
@@ -287,13 +309,30 @@ export function Plate({ label, children, action, className }: { label?: string; 
 export const newRowId = (): string => crypto.randomUUID().slice(0, 8)
 
 /** A compact cell input (wide = the name column; otherwise a grouped number). */
-/** `money`: a wider number column for amounts in 원. */
-export function RowInput({ value, onChange, label, wide, money, placeholder }: { value: string; onChange: (v: string) => void; label: string; wide?: boolean; money?: boolean; placeholder?: string }): JSX.Element {
-  const cls = 'tool-field h-9 rounded-lg px-2.5 text-[13px] tabular-nums outline-none placeholder:text-muted-foreground/45'
+// List tools (견적, PERT, RICE, 퍼널) lay a header and their rows on one grid template,
+// so every column lines up whatever the labels or values: name | numbers… | remove.
+export type RowCol = { label: string; title?: string; money?: boolean }
+
+const rowTemplate = (cols: readonly RowCol[], trailing: boolean): CSSProperties => ({
+  gridTemplateColumns: `minmax(7rem, 1fr) ${cols.map((c) => (c.money ? 'minmax(6.5rem, 8.5rem)' : 'minmax(3.5rem, 4.75rem)')).join(' ')}${trailing ? ' 1.75rem' : ''}`
+})
+
+/** One row of a list tool; `cols` must be the same array its RowHeader gets. */
+export function ListRow({ cols, trailing = true, children }: { cols: readonly RowCol[]; trailing?: boolean; children: ReactNode }): JSX.Element {
+  return (
+    <div className="grid items-center gap-2" style={rowTemplate(cols, trailing)}>
+      {children}
+    </div>
+  )
+}
+
+/** A compact cell input (wide = the name column; otherwise a right-aligned number). Fills its grid column. */
+export function RowInput({ value, onChange, label, wide, placeholder }: { value: string; onChange: (v: string) => void; label: string; wide?: boolean; placeholder?: string }): JSX.Element {
+  const cls = 'tool-field h-9 w-full min-w-0 rounded-lg px-2.5 text-[13px] tabular-nums outline-none placeholder:text-muted-foreground/45'
   return wide ? (
-    <input value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} placeholder={placeholder ?? label} className={cn(cls, 'min-w-[6rem] flex-1')} />
+    <input value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} placeholder={placeholder ?? label} className={cls} />
   ) : (
-    <NumInput value={value} onChange={onChange} aria-label={label} placeholder={placeholder} className={cn(cls, money ? 'w-28' : 'w-16', 'text-right')} />
+    <NumInput value={value} onChange={onChange} aria-label={label} placeholder={placeholder} className={cn(cls, 'text-right')} />
   )
 }
 
@@ -313,16 +352,17 @@ export function AddButton({ onClick, label }: { onClick: () => void; label: stri
   )
 }
 
-/** Column headings above RowInput rows; `cols` are the numeric columns' labels (right-aligned, w-16). */
-export function RowHeader({ name, cols, trailing = true }: { name: string; cols: { label: string; title?: string; money?: boolean }[]; trailing?: boolean }): JSX.Element {
+/** Column headings above ListRow rows; numeric headings sit right-aligned over their inputs. */
+export function RowHeader({ name, cols, trailing = true }: { name: string; cols: readonly RowCol[]; trailing?: boolean }): JSX.Element {
   return (
-    <div className={cn('flex items-center gap-2 text-[11px] font-medium text-muted-foreground', trailing && 'pr-9')}>
-      <span className="min-w-[6rem] flex-1">{name}</span>
+    <div className="grid items-end gap-2 px-0.5 text-[11.5px] font-medium text-muted-foreground" style={rowTemplate(cols, trailing)}>
+      <span>{name}</span>
       {cols.map((c) => (
-        <span key={c.label} title={c.title} className={cn(c.money ? 'w-28' : 'w-16', 'text-right')}>
+        <span key={c.label} title={c.title} className={cn('truncate text-right', c.title && 'cursor-help underline decoration-dotted decoration-muted-foreground/40 underline-offset-2')}>
           {c.label}
         </span>
       ))}
+      {trailing && <span />}
     </div>
   )
 }

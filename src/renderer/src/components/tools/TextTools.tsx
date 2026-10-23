@@ -46,7 +46,7 @@ export function ListCleanTool(): JSX.Element {
             onChange={(e) => setText(e.target.value)}
             placeholder={'정리할 목록을 붙여 넣으세요.\n엑셀 열, 이메일 목록, 쉼표로 이은 이름 모두 됩니다.'}
             aria-label="원본 목록"
-            className="min-h-[14rem] resize-y rounded-xl border border-input bg-background/80 p-4 text-[14px] leading-relaxed outline-none transition-shadow placeholder:text-muted-foreground/45 focus:border-[color:var(--tool)] focus:shadow-[0_0_0_3px_var(--tool-soft)]"
+            className="min-h-[14rem] resize-y rounded-xl tool-field p-4 text-[14px] leading-relaxed outline-none transition-shadow placeholder:text-muted-foreground/45 focus:border-[color:var(--tool)] focus:shadow-[0_0_0_3px_var(--tool-soft)]"
           />
           <div className="flex flex-wrap gap-1.5">
             {OPTION_LABELS.map(([key, label]) => (

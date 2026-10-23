@@ -659,8 +659,9 @@ body.is-resizing * {
   .tool-grid {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   }
+  /* Table-style inputs (RICE, PERT, 견적…) stack until there's room for both columns. */
   .tool-grid-wide {
-    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
   .tool-grid > :last-child {
     position: sticky;
@@ -706,6 +707,12 @@ body.is-resizing * {
 .dark .tool-inputs .tool-field,
 .dark .tool-field {
   background: hsl(var(--background) / 0.7);
+}
+
+@container (min-width: 64rem) {
+  .tool-grid-wide {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
 }
 
 /* The headline figure: scales with the pane so long amounts never overflow. */
