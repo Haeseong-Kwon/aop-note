@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+import groovy.json.JsonSlurper
+
+// Version from package.json: "0.2.0" → versionName 0.2.0, versionCode 200 (must grow for updates to install over).
+def pkgVersion = new JsonSlurper().parse(file('../../package.json')).version
+def (vMajor, vMinor, vPatch) = pkgVersion.tokenize('.').collect { it.replaceAll(/\D.*/, '') as int }
+
+// Release signing comes from the environment (scripts/android-release.sh reads the macOS Keychain);
+// the keystore and its password never live in the repo.
+def releaseKeystore = System.getenv('AOP_ANDROID_KEYSTORE')
+
 android {
     namespace = "com.aop.note"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +17,8 @@ android {
         applicationId "com.aop.note"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode vMajor * 10000 + vMinor * 100 + vPatch
+        versionName pkgVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +26,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseKeystore) {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv('AOP_ANDROID_KEYSTORE_PASSWORD')
+                keyAlias 'aop-note'
+                keyPassword System.getenv('AOP_ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            // Unsigned without the keystore; android-release.sh refuses to run then.
+            signingConfig releaseKeystore ? signingConfigs.release : null
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

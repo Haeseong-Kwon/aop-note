@@ -27,7 +27,8 @@
     "android:apk": "npm run build:mobile && cd android && ./gradlew assembleDebug",
     "typecheck:mobile": "tsc --noEmit -p tsconfig.mobile.json",
     "android:smoke": "node scripts/android-smoke.mjs",
-    "android:pc-link": "node scripts/android-pc-link.mjs"
+    "android:pc-link": "node scripts/android-pc-link.mjs",
+    "android:release": "bash scripts/android-release.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

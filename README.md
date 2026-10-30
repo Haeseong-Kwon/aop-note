@@ -191,7 +191,8 @@ npm run android:smoke      # 에뮬레이터 전용: 앱 데이터를 지우고 
 npm run build && npm run android:pc-link  # 에뮬레이터 + 데스크톱 앱: 코드로 페어링, 양방향 메모·첨부, 연결 해제
 ```
 
-**폰에 설치**: USB 디버깅을 켜고 `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`를 실행하거나, APK 파일을 폰으로 옮겨 열면 됩니다("출처를 알 수 없는 앱" 허용 필요).
+**폰에 설치 (릴리스)**: `npm run android:release` → `android/app/build/outputs/apk/release/app-release.apk`. 처음 실행할 때 서명 키(`~/.android/aop-note-release.jks`)를 만들고 비밀번호를 macOS 키체인(`aop-note-android-release`)에 넣습니다. **키 파일과 비밀번호를 백업해 두세요.** 폰은 같은 키로 서명한 업데이트만 받습니다. APK를 폰으로 옮겨 열거나("출처를 알 수 없는 앱" 허용) `adb install -r`로 설치합니다. 업데이트할 때는 `package.json`의 버전을 올려야 덮어 설치됩니다.
+디버그 APK(`npm run android:apk`)는 에뮬레이터 테스트용입니다. 서명이 달라서 이미 설치된 릴리스 앱 위에 덮어쓸 수 없습니다.
 
 **PC와 연결** (같은 Wi-Fi, 클라우드·별도 앱 없이):
 1. 데스크톱: 설정 → 휴대폰 연결 → 켜기 → **새 휴대폰 연결**. PC 주소와 연결 코드(10분 유효)가 나옵니다.
