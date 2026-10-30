@@ -1,0 +1,101 @@
+/* Phone shell (Android build). Only applies under .m-shell, so the desktop layout is untouched.
+   Mostly touch sizing for the shared desktop components that the phone pages reuse. */
+
+html,
+body {
+  background: hsl(var(--background));
+  overscroll-behavior: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.m-shell {
+  /* Edge-to-edge WebViews draw under the status bar: keep content below it. */
+  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top));
+  -webkit-tap-highlight-color: transparent;
+  /* Long-press selects text in memos, not the app's buttons and labels. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+.m-shell input,
+.m-shell textarea,
+.m-shell [contenteditable='true'],
+.m-shell [contenteditable='true'] * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Edge-to-edge: the tab bar (or the page itself) stays above the gesture/navigation bar. */
+.m-tabbar {
+  height: calc(4rem + var(--safe-area-inset-bottom, env(safe-area-inset-bottom)));
+  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom));
+}
+.m-shell:not(.m-shell--tabs) {
+  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom));
+}
+
+/* Shared page headers: phone-height bars with thumb-sized buttons. */
+.m-shell .note-header,
+.m-shell .page-header {
+  height: 3.5rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+}
+.m-shell .note-header button,
+.m-shell .page-header .no-drag button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.m-shell .note-header svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.m-shell .page-header h1 {
+  font-size: 17px;
+}
+
+/* Memo body lines up with the title: the desktop's 1rem inset holds hover drag handles, which touch has none of. */
+.m-shell .note-page .bn-memo--page .bn-editor {
+  padding-inline: var(--page-gutter);
+}
+
+/* Calendar on a ~55px-wide day cell: show as much of a title as fits instead of "분…",
+   keep desk chips on one scrolling row, and drop the mouse hint (click/drag). */
+.m-shell .cal-bar,
+.m-shell .cal-bar .truncate {
+  text-overflow: clip;
+  gap: 2px;
+  padding-inline: 3px;
+  font-size: 10px;
+  letter-spacing: -0.02em;
+}
+.m-shell .cal-desks {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.m-shell .cal-desks::-webkit-scrollbar {
+  display: none;
+}
+.m-shell .cal-desks > * {
+  flex-shrink: 0;
+}
+.m-shell .cal-hint {
+  display: none;
+}
+
+/* Toasts sit above the tab bar. */
+.m-shell--tabs .app-toast {
+  bottom: 5rem;
+}
+.m-shell .app-toast {
+  max-width: calc(100vw - 2rem);
+  font-size: 14px;
+}

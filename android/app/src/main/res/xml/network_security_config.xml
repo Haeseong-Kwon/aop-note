@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PC ↔ phone sync talks plain HTTP to the desktop on the local network (no certificates on a LAN).
+     Every sync body is AES-GCM sealed end to end (src/shared/lanProtocol.ts), so nothing readable
+     travels in clear. Android cannot scope cleartext to private IP ranges, hence the base config. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

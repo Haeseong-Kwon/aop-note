@@ -327,6 +327,31 @@ export interface AppSettings {
   aiModel: string
   /** Shared folder (iCloud Drive, Dropbox…) used to sync with other devices ('' = off). */
   syncPath: string
+  /** Desktop: phones on the same network can pair and sync directly (Settings → 휴대폰 연결). */
+  lanSync: boolean
+}
+
+/** Desktop side of PC ↔ phone sync (Settings → 휴대폰 연결). */
+export interface LanStatus {
+  enabled: boolean
+  /** Why the server could not start (port taken…). */
+  error: string | null
+  port: number
+  /** This computer's addresses on the local network, for the phone to type in. */
+  addresses: string[]
+  /** A one-time code is showing; a phone can pair until it expires. */
+  pairing: { code: string; expires_at: string } | null
+  devices: { id: string; name: string; paired_at: string; last_seen: string | null }[]
+}
+
+/** Phone side of PC ↔ phone sync (Settings → PC 연결). */
+export interface PcLinkStatus {
+  linked: boolean
+  pcName: string | null
+  address: string | null
+  last_sync: string | null
+  /** The last round failed (PC off, other network…); cleared by the next success. */
+  last_error: string | null
 }
 
 /** One sync round: rows merged from other devices, devices read, attachment files copied. */

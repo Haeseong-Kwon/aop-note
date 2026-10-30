@@ -12,72 +12,21 @@ import { DocumentViewer } from './components/DocumentViewer'
 import { popUndo } from './store/undo'
 import { useToast, toastError } from './store/useToast'
 import { FloatingTools } from './components/tools/FloatingTools'
+import { useAppEvents } from './hooks/useAppEvents'
 
 function App(): JSX.Element {
-  const init = useStore((s) => s.init)
   const loading = useStore((s) => s.loading)
   const error = useStore((s) => s.error)
   const openQuickCapture = useStore((s) => s.openQuickCapture)
   const openPalette = useStore((s) => s.openPalette)
   const toggleHelp = useStore((s) => s.toggleHelp)
   const collapse = useStore((s) => s.collapse)
-  const navigateToTask = useStore((s) => s.navigateToTask)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
   const openDocument = useStore((s) => s.openDocument)
   const closeDocument = useStore((s) => s.closeDocument)
   const toggleSidebar = useStore((s) => s.toggleSidebar)
 
-  useEffect(() => {
-    init()
-  }, [init])
-
-  // Navigation requests from notification clicks (main → renderer).
-  useEffect(() => {
-    return window.api.onNavigateToTask((payload) => {
-      navigateToTask(payload)
-    })
-  }, [navigateToTask])
-
-  // Claude Code (via MCP) can add notes while the app is in the background.
-  useEffect(() => {
-    const onFocus = (): void => void useStore.getState().refresh()
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
-  }, [])
-
-  // A linked project folder changed on disk (docs edited, commit made).
-  useEffect(() => window.api.onProjectChanged(() => useStore.getState().bumpProjectVersion()), [])
-
-  useEffect(() => window.api.onCalendarsSynced(() => useStore.getState().bumpCalendarVersion()), [])
-
-  // Another device's edits were merged in (folder sync): reload desks and the open view.
-  useEffect(
-    () =>
-      window.api.onDataMerged(() => {
-        void window.api.workspace
-          .list()
-          .then((workspaces) => {
-            useStore.setState({ workspaces })
-            return useStore.getState().refresh()
-          })
-          .catch(toastError)
-      }),
-    []
-  )
-
-  // System-wide quick capture (global shortcut / menu-bar icon).
-  useEffect(() => window.api.onQuickCapture(() => openQuickCapture()), [openQuickCapture])
-
-  // Prevent the window from navigating away when a file is dropped outside a drop zone.
-  useEffect(() => {
-    const prevent = (e: DragEvent): void => e.preventDefault()
-    window.addEventListener('dragover', prevent)
-    window.addEventListener('drop', prevent)
-    return () => {
-      window.removeEventListener('dragover', prevent)
-      window.removeEventListener('drop', prevent)
-    }
-  }, [])
+  useAppEvents()
 
   // Global shortcuts. Cmd/Ctrl combos work even while typing; bare keys (?, Esc)
   // yield to text inputs.

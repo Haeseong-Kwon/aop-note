@@ -72,7 +72,8 @@ export function ResizablePane({
   return (
     // The handle lives on an unclipped wrapper: panes like the sidebar clip their overflow
     // (rounded glass), which would cut off the half of the handle that sits in the gap.
-    <div className="relative flex shrink-0" style={{ width, maxWidth: `${maxShare * 100}%` }}>
+    // Phone: panes stack (the parent row turns into a column), so this one spans the width and stays short.
+    <div className="relative flex shrink-0 max-md:!w-full max-md:!max-w-none max-md:max-h-[34vh]" style={{ width, maxWidth: `${maxShare * 100}%` }}>
       <Tag className={cn('min-w-0 flex-1', className)} aria-label={rest['aria-label']}>
         {children}
       </Tag>
@@ -106,7 +107,7 @@ export function ResizablePane({
           else return
           e.preventDefault()
         }}
-        className="no-drag group/resize absolute -right-1.5 top-0 z-20 flex h-full w-3 cursor-col-resize justify-center outline-none"
+        className="no-drag group/resize absolute -right-1.5 top-0 z-20 flex h-full w-3 cursor-col-resize justify-center outline-none max-md:hidden"
       >
         <span
           className={cn(

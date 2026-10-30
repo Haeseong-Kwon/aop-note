@@ -17,7 +17,7 @@ const STATUS_DOT: Record<TaskStatus, string> = {
 }
 
 /** First meaningful line of a memo, stripped of common Markdown noise; null when the memo is empty. */
-function memoPreview(note: string): string | null {
+export function memoPreview(note: string): string | null {
   // A chart is a JSON fence in the Markdown; preview it by its title.
   const withCharts = replaceChartFences(note, (doc) => `📊 ${chartTitle(doc)}`)
   const line = withCharts

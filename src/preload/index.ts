@@ -233,6 +233,19 @@ const api: Api = {
     syncDisable: () => ipcRenderer.invoke(IPC.data.syncDisable),
     exportIcs: () => ipcRenderer.invoke(IPC.data.exportIcs)
   },
+  lan: {
+    status: () => ipcRenderer.invoke(IPC.lan.status),
+    enable: () => ipcRenderer.invoke(IPC.lan.enable),
+    disable: () => ipcRenderer.invoke(IPC.lan.disable),
+    startPairing: () => ipcRenderer.invoke(IPC.lan.startPairing),
+    forget: (deviceId: string) => ipcRenderer.invoke(IPC.lan.forget, deviceId)
+  },
+  pcLink: {
+    status: () => ipcRenderer.invoke(IPC.pcLink.status),
+    link: (input: { address: string; code: string }) => ipcRenderer.invoke(IPC.pcLink.link, input),
+    syncNow: () => ipcRenderer.invoke(IPC.pcLink.syncNow),
+    unlink: () => ipcRenderer.invoke(IPC.pcLink.unlink)
+  },
   update: {
     status: () => ipcRenderer.invoke(IPC.update.status),
     check: () => ipcRenderer.invoke(IPC.update.check)

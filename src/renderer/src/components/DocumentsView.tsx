@@ -109,7 +109,7 @@ export function DocumentsView(): JSX.Element {
     void run(() => window.api.docFolder.remove(folder.id), `‘${folder.name}’ 폴더를 지웠습니다. 안의 문서는 상위 폴더로 옮겼습니다.`)
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full max-md:flex-col">
       <DocFolderTree
         folders={folders}
         memoGroups={memoGroups}

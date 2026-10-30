@@ -4,7 +4,8 @@ import { existsSync } from 'fs'
 import { app, dialog, shell, BrowserWindow, Menu, protocol, net } from 'electron'
 import { getDb, closeDb } from './db'
 import { registerIpcHandlers, notifyMerged } from './ipc/handlers'
-import { startSyncLoop } from './sync'
+import { scheduleSync, startSyncLoop } from './sync'
+import { registerLanHandlers, startLanServer, stopLanServer } from './lanSync'
 import { startAutoUpdate } from './updater'
 import { startDueNotifier } from './notifications'
 import { pathForStored } from './attachments'
@@ -172,6 +173,14 @@ app.whenReady().then(() => {
   backfillDocumentIndex().catch((error) => console.error('[search] document backfill failed:', error))
   // Device sync through a shared folder (off unless a folder is chosen in Settings).
   stopSync = startSyncLoop(() => loadSettings().syncPath, notifyMerged)
+  // Phones on the local network (off unless turned on in Settings → 휴대폰 연결). A phone's edits
+  // show here and travel on to the shared folder, if one is set.
+  const lanMerged = (): void => {
+    notifyMerged()
+    scheduleSync(() => loadSettings().syncPath, notifyMerged)
+  }
+  registerLanHandlers(lanMerged)
+  if (loadSettings().lanSync) void startLanServer(lanMerged)
   // New versions from GitHub Releases (packaged builds only).
   stopUpdates = startAutoUpdate()
   // Bring the Markdown mirror up to date (e.g. after an app update changed its format).
@@ -205,6 +214,7 @@ app.on('will-quit', () => {
   stopQuickCapture?.()
   stopProjectWatching?.()
   stopSync?.()
+  stopLanServer()
   stopUpdates?.()
   if (calendarTimer) clearInterval(calendarTimer)
   closeDb()

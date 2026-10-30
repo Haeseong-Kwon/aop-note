@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"sed -n 535,570p src/renderer/src/components/Sidebar.tsx; grep -rn \\\"SidebarExpandButton\\\\|export function\\\" src/renderer/src/components/Sidebar.tsx | head; grep -rn \\\"ResizablePane\\\" src/r...",
+  "error": "Exit code 1\n    </button>\n  )\n}\n\n/** Shown at the start of a page header while the sidebar is collapsed. */\nexport function SidebarExpandButton(): JSX.Element | null {\n  const collapsed = useStore((s) => s.sidebarCollapsed)\n  const toggleSidebar = useStore((s) => s.toggleSidebar)\n  if (!collapsed) return null\n  return (\n    <button\n      onClick={toggleSidebar}\n      title={`사이드바 열기 (${shortcut('Mod', '\\\\')})`}\n      aria-label=\"사이드바 열기\"\n      // Clears the macOS traffic lights, which now float ...",
+  "timestamp": "2026-10-26T06:43:17.693Z",
+  "retry_count": 1
+}

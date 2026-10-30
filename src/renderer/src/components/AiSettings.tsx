@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useToast, toastError } from '@/store/useToast'
 import { SettingRow } from './SettingsView'
-import { cn } from '@/lib/utils'
+import { cn, IS_ANDROID } from '@/lib/utils'
 import type { AiProvider, AiStatus, AppSettings } from '@shared/types'
 import { AI_MODELS, DEFAULT_AI_MODEL } from '@shared/aiModels'
 
-const PROVIDERS: { value: AiProvider; label: string; hint: string }[] = [
+const ALL_PROVIDERS: { value: AiProvider; label: string; hint: string }[] = [
   { value: 'claude-code', label: 'Claude Code', hint: '이 Mac에 로그인된 claude CLI로 실행 (구독 사용)' },
   { value: 'api', label: 'Anthropic API 키', hint: '직접 발급한 API 키로 실행 (사용량만큼 과금)' }
 ]
+// The phone has no claude CLI: API key only.
+const PROVIDERS = ALL_PROVIDERS.filter((p) => !IS_ANDROID || p.value === 'api')
 
 const MODELS = AI_MODELS.map((m) => ({ value: m.id, label: m.label }))
 

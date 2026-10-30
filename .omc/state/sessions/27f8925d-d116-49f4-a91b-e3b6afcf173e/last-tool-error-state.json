@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"python3 - <<'EOF'\\np='README.md'; s=open(p).read()\\nold_start=s.index(\\\"**데스크톱과 동기화** (Syncthing):\\\")\\nold_end=s.index(\\\"**모바일 화면**\\\")\\ns=s[:old_start]+\\\"\\\"\\\"**PC와 연결** (같은 Wi-Fi, 클라우드·별도 ...",
+  "error": "Exit code 2\n\n```bash\n# 요구: Android SDK(~/Library/Android/sdk), JDK 21\nexport JAVA_HOME=$(mise where java@temurin-21.0.12+101.0.LTS) ANDROID_HOME=$HOME/Library/Android/sdk\nnpm run android:apk        # → android/app/build/outputs/apk/debug/app-debug.apk\nnpm run test:mobile        # 저장소 체크를 SQLite Wasm 위에서 실행\nnpm run android:smoke      # 에뮬레이터 전용: 앱 데이터를 지우고 설치·저장·재시작·동기화 확인\nnpm run build && npm run android:pc-link  # 에뮬레이터 + 데스크톱 앱: 코드로 페어링, 양방향 메모·첨부, 연결 해제\n```\n\n**폰에 설치**: USB 디버깅을 켜고 `adb instal...",
+  "timestamp": "2026-10-30T18:44:02.426Z",
+  "retry_count": 1
+}

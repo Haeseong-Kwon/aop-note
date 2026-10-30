@@ -225,7 +225,7 @@ export function GraphView(): JSX.Element {
         </p>
       </div>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 max-md:flex-col">
         <ResizablePane
           as="nav"
           aria-label="프로젝트"

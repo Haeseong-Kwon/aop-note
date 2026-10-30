@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1792758671920,
+  "lastScanned": 1793168344389,
   "projectRoot": "/Users/haeseong/Desktop/Products/aop-note",
   "techStack": {
     "languages": [
@@ -56,7 +56,7 @@
       "build": "electron-vite build && npm run build:mcp",
       "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
       "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
-      "typecheck": "npm run typecheck:node && npm run typecheck:web",
+      "typecheck": "npm run typecheck:node && npm run typecheck:web && npm run typecheck:mobile",
       "start": "electron-vite preview",
       "package": "npm run build && electron-builder",
       "package:mac": "npm run build && electron-builder --mac",
@@ -67,7 +67,12 @@
       "e2e": "npm run build && playwright test",
       "test:renderer": "esbuild src/renderer/src/lib/check.ts --bundle --platform=node --format=esm --alias:@shared=./src/shared --outfile=node_modules/.cache/memo-check.mjs --log-level=error && node node_modules/.cache/memo-check.mjs",
       "test:main": "esbuild src/main/check.ts --bundle --platform=node --format=cjs --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=node_modules/.cache/main-check.cjs --log-level=error && ELECTRON_RUN_AS_NODE=1 electron node_modules/.cache/main-check.cjs",
-      "build:mcp": "esbuild src/mcp/server.ts --bundle --platform=node --format=cjs --target=node20 --alias:electron=./src/mcp/electron-shim.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=out/mcp/server.js --log-level=warning"
+      "build:mcp": "esbuild src/mcp/server.ts --bundle --platform=node --format=cjs --target=node20 --alias:electron=./src/mcp/electron-shim.ts --alias:@shared=./src/shared --external:better-sqlite3 --outfile=out/mcp/server.js --log-level=warning",
+      "test:mobile": "esbuild src/mobile/db.check.ts --bundle --platform=node --format=esm --alias:electron=./test/electron-stub.ts --alias:@shared=./src/shared --alias:better-sqlite3=./src/mobile/shims/better-sqlite3.ts --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\" --outfile=node_modules/.cache/mobile-check.mjs --log-level=error && cp node_modules/@sqlite.org/sqlite-wasm/dist/sqlite3.wasm node_modules/.cache/ && node node_modules/.cache/mobile-check.mjs",
+      "build:mobile": "vite build -c vite.mobile.config.ts && cap sync android",
+      "android:apk": "npm run build:mobile && cd android && ./gradlew assembleDebug",
+      "typecheck:mobile": "tsc --noEmit -p tsconfig.mobile.json",
+      "android:smoke": "node scripts/android-smoke.mjs"
     }
   },
   "conventions": {
@@ -91,11 +96,24 @@
   },
   "customNotes": [],
   "directoryMap": {
+    "android": {
+      "path": "android",
+      "purpose": null,
+      "fileCount": 9,
+      "lastAccessed": 1793168344376,
+      "keyFiles": [
+        "build.gradle",
+        "capacitor.settings.gradle",
+        "gradle.properties",
+        "gradlew",
+        "gradlew.bat"
+      ]
+    },
     "build": {
       "path": "build",
       "purpose": "Build output",
       "fileCount": 2,
-      "lastAccessed": 1792758671908,
+      "lastAccessed": 1793168344377,
       "keyFiles": [
         "icon.icns",
         "icon.png"
@@ -104,34 +122,34 @@
     "dist": {
       "path": "dist",
       "purpose": "Distribution/build output",
-      "fileCount": 13,
-      "lastAccessed": 1792758671910,
+      "fileCount": 15,
+      "lastAccessed": 1793168344382,
       "keyFiles": [
         "aop-note-0.1.0-arm64.dmg",
         "aop-note-0.1.0-arm64.dmg.blockmap",
+        "aop-note-0.2.0-android.apk",
         "aop-note-0.2.0-arm64-mac.zip",
-        "aop-note-0.2.0-arm64-mac.zip.blockmap",
-        "aop-note-0.2.0-arm64.dmg"
+        "aop-note-0.2.0-arm64-mac.zip.blockmap"
       ]
     },
     "e2e": {
       "path": "e2e",
       "purpose": null,
-      "fileCount": 7,
-      "lastAccessed": 1792758671914,
+      "fileCount": 9,
+      "lastAccessed": 1793168344385,
       "keyFiles": [
         "app.ts",
         "audit.mjs",
         "charts.spec.ts",
-        "desks.spec.ts",
-        "search.spec.ts"
+        "clipboard.spec.ts",
+        "desks.spec.ts"
       ]
     },
     "image": {
       "path": "image",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1792758671914,
+      "lastAccessed": 1793168344385,
       "keyFiles": [
         "logo image.png"
       ]
@@ -140,14 +158,14 @@
       "path": "out",
       "purpose": "Build output",
       "fileCount": 0,
-      "lastAccessed": 1792758671914,
+      "lastAccessed": 1793168344386,
       "keyFiles": []
     },
     "resources": {
       "path": "resources",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1792758671915,
+      "lastAccessed": 1793168344387,
       "keyFiles": [
         "tray.png"
       ]
@@ -155,9 +173,10 @@
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
-      "fileCount": 3,
-      "lastAccessed": 1792758671915,
+      "fileCount": 4,
+      "lastAccessed": 1793168344387,
       "keyFiles": [
+        "android-smoke.mjs",
         "install-mac.sh",
         "make-icon.py",
         "package-win.mjs"
@@ -167,14 +186,14 @@
       "path": "src",
       "purpose": "Source code",
       "fileCount": 0,
-      "lastAccessed": 1792758671915,
+      "lastAccessed": 1793168344387,
       "keyFiles": []
     },
     "test": {
       "path": "test",
       "purpose": "Test files",
       "fileCount": 1,
-      "lastAccessed": 1792758671915,
+      "lastAccessed": 1793168344387,
       "keyFiles": [
         "electron-stub.ts"
       ]
@@ -183,27 +202,105 @@
       "path": "test-results",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1792758671915,
+      "lastAccessed": 1793168344387,
+      "keyFiles": []
+    },
+    "android/app": {
+      "path": "android/app",
+      "purpose": "Application code",
+      "fileCount": 4,
+      "lastAccessed": 1793168344388,
+      "keyFiles": [
+        "build.gradle",
+        "capacitor.build.gradle",
+        "proguard-rules.pro"
+      ]
+    },
+    "android/build": {
+      "path": "android/build",
+      "purpose": "Build output",
+      "fileCount": 0,
+      "lastAccessed": 1793168344388,
       "keyFiles": []
     }
   },
   "hotPaths": [
     {
-      "path": "src/renderer/src/lib/imeEditKeys.ts",
+      "path": "src/main/lanSync.ts",
+      "accessCount": 6,
+      "lastAccessed": 1793385946541,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/mobile/MobileApp.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1793168775029,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/mobile/mobile.css",
+      "accessCount": 3,
+      "lastAccessed": 1793168917525,
+      "type": "file"
+    },
+    {
+      "path": "scripts/android-icons.py",
       "accessCount": 2,
-      "lastAccessed": 1792759372575,
+      "lastAccessed": 1793168638493,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/main.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1792759267339,
+      "path": "src/renderer/src/components/CalendarView.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1793168682486,
       "type": "file"
     },
     {
-      "path": "src/renderer/src/components/ScrollJump.tsx",
+      "path": "src/shared/lanProtocol.ts",
+      "accessCount": 2,
+      "lastAccessed": 1793385234757,
+      "type": "file"
+    },
+    {
+      "path": "scripts/android-smoke.mjs",
+      "accessCount": 2,
+      "lastAccessed": 1793386184927,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/calendar/MonthGrid.tsx",
       "accessCount": 1,
-      "lastAccessed": 1792779843043,
+      "lastAccessed": 1793168682860,
+      "type": "file"
+    },
+    {
+      "path": "src/main/lanSync.check.ts",
+      "accessCount": 1,
+      "lastAccessed": 1793385396616,
+      "type": "file"
+    },
+    {
+      "path": "src/mobile/pcLink.ts",
+      "accessCount": 1,
+      "lastAccessed": 1793385493602,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/src/components/DeviceLinkSettings.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1793385581032,
+      "type": "file"
+    },
+    {
+      "path": "scripts/android-pc-link.mjs",
+      "accessCount": 1,
+      "lastAccessed": 1793385738723,
+      "type": "file"
+    },
+    {
+      "path": "docs/adr/0001-pc-phone-direct-lan-sync.md",
+      "accessCount": 1,
+      "lastAccessed": 1793385863780,
       "type": "file"
     }
   ],

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "entries": {
+    "445ed27a3872b681d98190bae61ccb84954e1bc4e140df5370be958dee776b3a": {
+      "last_emitted_at_ms": 1793386182575,
+      "message": "Verify changes work after editing. Test functionality before marking complete."
+    },
+    "466399dafa2d20f60587180bad0a07358eb7f2bce724df0ff682f038ad33f5ad": {
+      "last_emitted_at_ms": 1793386169647,
+      "message": "Read multiple files in parallel when possible for faster analysis."
+    },
+    "79a93d4a2f8f50b95f852280616242fee1855dc99a3c75211917f55e72e95fae": {
+      "last_emitted_at_ms": 1793386005693,
+      "message": "Use parallel execution for independent tasks. Use run_in_background for long operations (npm install, builds, tests)."
+    },
+    "fc9a3c1c35ae29ecc23a7d6b96f3699d24488807d620694c997885906ea7e5d3": {
+      "last_emitted_at_ms": 1793385823770,
+      "message": "Spawning agent: oh-my-claudecode:security-reviewer (inherit) | Task: Security review of LAN sync"
+    }
+  },
+  "updated_at": "2026-10-30T18:49:42.575Z"
+}

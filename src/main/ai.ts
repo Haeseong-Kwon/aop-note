@@ -155,7 +155,13 @@ export async function runAi(req: AiRequest, onDelta: (text: string) => void): Pr
 async function viaApi(id: string, model: string, prompt: { system: string; user: string }, onDelta: (t: string) => void): Promise<string> {
   const apiKey = readApiKey()
   if (!apiKey) throw new Error('설정 → AI에서 Anthropic API 키를 먼저 저장하세요.')
-  const client = new Anthropic({ apiKey })
+  // In the Android build this runs in the app's own WebView (no third-party page can read the key);
+  // the WebView's original fetch streams, Capacitor's native-HTTP fetch would buffer the reply.
+  const client = new Anthropic({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+    fetch: (globalThis as { CapacitorWebFetch?: typeof fetch }).CapacitorWebFetch
+  })
   const base = {
     model,
     max_tokens: MAX_TOKENS,

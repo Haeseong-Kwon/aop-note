@@ -1,0 +1,28 @@
+{
+  "agents": [
+    {
+      "agent_id": "ae07b83983ae7a5f7",
+      "agent_type": "untracked-native-fork",
+      "started_at": "2026-10-28T06:33:00.757Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-10-28T06:33:00.757Z",
+      "synthetic": true,
+      "telemetry_status": "unmatched_stop",
+      "telemetry_note": "SubagentStop arrived without a matching SubagentStart; native Agent/Task start telemetry was not observed."
+    },
+    {
+      "agent_id": "a0773502f4294ae4e",
+      "agent_type": "oh-my-claudecode:security-reviewer",
+      "started_at": "2026-10-30T18:43:43.951Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-10-30T18:45:33.505Z",
+      "duration_ms": 109554
+    }
+  ],
+  "total_spawned": 1,
+  "total_completed": 2,
+  "total_failed": 0,
+  "last_updated": "2026-10-30T18:45:33.509Z"
+}

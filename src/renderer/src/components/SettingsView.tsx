@@ -6,10 +6,11 @@ import { PageHeader } from './PageHeader'
 import { CalendarSubscriptions } from './CalendarSubscriptions'
 import { AiSettings } from './AiSettings'
 import { DataTransferSettings } from './DataTransferSettings'
+import { DeviceLinkSettings } from './DeviceLinkSettings'
 import { UpdateRow } from './UpdateRow'
 import { cn } from '@/lib/utils'
 import type { AppSettings, BackupInfo, McpInfo } from '@shared/types'
-import { IS_MAC, shortcut } from '@/lib/utils'
+import { IS_ANDROID, IS_MAC, shortcut } from '@/lib/utils'
 
 export function SettingsView(): JSX.Element {
   const showToast = useToast((s) => s.show)
@@ -21,7 +22,7 @@ export function SettingsView(): JSX.Element {
   useEffect(() => {
     window.api.backup.info().then(setInfo, toastError)
     window.api.settings.get().then(setSettings, toastError)
-    window.api.mcp.info().then(setMcp, toastError)
+    if (!IS_ANDROID) window.api.mcp.info().then(setMcp, toastError)
   }, [])
 
   const chooseVault = async (): Promise<void> => {
@@ -98,6 +99,8 @@ export function SettingsView(): JSX.Element {
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-8 py-6">
           <Section title="일반">
+            {!IS_ANDROID && (
+            <>
             <SettingRow label="로그인 시 자동 실행" description="Mac을 켜면 AOP Note가 백그라운드에서 시작되어 알림을 놓치지 않습니다.">
               <Switch
                 label="로그인 시 자동 실행"
@@ -117,6 +120,8 @@ export function SettingsView(): JSX.Element {
                 onChange={() => toggle('globalShortcut')}
               />
             </SettingRow>
+            </>
+            )}
             <SettingRow
               label="오늘 마감 알림"
               description="오늘이 기한인 작업을 알려 줍니다. 작업에 직접 설정한 시간 알림은 이 설정과 관계없이 울립니다."
@@ -130,6 +135,10 @@ export function SettingsView(): JSX.Element {
             </SettingRow>
           </Section>
 
+          <Section title={IS_ANDROID ? 'PC 연결' : '휴대폰 연결'}>
+            <DeviceLinkSettings />
+          </Section>
+
           <Section title="AI">
             <AiSettings settings={settings} onSettings={setSettings} />
           </Section>
@@ -138,6 +147,7 @@ export function SettingsView(): JSX.Element {
             <CalendarSubscriptions />
           </Section>
 
+          {!IS_ANDROID && (
           <Section title="Obsidian · AI 에이전트">
             <SettingRow
               label="Obsidian 볼트로 미러링"
@@ -198,11 +208,13 @@ export function SettingsView(): JSX.Element {
               />
             </SettingRow>
           </Section>
+          )}
 
           <Section title="가져오기 · 내보내기 · 동기화">
             <DataTransferSettings settings={settings} onSettings={setSettings} />
           </Section>
 
+          {!IS_ANDROID && (
           <Section title="데이터">
             <UpdateRow />
             <SettingRow
@@ -240,6 +252,7 @@ export function SettingsView(): JSX.Element {
               </Button>
             </SettingRow>
           </Section>
+          )}
         </div>
       </div>
     </div>

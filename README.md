@@ -173,6 +173,43 @@ npm run package:mac    # macOS dmg
 ```
 결과물은 `dist/`에 생성됩니다.
 
+### 안드로이드 (개인용 APK)
+같은 렌더러를 Capacitor WebView에 올립니다. 메인 프로세스 코드(저장소·IPC 핸들러·동기화)도 WebView 안에서 그대로 돌고, Node/Electron 모듈만 `src/mobile/shims`가 대신합니다.
+
+| 데스크톱 | 안드로이드 |
+|---|---|
+| better-sqlite3 | SQLite Wasm (FTS5 포함), 메모리에서 실행 후 앱 전용 저장소에 저장 |
+| `ipcMain` / `ipcRenderer` | 같은 페이지 안의 핸들러 레지스트리 (`handlers.ts`, `preload` 그대로 사용) |
+| `fs` | 메모리 파일시스템 + 앱 저장소·동기화 폴더에 나중 쓰기 |
+
+```bash
+# 요구: Android SDK(~/Library/Android/sdk), JDK 21
+export JAVA_HOME=$(mise where java@temurin-21.0.12+101.0.LTS) ANDROID_HOME=$HOME/Library/Android/sdk
+npm run android:apk        # → android/app/build/outputs/apk/debug/app-debug.apk
+npm run test:mobile        # 저장소 체크를 SQLite Wasm 위에서 실행
+npm run android:smoke      # 에뮬레이터 전용: 앱 데이터를 지우고 설치·저장·재시작·동기화 확인
+npm run build && npm run android:pc-link  # 에뮬레이터 + 데스크톱 앱: 코드로 페어링, 양방향 메모·첨부, 연결 해제
+```
+
+**폰에 설치**: USB 디버깅을 켜고 `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`를 실행하거나, APK 파일을 폰으로 옮겨 열면 됩니다("출처를 알 수 없는 앱" 허용 필요).
+
+**PC와 연결** (같은 Wi-Fi, 클라우드·별도 앱 없이):
+1. 데스크톱: 설정 → 휴대폰 연결 → 켜기 → **새 휴대폰 연결**. PC 주소와 연결 코드(10분 유효)가 나옵니다.
+2. 폰: 홈의 **PC와 연결하기**(또는 설정 → PC 연결)에서 주소와 코드를 입력합니다.
+3. 이후 앱을 열 때, 메모를 고친 몇 초 뒤, 열어 둔 동안 1분마다, 앱을 나갈 때 자동으로 맞춥니다. 첨부 파일도 양쪽으로 복사합니다.
+
+내용은 기기마다 다른 256비트 키로 AES-GCM 암호화되어 오가므로 같은 Wi-Fi의 다른 사람이 읽거나 고칠 수 없습니다. 코드를 다섯 번 틀리면 코드가 폐기되고, 데스크톱에서 기기별로 **연결 해제**하면 그 폰은 더 이상 동기화할 수 없습니다. 처음 켤 때 방화벽이 연결 허용을 물으면 허용하세요. 프로토콜: `src/shared/lanProtocol.ts`, 서버 `src/main/lanSync.ts`, 폰 `src/mobile/pcLink.ts`.
+
+**고급: Syncthing 폴더 동기화** (Wi-Fi 밖에서도 맞출 때):
+1. Mac과 폰에 Syncthing을 설치하고, 같은 폴더를 공유합니다(예: Mac `~/Sync` ↔ 폰 `/storage/emulated/0/Sync`).
+2. 데스크톱: 설정 → 기기 간 동기화 (공유 폴더) → 그 폴더 선택.
+3. 폰: 설정 → 고급: Syncthing 폴더 동기화 → 폴더 선택… → 경로 확인 → "모든 파일 액세스" 허용.
+앱을 열 때, 앱으로 돌아올 때, 2분마다 동기화합니다. 두 기기 모두 그 폴더 안의 `AOP Note Sync/`를 씁니다.
+
+**모바일 화면** (`src/renderer/src/mobile/`): 안드로이드에서는 데스크톱 레이아웃 대신 노션 모바일 방식의 셸을 씁니다. 하단 탭(홈·오늘·＋·달력·검색), 탭마다 풀스크린 페이지 스택(데스크 → 메모), 하드웨어 뒤로가기, 메뉴는 바텀시트. 데이터·기능은 데스크톱과 같은 스토어와 컴포넌트를 씁니다.
+
+모바일에서 빠지는 기능: 프로젝트 폴더 연결, Claude Code CLI·MCP, 폴더/파일 대화상자를 쓰는 가져오기·내보내기·백업, 링크 미리보기. AI는 Anthropic API 키 방식으로만 동작합니다(키는 앱 전용 저장소에 보관).
+
 ## 주요 UX
 
 - **퀵 캡처**: 어느 화면에서든 `⌘/Ctrl + N` → 제목만 입력해도 저장. 카테고리·목표 연결 선택 가능. 카테고리 미지정 시 현재 활성 카테고리(없으면 첫 카테고리)로 들어갑니다.

@@ -116,6 +116,7 @@ export const BlockNoteEditor = forwardRef<MemoEditorHandle, BlockNoteEditorProps
         ]
       },
       // Drag & drop / paste of a file anywhere in the memo lands here.
+      resolveFileUrl: window.aopResolveFileUrl,
       uploadFile: async (file: File): Promise<string> => {
         try {
           return await window.api.attachment.addBytes(taskId, file.name, await file.arrayBuffer())

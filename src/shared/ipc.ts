@@ -38,6 +38,8 @@ import type {
   BackupInfo,
   AppSettings,
   SyncResult,
+  LanStatus,
+  PcLinkStatus,
   UpdateStatus,
   ImportSummary,
   Backlinks,
@@ -239,6 +241,19 @@ export const IPC = {
     syncDisable: 'data:syncDisable',
     exportIcs: 'data:exportIcs'
   },
+  lan: {
+    status: 'lan:status',
+    enable: 'lan:enable',
+    disable: 'lan:disable',
+    startPairing: 'lan:startPairing',
+    forget: 'lan:forget'
+  },
+  pcLink: {
+    status: 'pcLink:status',
+    link: 'pcLink:link',
+    syncNow: 'pcLink:syncNow',
+    unlink: 'pcLink:unlink'
+  },
   update: {
     status: 'update:status',
     check: 'update:check'
@@ -439,6 +454,22 @@ export interface Api {
     syncDisable(): Promise<AppSettings>
     /** Save schedules + open tasks with due dates as an .ics file; null if cancelled. */
     exportIcs(): Promise<string | null>
+  }
+  /** Desktop: let phones on the local network pair and sync with this computer. */
+  lan: {
+    status(): Promise<LanStatus>
+    enable(): Promise<LanStatus>
+    disable(): Promise<LanStatus>
+    /** Show a one-time code (10 minutes) a phone types in to pair. */
+    startPairing(): Promise<LanStatus>
+    forget(deviceId: string): Promise<LanStatus>
+  }
+  /** Phone: pair with a desktop on the same network and sync with it. */
+  pcLink: {
+    status(): Promise<PcLinkStatus>
+    link(input: { address: string; code: string }): Promise<PcLinkStatus>
+    syncNow(): Promise<SyncResult>
+    unlink(): Promise<PcLinkStatus>
   }
   update: {
     status(): Promise<UpdateStatus>

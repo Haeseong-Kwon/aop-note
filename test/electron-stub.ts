@@ -16,6 +16,8 @@ const unavailable = (name: string): never => {
 export const dialog = new Proxy({}, { get: (_t, p) => () => unavailable(`dialog.${String(p)}`) })
 export const shell = new Proxy({}, { get: (_t, p) => () => unavailable(`shell.${String(p)}`) })
 export class BrowserWindow {}
+// Handlers registered by main modules are simply not reachable from checks.
+export const ipcMain = { handle: (): void => {} }
 
 // Test-only stand-in for the OS keychain: reversible, clearly not encryption.
 export const safeStorage = {

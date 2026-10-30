@@ -21,7 +21,7 @@ export function Toast(): JSX.Element | null {
     <div
       role={toast.tone === 'error' ? 'alert' : 'status'}
       className={cn(
-        'glass-overlay fixed bottom-5 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-3 rounded-lg py-2 pl-4 pr-2 text-sm animate-in fade-in-0 slide-in-from-bottom-2',
+        'app-toast glass-overlay fixed bottom-5 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-3 rounded-lg py-2 pl-4 pr-2 text-sm animate-in fade-in-0 slide-in-from-bottom-2',
         toast.tone === 'error' && 'text-destructive'
       )}
     >

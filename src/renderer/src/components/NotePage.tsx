@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Trash2, Smile, ImagePlus, FilePlus2, FileText, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { BlockNoteEditor, type MemoEditorHandle } from './BlockNoteEditor'
@@ -32,7 +32,7 @@ function savedLabel(iso: string): string {
 }
 
 /** A memo as a Notion-style page: cover, icon, title, properties, blocks, backlinks — one scroll. */
-export function NotePage({ task, category }: { task: Task; category?: Category }): JSX.Element {
+export function NotePage({ task, category, leading }: { task: Task; category?: Category; leading?: ReactNode }): JSX.Element {
   const updateTask = useStore((s) => s.updateTask)
   const deleteTask = useStore((s) => s.deleteTask)
   const duplicateNote = useStore((s) => s.duplicateNote)
@@ -90,7 +90,9 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
 
   return (
     <div className="flex h-full flex-col">
-      <header className="cq flex h-11 shrink-0 items-center gap-2 px-4">
+      <header className="note-header cq flex h-11 shrink-0 items-center gap-2 px-4">
+        {/* Phone shell: the back button. */}
+        {leading}
         <nav aria-label="메모 위치" className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         {category && (
           <span className="flex min-w-0 shrink items-center gap-1.5 text-xs text-muted-foreground">
@@ -146,7 +148,7 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
           )}
 
           {(!meta.icon || !meta.cover) && (
-            <div className={cn('flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover/title:opacity-100', meta.icon || meta.cover ? 'mt-2' : '')}>
+            <div className={cn('flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover/title:opacity-100 [@media(hover:none)]:opacity-100', meta.icon || meta.cover ? 'mt-2' : '')}>
               {!meta.icon && (
                 <button
                   ref={iconRef}
@@ -177,7 +179,7 @@ export function NotePage({ task, category }: { task: Task; category?: Category }
             onBlur={commitTitle}
             onKeyDown={handleTitleKeyDown}
             placeholder="제목 없음"
-            className="mt-1 w-full bg-transparent text-[2.5rem] font-bold leading-[1.15] tracking-[-0.03em] outline-none placeholder:text-muted-foreground/30"
+            className="mt-1 w-full bg-transparent text-[2.5rem] font-bold max-md:text-[2rem] leading-[1.15] tracking-[-0.03em] outline-none placeholder:text-muted-foreground/30"
           />
 
           {/* Wraps as whole chips on a narrow page (Korean keep-all would otherwise stack letters). */}

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { SidebarExpandButton } from './Sidebar'
+import { IS_ANDROID } from '@/lib/utils'
+import { BackButton } from '@/mobile/ui'
 
 interface PageHeaderProps {
   icon: LucideIcon
@@ -13,8 +15,9 @@ interface PageHeaderProps {
 /** Header strip for pages outside a desk (smart views, trash, settings). */
 export function PageHeader({ icon: Icon, title, count, actions }: PageHeaderProps): JSX.Element {
   return (
-    <div className="drag-region flex h-12 shrink-0 items-center gap-2 border-b border-border px-5">
-      <SidebarExpandButton />
+    <div className="page-header drag-region flex h-12 shrink-0 items-center gap-2 border-b border-border px-5">
+      {/* Phone shell: these pages sit on a navigation stack instead of beside a sidebar. */}
+      {IS_ANDROID ? <BackButton /> : <SidebarExpandButton />}
       <Icon className="h-4 w-4 text-primary" />
       <h1 className="text-sm font-semibold tracking-tight">{title}</h1>
       {count !== undefined && (

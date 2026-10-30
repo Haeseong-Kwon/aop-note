@@ -239,7 +239,7 @@ export function CalendarView({ unified = false }: { unified?: boolean }): JSX.El
       ) : (
         <Agenda items={items} fromDay={fromDay} />
       )}
-      {mode === 'month' && <p className="mt-2 text-[11px] text-muted-foreground">날짜를 클릭하거나 여러 날을 드래그해서 일정을 추가하세요.</p>}
+      {mode === 'month' && <p className="cal-hint mt-2 text-[11px] text-muted-foreground">날짜를 클릭하거나 여러 날을 드래그해서 일정을 추가하세요.</p>}
 
       {draft && <ScheduleDialog key={draft.mode === 'edit' ? draft.schedule.id : `${draft.fromDay}~${draft.toDay}`} draft={draft} onClose={() => setDraft(null)} onChanged={changed} />}
     </div>
@@ -297,7 +297,7 @@ function DeskFilter({ hidden, onToggle, onShowAll }: { hidden: string[]; onToggl
   const workspaces = useStore((s) => s.workspaces)
   const chips = [...workspaces.map((w) => ({ id: w.id, name: w.name, color: w.color, icon: w.icon })), { id: NO_DESK, name: '데스크 없음', color: '#94a3b8', icon: '' }]
   return (
-    <div role="group" aria-label="데스크 필터" className="-mt-1 mb-3 flex flex-wrap items-center gap-1.5">
+    <div role="group" aria-label="데스크 필터" className="cal-desks -mt-1 mb-3 flex flex-wrap items-center gap-1.5">
       {chips.map((c) => {
         const on = !hidden.includes(c.id)
         return (

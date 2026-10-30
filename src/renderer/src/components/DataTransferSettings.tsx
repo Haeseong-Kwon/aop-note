@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { useStore } from '@/store/useStore'
 import { useToast, toastError } from '@/store/useToast'
 import { SettingRow } from './SettingsView'
+import { IS_ANDROID } from '@/lib/utils'
 import type { AppSettings } from '@shared/types'
 
 interface Props {
@@ -63,6 +64,9 @@ export function DataTransferSettings({ settings, onSettings }: Props): JSX.Eleme
 
   return (
     <>
+      {/* File pickers / save dialogs are desktop-only; the phone keeps device sync. */}
+      {!IS_ANDROID && (
+        <>
       <SettingRow
         label="Markdown 폴더 가져오기"
         description="Obsidian 볼트나 Notion의 'Markdown & CSV' 내보내기(압축 해제한 폴더)를 새 데스크로 가져옵니다. 하위 폴더는 폴더로, 페이지 간 링크는 [[링크]]로 바뀝니다."
@@ -101,12 +105,16 @@ export function DataTransferSettings({ settings, onSettings }: Props): JSX.Eleme
           내보내기…
         </Button>
       </SettingRow>
+        </>
+      )}
       <SettingRow
-        label="기기 간 동기화"
+        label={IS_ANDROID ? '고급: Syncthing 폴더 동기화' : '기기 간 동기화 (공유 폴더)'}
         description={
           settings?.syncPath
             ? `${settings.syncPath}/AOP Note Sync 로 동기화 중 (수정 후 10초, 그리고 5분마다). 두 기기에서 같은 메모를 동시에 고치면 나중에 고친 쪽이 남습니다.`
-            : 'iCloud Drive·Dropbox·OneDrive 같은 공유 폴더를 고르면 그 폴더를 쓰는 모든 기기의 데이터가 합쳐집니다. 데이터베이스 파일 자체는 공유 폴더에 두지 않습니다.'
+            : IS_ANDROID
+              ? 'PC 연결을 쓰면 필요 없습니다. Wi-Fi 밖에서도 맞추려면 Syncthing으로 데스크톱의 동기화 폴더와 맞춘 폴더(기본 /storage/emulated/0/Sync)를 고르세요.'
+              : 'iCloud Drive·Dropbox·OneDrive 같은 공유 폴더를 고르면 그 폴더를 쓰는 모든 기기의 데이터가 합쳐집니다. 데이터베이스 파일 자체는 공유 폴더에 두지 않습니다.'
         }
       >
         {settings?.syncPath ? (

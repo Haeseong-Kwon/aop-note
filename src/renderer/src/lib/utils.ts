@@ -8,6 +8,9 @@ export function cn(...inputs: ClassValue[]): string {
 /** macOS draws the traffic-light buttons over the top-left of the frameless window. */
 export const IS_MAC = navigator.userAgent.includes('Macintosh')
 
+/** The Android build: a phone shell (src/renderer/src/mobile) replaces the desktop layout; desktop-only settings are hidden. */
+export const IS_ANDROID = navigator.userAgent.includes('Android')
+
 /** A shortcut in the platform's notation: shortcut('Mod', 'P') → "⌘P" on macOS, "Ctrl+P" on Windows. */
 export function shortcut(...keys: string[]): string {
   if (IS_MAC) return keys.map((k) => (k === 'Mod' ? '⌘' : k === 'Shift' ? '⇧' : k)).join('')

@@ -124,7 +124,7 @@ export function MonthGrid({ days, month, items, onPickRange }: MonthGridProps): 
                       onClick={it.open}
                       title={`${it.title}\n${dayRange(it.startDay, it.endDay)}${it.time ? ` · ${it.time}` : ''}`}
                       className={cn(
-                        'absolute z-10 flex h-[18px] items-center gap-1 truncate px-1.5 text-left text-[11px] font-medium leading-none transition-[filter,transform] duration-fast hover:brightness-110 active:scale-[0.98]',
+                        'cal-bar absolute z-10 flex h-[18px] items-center gap-1 truncate px-1.5 text-left text-[11px] font-medium leading-none transition-[filter,transform] duration-fast hover:brightness-110 active:scale-[0.98]',
                         b.continuesLeft ? 'rounded-l-none' : 'rounded-l-[5px]',
                         b.continuesRight ? 'rounded-r-none' : 'rounded-r-[5px]',
                         it.done && 'line-through opacity-50'

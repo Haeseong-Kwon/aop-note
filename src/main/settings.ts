@@ -11,7 +11,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   vaultPath: '',
   aiProvider: 'claude-code',
   aiModel: DEFAULT_AI_MODEL,
-  syncPath: ''
+  syncPath: '',
+  lanSync: false
 }
 
 export const settingsPath = (): string => join(app.getPath('userData'), 'settings.json')
